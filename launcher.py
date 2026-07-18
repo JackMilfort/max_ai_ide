@@ -40,7 +40,32 @@ splash_root = None
 
 # If running from a frozen PyInstaller bundle, launch the splash screen IMMEDIATELY
 if getattr(sys, 'frozen', False):
+    import subprocess
     import tkinter as tk
+
+    # Auto-Update Executable Swap Logic
+    # If MAX.new was downloaded by the background updater, replace ourselves
+    _exe_path = sys.executable
+    _exe_dir = os.path.dirname(_exe_path)
+    _new_exe = os.path.join(_exe_dir, "MAX.new")
+    _old_exe = os.path.join(_exe_dir, "MAX.old")
+
+    # Clean up previous old executable if it exists
+    if os.path.exists(_old_exe):
+        try: os.remove(_old_exe)
+        except Exception: pass
+
+    # Swap and restart if update is pending
+    if os.path.exists(_new_exe):
+        try:
+            os.rename(_exe_path, _old_exe)  # Rename currently running file (Windows allows this!)
+            os.rename(_new_exe, _exe_path)  # Put the new version in place
+            # Start the new version and exit immediately
+            subprocess.Popen([_exe_path] + sys.argv[1:])
+            os._exit(0)
+        except Exception:
+            pass # If swap fails, just launch the old version as normal
+
 
     def show_splash_instantly():
         global splash_root

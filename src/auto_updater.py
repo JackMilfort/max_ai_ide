@@ -48,7 +48,7 @@ def _get_exe_dir() -> str:
 
 
 def _get_pending_path() -> str:
-    return os.path.join(_get_exe_dir(), "MAX.exe.pending")
+    return os.path.join(_get_exe_dir(), "MAX.new")
 
 
 def _get_version_cache_path() -> str:
@@ -102,54 +102,7 @@ def check_applied_on_startup() -> str | None:
     return None
 
 
-def _write_launcher_bat():
-    """
-    Crea/actualiza MAX_launcher.bat en el mismo directorio que MAX.exe.
-    Este script es el que los usuarios deben usar como acceso directo.
-    """
-    exe_dir = _get_exe_dir()
-    bat_path = os.path.join(exe_dir, "MAX_launcher.bat")
-    bat_content = (
-        "@echo off\r\n"
-        "cd /d \"%~dp0\"\r\n"
-        ":: Aplicar actualización pendiente si existe\r\n"
-        "if exist \"MAX.exe.pending\" (\r\n"
-        "    move /y \"MAX.exe.pending\" \"MAX.exe\" >nul 2>&1\r\n"
-        "    echo Aplicando actualizacion de MAX...\r\n"
-        "    echo {\"version\":\"pending\"} > \"%USERPROFILE%\\.max\\update_applied.json\"\r\n"
-        ")\r\n"
-        ":: Iniciar MAX\r\n"
-        "start \"\" \"MAX.exe\"\r\n"
-    )
-    try:
-        with open(bat_path, "w", encoding="utf-8") as f:
-            f.write(bat_content)
-    except Exception as e:
-        logger.debug(f"[AutoUpdater] No se pudo crear MAX_launcher.bat: {e}")
-
-
-def _write_launcher_bat_with_version(version: str):
-    """Versión del bat que también escribe la versión aplicada correctamente."""
-    exe_dir = _get_exe_dir()
-    bat_path = os.path.join(exe_dir, "MAX_launcher.bat")
-    applied_flag = os.path.join(os.path.expanduser("~"), ".max", "update_applied.json").replace("\\", "\\\\")
-    bat_content = (
-        "@echo off\r\n"
-        "cd /d \"%~dp0\"\r\n"
-        "if exist \"MAX.exe.pending\" (\r\n"
-        "    move /y \"MAX.exe.pending\" \"MAX.exe\" >nul 2>&1\r\n"
-        f"    echo {{\"version\":\"{version}\"}} > \"%USERPROFILE%\\.max\\update_applied.json\"\r\n"
-        ")\r\n"
-        "start \"\" \"MAX.exe\"\r\n"
-    )
-    try:
-        os.makedirs(os.path.join(os.path.expanduser("~"), ".max"), exist_ok=True)
-        with open(bat_path, "w", encoding="utf-8") as f:
-            f.write(bat_content)
-    except Exception:
-        pass
-
-
+# Removed _write_launcher_bat logic
 def _download_update(asset_url: str, version: str) -> bool:
     """Descarga la nueva versión a MAX.exe.pending. Retorna True si fue exitoso."""
     pending_path = _get_pending_path()
@@ -178,8 +131,14 @@ def _download_update(asset_url: str, version: str) -> bool:
             os.remove(pending_path)
         os.rename(tmp_path, pending_path)
 
-        # Actualizar el bat con la versión correcta
-        _write_launcher_bat_with_version(version)
+        # Registrar version para el proximo inicio
+        try:
+            os.makedirs(os.path.join(os.path.expanduser("~"), ".max"), exist_ok=True)
+            flag_path = os.path.join(os.path.expanduser("~"), ".max", "update_applied.json")
+            with open(flag_path, "w", encoding="utf-8") as f:
+                json.dump({"version": version}, f)
+        except Exception:
+            pass
 
         _update_status["update_ready"] = True
         _update_status["new_version"] = version
@@ -268,9 +227,6 @@ def start_background_updater():
     if not update_url:
         logger.debug("[AutoUpdater] MAX_UPDATE_URL no configurado — actualizaciones automáticas desactivadas.")
         return
-
-    # Asegurar que el launcher bat existe
-    _write_launcher_bat()
 
     def _loop():
         # Esperar 60s después del inicio antes de verificar

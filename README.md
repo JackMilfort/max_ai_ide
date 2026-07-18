@@ -28,9 +28,8 @@ MAX es un asistente de IA personal que corre en tu computadora. Soporta modelos 
 No necesitas instalar Python, Node.js ni nada mas.
 
 1. Ve a [Releases](https://github.com/JackMilfort/max_ai_ide/releases/latest)
-2. Descarga MAX.exe y MAX_launcher.bat
-3. Ponlos en la misma carpeta
-4. Abre siempre MAX_launcher.bat para usar MAX
+2. Descarga **MAX.exe**
+3. Ponlo en una carpeta y ábrelo
 
 ---
 
@@ -39,7 +38,7 @@ No necesitas instalar Python, Node.js ni nada mas.
 MAX se actualiza solo. Cuando hay una nueva version:
 
 1. MAX la descarga en segundo plano mientras esta abierto
-2. La proxima vez que abras MAX_launcher.bat, se instala silenciosamente
+2. La proxima vez que abras MAX.exe, se instala silenciosamente
 3. Aparece una notificacion en la interfaz confirmando la actualizacion
 
 Tus conversaciones, memorias y configuracion NUNCA se pierden.

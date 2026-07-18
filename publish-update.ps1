@@ -23,10 +23,12 @@ function Write-Step($msg) { Write-Host ""; Write-Host ("==> " + $msg) -Foregroun
 function Write-OK($msg)   { Write-Host ("    [ok] " + $msg) -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host ("    [!]  " + $msg) -ForegroundColor Yellow }
 function Fail($msg) {
-    Write-Host (""; "ERROR: $msg") -ForegroundColor Red
+    Write-Host ""
+    Write-Host "ERROR: $msg" -ForegroundColor Red
     Read-Host "Presiona Enter para salir"
     exit 1
 }
+
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Magenta
@@ -72,11 +74,11 @@ Write-Host "    Version : v$Version" -ForegroundColor Cyan
 Write-Host "    Cambios : $Notes" -ForegroundColor Cyan
 Write-Host "    Release : https://github.com/JackMilfort/max_ai_ide/releases/tag/v$Version" -ForegroundColor Cyan
 Write-Host ""
-$confirm = Read-Host "  Continuar? (s/n)"
-if ($confirm -ne "s" -and $confirm -ne "S") {
-    Write-Host "Cancelado." -ForegroundColor Yellow
-    exit 0
-}
+$confirm = "s"
+# if ($confirm -ne "s" -and $confirm -ne "S") {
+#     Write-Host "Cancelado." -ForegroundColor Yellow
+#     exit 0
+# }
 
 # ── Actualizar version en .env ────────────────────────────────────────────────
 Write-Step "Actualizando version en .env"
@@ -109,13 +111,12 @@ $releaseNotes = @"
 $Notes
 
 ### Como instalar (primera vez):
-1. Descarga **MAX.exe** y **MAX_launcher.bat**
-2. Ponlos en la misma carpeta
-3. Abre siempre **MAX_launcher.bat**
+1. Descarga **MAX.exe**
+2. Ponlo donde quieras y ábrelo
 
 ### Actualizacion automatica:
-Si ya tienes MAX instalado, la proxima vez que abras MAX_launcher.bat
-esta version se instalara sola. No necesitas hacer nada.
+Si ya tienes MAX instalado, la proxima vez que lo abras
+esta version se instalara sola silenciosamente. No necesitas hacer nada.
 
 ---
 *Desarrollado por Jack Milfort*
@@ -126,8 +127,6 @@ $tmpNotes = "$PSScriptRoot\.release_notes_tmp.md"
 
 & gh release create "v$Version" `
     ".\dist\MAX.exe" `
-    ".\dist\MAX_launcher.bat" `
-    ".\dist\LEEME.txt" `
     --repo JackMilfort/max_ai_ide `
     --title "MAX v$Version" `
     --notes-file $tmpNotes
@@ -146,5 +145,5 @@ Write-Host ""
 Write-Host "  Release: https://github.com/JackMilfort/max_ai_ide/releases/tag/v$Version"
 Write-Host ""
 Write-Host "  Tus amigos recibiran la actualizacion automaticamente"
-Write-Host "  la proxima vez que abran MAX_launcher.bat."
+Write-Host "  la proxima vez que abran MAX.exe."
 Write-Host ""

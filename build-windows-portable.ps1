@@ -66,27 +66,6 @@ $dataArgs = @(
 if ($LASTEXITCODE -ne 0) { Fail "PyInstaller fallo." }
 Write-OK "MAX.exe compilado"
 
-# ── Generar MAX_launcher.bat ──────────────────────────────────────────────────
-Write-Step "Generando MAX_launcher.bat"
-& python .\generate_launcher_bat.py
-if ($LASTEXITCODE -ne 0) {
-    # Fallback: escribir bat directamente byte a byte
-    $lines = @(
-        "@echo off",
-        "cd /d ""%~dp0""",
-        ":: MAX Launcher - Abre siempre este archivo para usar MAX",
-        "if exist ""MAX.exe.pending"" (",
-        "    echo Aplicando actualizacion de MAX...",
-        "    move /y ""MAX.exe.pending"" ""MAX.exe"" >nul 2>&1",
-        "    if not exist ""%USERPROFILE%\.max"" mkdir ""%USERPROFILE%\.max""",
-        "    timeout /t 1 /nobreak > nul",
-        ")",
-        "start """" ""MAX.exe"""
-    )
-    [System.IO.File]::WriteAllLines("$PSScriptRoot\dist\MAX_launcher.bat", $lines, [System.Text.Encoding]::ASCII)
-}
-Write-OK "MAX_launcher.bat creado en dist\"
-
 # ── Copiar .env si existe ──────────────────────────────────────────────────────
 Write-Step "Copiando configuracion"
 if (Test-Path ".\.env") {
@@ -94,45 +73,14 @@ if (Test-Path ".\.env") {
     Write-OK ".env copiado al paquete"
 }
 
-# ── Generar LEEME.txt ─────────────────────────────────────────────────────────
-Write-Step "Generando LEEME.txt"
-$readme = @(
-    "MAX - Instrucciones de instalacion",
-    "==================================",
-    "",
-    "PARA USAR MAX:",
-    "  Abre siempre: MAX_launcher.bat",
-    "  Este archivo aplica actualizaciones automaticas",
-    "  antes de iniciar la aplicacion.",
-    "",
-    "ACTUALIZACIONES AUTOMATICAS:",
-    "  MAX descarga nuevas versiones en segundo plano.",
-    "  La proxima vez que abras MAX_launcher.bat,",
-    "  la actualizacion se aplica sola, sin que hagas nada.",
-    "  Tus conversaciones, memorias y configuracion",
-    "  NUNCA se pierden con las actualizaciones.",
-    "",
-    "REQUISITOS:",
-    "  Windows 10/11",
-    "  Conexion a Internet (para el AI y las actualizaciones)",
-    "",
-    "NO NECESITAS instalar Python, Node.js ni nada mas.",
-    "",
-    "Desarrollado por Jack Milfort"
-)
-[System.IO.File]::WriteAllLines("$PSScriptRoot\dist\LEEME.txt", $readme, [System.Text.Encoding]::UTF8)
-Write-OK "LEEME.txt creado"
-
 # ── Resumen final ─────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host "  Build completado exitosamente" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Archivos para distribuir (carpeta dist\):"
-Write-Host "    MAX.exe              - la app principal"
-Write-Host "    MAX_launcher.bat     - los amigos abren ESTE"
-Write-Host "    LEEME.txt            - instrucciones"
+Write-Host "  Archivo para distribuir (carpeta dist\):"
+Write-Host "    MAX.exe              - la app principal (ahora se auto-actualiza!)"
 Write-Host ""
 Write-Host "  Repositorio: https://github.com/JackMilfort/max_ai_ide"
 Write-Host "  Para publicar actualizaciones: crea un GitHub Release"

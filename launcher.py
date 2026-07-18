@@ -14,6 +14,13 @@ import threading
 import time
 import webbrowser
 
+# Auto-updater (silent, background)
+try:
+    from src.auto_updater import start_background_updater, check_applied_on_startup
+except ImportError:
+    def start_background_updater(): pass
+    def check_applied_on_startup(): return None
+
 # Define a dummy NullWriter to suppress standard stream crashes (isatty etc.) in GUI mode
 class NullWriter:
     def write(self, text):
@@ -39,7 +46,7 @@ if getattr(sys, 'frozen', False):
         global splash_root
         try:
             splash_root = tk.Tk()
-            splash_root.title("Odysseus")
+            splash_root.title("MAX")
             splash_root.overrideredirect(True)
             splash_root.configure(bg="#1a1c23")
 
@@ -53,7 +60,7 @@ if getattr(sys, 'frozen', False):
             y = (hs - h) // 2
             splash_root.geometry(f"{w}x{h}+{x}+{y}")
 
-            tk.Label(splash_root, text="⛵ Odysseus", font=("Segoe UI", 22, "bold"), bg="#1a1c23", fg="#e06c75").pack(pady=(22, 2))
+            tk.Label(splash_root, text="⛵ MAX", font=("Segoe UI", 22, "bold"), bg="#1a1c23", fg="#e06c75").pack(pady=(22, 2))
             tk.Label(splash_root, text="Launching background services...", font=("Segoe UI", 10), bg="#1a1c23", fg="#d1d4e0").pack(pady=2)
             tk.Label(splash_root, text="Please wait, this will take a few seconds.", font=("Segoe UI", 8, "italic"), bg="#1a1c23", fg="#5c6370").pack(pady=(12, 0))
 
@@ -67,17 +74,24 @@ if getattr(sys, 'frozen', False):
 
 
 def create_tray_image():
-    # Generate a beautiful 64x64 icon matching Odysseus brand red accent (#e06c75)
+    # Load our custom 192x192 PNG icon for MAX
     from PIL import Image, ImageDraw
+    import sys
+    try:
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(base_dir, "static", "icons", "icon-192.png")
+        if os.path.exists(icon_path):
+            return Image.open(icon_path)
+    except Exception:
+        pass
+    
+    # Fallback to a simple drawn shape
     image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
     dc = ImageDraw.Draw(image)
-    accent_red = (224, 108, 117, 255)
-    light_red = (224, 108, 117, 150)
-
-    # Draw premium sailing boat
-    dc.polygon([(32, 10), (32, 45), (12, 45)], fill=accent_red)
-    dc.polygon([(32, 18), (32, 45), (48, 45)], fill=light_red)
-    dc.polygon([(8, 48), (56, 48), (44, 56), (20, 56)], fill=accent_red)
+    dc.ellipse([8, 8, 56, 56], fill=(30, 144, 255, 255))
     return image
 
 
@@ -95,13 +109,13 @@ def setup_system_tray(url):
         import pystray
         icon_img = create_tray_image()
         menu = (
-            pystray.MenuItem('Open Odysseus', lambda icon, item: on_open_browser(icon, item, url), default=True),
+            pystray.MenuItem('Open MAX', lambda icon, item: on_open_browser(icon, item, url), default=True),
             pystray.MenuItem('Exit', on_exit)
         )
         tray_icon = pystray.Icon(
-            "Odysseus",
+            "MAX",
             icon_img,
-            "Odysseus",
+            "MAX",
             menu
         )
         tray_icon.run()
@@ -126,6 +140,9 @@ def open_browser(url):
 
 if __name__ == "__main__":
     import uvicorn
+    # Verificar si en ESTE inicio se aplicó una actualización automática
+    applied_version = check_applied_on_startup()
+
     # Import the FastAPI app from app.py
     from app import app
 
@@ -138,5 +155,8 @@ if __name__ == "__main__":
         threading.Thread(target=open_browser, args=(url,), daemon=True).start()
         # Start system tray manager thread
         threading.Thread(target=setup_system_tray, args=(url,), daemon=True).start()
+        # Start the silent background auto-updater (checks every 6h, downloads if new version available)
+        threading.Thread(target=start_background_updater, daemon=True).start()
 
     uvicorn.run(app, host=bind_host, port=bind_port, log_level="info")
+

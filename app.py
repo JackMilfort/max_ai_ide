@@ -928,6 +928,15 @@ async def get_version():
     from core.constants import APP_VERSION
     return {"version": APP_VERSION}
 
+@app.get("/api/system/update-status")
+async def update_status():
+    """Retorna el estado del auto-actualizador de MAX para mostrar notificaciones en el frontend."""
+    try:
+        from src.auto_updater import get_status
+        return get_status()
+    except ImportError:
+        return {"update_ready": False, "checking": False}
+
 @app.get("/api/health")
 async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}

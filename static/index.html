@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Odysseus Chat</title>
+  <title>MAX Chat</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4L16 22L6 22Z' fill='%23e06c75'/%3E%3Cpath d='M16 8L16 22L24 22Z' fill='%23e06c75' opacity='0.6'/%3E%3Cpath d='M4 24Q10 20 16 24Q22 28 28 24' stroke='%23e06c75' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#282c34">
@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Disable iOS / Android auto-linkifying of numbers (phone/date/address)
        in email bodies — was wrapping random digits in <a href="tel:..."> with
-       browser-default styling that didn't match the Odysseus theme. -->
+       browser-default styling that didn't match the MAX theme. -->
   <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <script nonce="{{CSP_NONCE}}">
@@ -156,14 +156,14 @@
       apple.href = href;
       // Also customize the page title so the bookmark inherits a useful name.
       var titles = {
-        '/calendar': 'Calendar — Odysseus',
-        '/notes': 'Notes — Odysseus',
-        '/cookbook': 'Cookbook — Odysseus',
-        '/email': 'Email — Odysseus',
-        '/memory': 'Memory — Odysseus',
-        '/gallery': 'Gallery — Odysseus',
-        '/tasks': 'Tasks — Odysseus',
-        '/library': 'Library — Odysseus',
+        '/calendar': 'Calendar — MAX',
+        '/notes': 'Notes — MAX',
+        '/cookbook': 'Cookbook — MAX',
+        '/email': 'Email — MAX',
+        '/memory': 'Memory — MAX',
+        '/gallery': 'Gallery — MAX',
+        '/tasks': 'Tasks — MAX',
+        '/library': 'Library — MAX',
       };
       if (titles[path]) document.title = titles[path];
       // Per-route Android home-screen icon. We swap the <link rel="manifest">
@@ -173,8 +173,8 @@
       try {
         if (inner && typeof Blob !== 'undefined') {
           var pwa = {
-            name: (titles[path] || 'Odysseus'),
-            short_name: (titles[path] || 'Odysseus').split('—')[0].trim(),
+            name: (titles[path] || 'MAX'),
+            short_name: (titles[path] || 'MAX').split('—')[0].trim(),
             start_url: path,
             scope: '/',
             display: 'standalone',
@@ -511,7 +511,7 @@
         <div class="theme-adv-group">
           <div class="theme-adv-group-label">Sidebar</div>
           <div class="theme-custom">
-            <div class="color-row"><label>Odysseus Logo</label><input type="color" id="adv-brandColor"><button class="color-reset-btn" data-reset-adv="brandColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
+            <div class="color-row"><label>MAX Logo</label><input type="color" id="adv-brandColor"><button class="color-reset-btn" data-reset-adv="brandColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
             <div class="color-row"><label title="Hamburger menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-2px;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></label><input type="color" id="adv-hamburgerColor"><button class="color-reset-btn" data-reset-adv="hamburgerColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
           </div>
         </div>
@@ -706,7 +706,7 @@
     <div class="sidebar-header">
       <button class="sidebar-hamburger" id="sidebar-toggle-btn" title="Toggle sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <div class="sidebar-brand" id="sidebar-brand-btn" style="cursor:pointer;" title="New chat">
-        <span class="sidebar-brand-title">Odysseus</span>
+        <span class="sidebar-brand-title">MAX</span>
       </div>
     </div>
     <div class="sidebar-inner">
@@ -944,6 +944,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
+      <div style="padding:0.5rem 1rem 0.4rem;font-size:0.65rem;opacity:0.3;letter-spacing:0.03em;text-align:center;pointer-events:none;user-select:none;">Desarrollado por <span style="font-weight:600;">Jack Milfort</span></div>
     </div>
   </nav>
 
@@ -952,14 +953,15 @@
          never affects layout, but always present inside the main landmark
          (the sidebar that shows the visible brand is hidden off-canvas on
          mobile) so the page always exposes a single level-1 heading. -->
-    <h1 class="a11y-visually-hidden">Odysseus</h1>
+    <h1 class="a11y-visually-hidden">MAX</h1>
     <div class="chat-top-bar">
       <button type="button" class="incognito-indicator" id="incognito-indicator" title="Nobody mode active — click to deactivate" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><line x1="8" y1="16" x2="16" y2="8"/><line x1="8" y1="8" x2="16" y2="16"/></svg></button>
-      <div class="chat-meta-overlay"><span id="current-meta">Odysseus Chat</span><span id="current-meta-count" class="chat-meta-count" aria-hidden="true"></span><span id="session-cost-display" class="session-cost-display" style="display:none;"></span><span class="export-dropdown-wrap" id="export-dropdown-wrap"><button type="button" class="export-dl-btn" id="export-dl-btn" title="More"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button><div class="export-dropdown-menu" id="export-dropdown-menu"><div class="export-dropdown-item" id="export-rename-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span>Rename</span></div><div class="export-dropdown-item" id="export-copy-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span><span>Copy Chat</span></div><div class="export-dropdown-item" id="export-pdf-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h2a1.5 1.5 0 0 1 0 3H9z"/></svg></span><span>PDF</span></div><div class="export-dropdown-item" id="export-doc-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>Save to Documents</span></div></div></span></div>    </div>
+      <div class="chat-meta-overlay"><span id="current-meta">MAX Chat</span><span id="current-meta-count" class="chat-meta-count" aria-hidden="true"></span><span id="session-cost-display" class="session-cost-display" style="display:none;"></span><span class="export-dropdown-wrap" id="export-dropdown-wrap"><button type="button" class="export-dl-btn" id="export-dl-btn" title="More"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button><div class="export-dropdown-menu" id="export-dropdown-menu"><div class="export-dropdown-item" id="export-rename-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span>Rename</span></div><div class="export-dropdown-item" id="export-copy-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span><span>Copy Chat</span></div><div class="export-dropdown-item" id="export-pdf-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h2a1.5 1.5 0 0 1 0 3H9z"/></svg></span><span>PDF</span></div><div class="export-dropdown-item" id="export-doc-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>Save to Documents</span></div></div></span></div>    </div>
     <div id="welcome-screen">
-      <div class="welcome-name"><svg class="welcome-boat" viewBox="0 0 32 32"><path d="M16 4L16 22L6 22Z" fill="currentColor"/><path d="M16 8L16 22L24 22Z" fill="currentColor" opacity="0.6"/><path d="M4 24Q10 20 16 24Q22 28 28 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>Odysseus</div>
+      <div class="welcome-name"><svg class="welcome-boat" viewBox="0 0 32 32"><path d="M16 4L16 22L6 22Z" fill="currentColor"/><path d="M16 8L16 22L24 22Z" fill="currentColor" opacity="0.6"/><path d="M4 24Q10 20 16 24Q22 28 28 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>MAX</div>
       <div class="welcome-sub" id="welcome-sub">Welcome, <span class="setup-trigger-link" style="color:var(--accent,var(--red));font-weight:600;cursor:pointer;text-decoration:underline;" title="Click to launch setup">type /setup</span> to get started.</div>
       <div class="welcome-tip" id="welcome-tip"></div>
+      <div style="margin-top:1.2rem;font-size:0.72rem;opacity:0.4;letter-spacing:0.04em;font-family:inherit;">Desarrollado por <span style="background:linear-gradient(90deg,var(--brand-color,var(--red)),color-mix(in srgb,var(--brand-color,var(--red)) 50%,var(--fg)));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:600;">Jack Milfort</span></div>
       <button type="button" class="incognito-btn" id="incognito-btn" title="Enable Nobody mode — no memory, no history saved">
         <svg class="eye-open" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -1013,7 +1015,7 @@
     <div class="chat-input-bar">
       <div class="chat-input-top">
         <div id="message-ghost" class="ghost-text-overlay" aria-hidden="true"></div>
-        <textarea id="message" placeholder="Message Odysseus..." required autocomplete="off" aria-label="Message input" rows="1" autofocus></textarea>
+        <textarea id="message" placeholder="Message MAX..." required autocomplete="off" aria-label="Message input" rows="1" autofocus></textarea>
         <!-- Model picker (inside chatbox, top-right) -->
         <div class="model-picker-wrap" id="model-picker-wrap">
           <button type="button" class="model-picker-btn" id="model-picker-btn" title="Switch model"><span id="model-picker-label">Select model</span> <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg></button>
@@ -1725,7 +1727,7 @@
             <div class="vis-toggles">
               <label class="vis-row">
                 <span class="vis-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg></span>
-                <span class="vis-label">Odysseus <span class="vis-hint">Brand name</span></span>
+                <span class="vis-label">MAX <span class="vis-hint">Brand name</span></span>
                 <input type="checkbox" checked data-ui-key="sidebar-brand"><span class="vis-switch"></span>
               </label>
               <label class="vis-row">
@@ -2038,7 +2040,7 @@
           </div>
           <div class="admin-card">
             <h2><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;opacity:0.6"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Public App URL</h2>
-            <div class="admin-toggle-sub" style="margin-bottom:8px">Used to build clickable links back to Odysseus inside outgoing reminder / urgent-email emails (e.g. <code>https://chat.yourdomain.com</code>). Leave blank to omit links.</div>
+            <div class="admin-toggle-sub" style="margin-bottom:8px">Used to build clickable links back to MAX inside outgoing reminder / urgent-email emails (e.g. <code>https://chat.yourdomain.com</code>). Leave blank to omit links.</div>
             <div class="settings-col">
               <div class="settings-row">
                 <label class="settings-label">URL</label>
@@ -2296,7 +2298,7 @@
               </svg>
               Terminal Logs
             </h2>
-            <div class="admin-toggle-sub settings-system-logs-toggle-sub">Live diagnostic logs and system output from the Odysseus process.</div>
+            <div class="admin-toggle-sub settings-system-logs-toggle-sub">Live diagnostic logs and system output from the MAX process.</div>
 
             <div class="settings-col settings-system-logs-col">
               <!-- Controls row -->
@@ -2488,5 +2490,118 @@
 <script type="module" src="/static/js/init.js"></script>
 <script type="module" src="/static/js/a11y.js"></script>
 <script nonce="{{CSP_NONCE}}">if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
+<!-- ═══════════════════════════════════════════
+     MAX Auto-Update Notification System
+     Silencioso, transparente, no intrusivo.
+     ═══════════════════════════════════════════ -->
+<style>
+  /* Toast de actualización — aparece en la esquina inferior derecha */
+  #max-update-toast {
+    position: fixed; bottom: 1.4rem; right: 1.4rem; z-index: 99999;
+    background: #1e2130;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid #4ade80;
+    border-radius: 10px;
+    padding: 0.8rem 1.1rem;
+    display: flex; align-items: center; gap: 0.7rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    font-size: 0.8rem; color: #d1d4e0;
+    max-width: 300px;
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+  }
+  #max-update-toast.visible {
+    opacity: 1; transform: translateY(0); pointer-events: auto;
+  }
+  #max-update-toast .upd-icon { font-size: 1.1rem; flex-shrink: 0; }
+  #max-update-toast .upd-title { font-weight: 600; color: #4ade80; font-size: 0.78rem; }
+  #max-update-toast .upd-msg { opacity: 0.75; margin-top: 1px; }
+  #max-update-toast .upd-close {
+    margin-left: auto; cursor: pointer; opacity: 0.4;
+    background: none; border: none; color: inherit; font-size: 1rem;
+    padding: 0; line-height: 1; flex-shrink: 0;
+  }
+  #max-update-toast .upd-close:hover { opacity: 0.9; }
+  /* Badge en la sidebar cuando hay actualización lista */
+  #max-update-badge {
+    display: none;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80;
+    position: absolute; top: 6px; right: 6px;
+  }
+</style>
+
+<div id="max-update-toast" role="alert" aria-live="polite">
+  <span class="upd-icon">✦</span>
+  <div>
+    <div class="upd-title" id="max-upd-title">MAX actualizado</div>
+    <div class="upd-msg" id="max-upd-msg">La nueva versión se instaló correctamente.</div>
+  </div>
+  <button class="upd-close" id="max-upd-close" aria-label="Cerrar notificación">✕</button>
+</div>
+
+<script nonce="{{CSP_NONCE}}">
+(function() {
+  // ── Mostrar toast de "actualización aplicada" si aplica ──────────────────
+  function showToast(title, msg, color) {
+    var toast = document.getElementById('max-update-toast');
+    if (!toast) return;
+    document.getElementById('max-upd-title').textContent = title;
+    document.getElementById('max-upd-msg').textContent = msg;
+    toast.style.borderLeftColor = color || '#4ade80';
+    toast.classList.add('visible');
+    // Auto-cerrar después de 8 segundos
+    var t = setTimeout(function() { toast.classList.remove('visible'); }, 8000);
+    document.getElementById('max-upd-close').onclick = function() {
+      clearTimeout(t); toast.classList.remove('visible');
+    };
+  }
+
+  // ── Verificar si este inicio aplicó una actualización ───────────────────
+  // El endpoint retorna applied_version != null si fue este inicio
+  function checkAppliedOnLoad() {
+    fetch('/api/system/update-status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.applied_version) {
+          showToast(
+            '✓ MAX actualizado a ' + d.applied_version,
+            'Tu información y memorias se conservaron intactas.',
+            '#4ade80'
+          );
+        }
+      })
+      .catch(function() {});
+  }
+
+  // ── Verificar periódicamente si hay actualización lista ─────────────────
+  // Muestra badge/toast sutil cuando una descarga está lista para el próximo inicio
+  function pollUpdateReady() {
+    fetch('/api/system/update-status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.update_ready && d.new_version) {
+          showToast(
+            'Actualización ' + d.new_version + ' lista',
+            'Se instalará automáticamente al reiniciar MAX.',
+            '#f59e0b'
+          );
+          // Dejar de verificar hasta el próximo reinicio
+          clearInterval(window._maxUpdatePoll);
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Esperar a que la app cargue antes de verificar
+  window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkAppliedOnLoad, 2500);
+    // Verificar si hay update ready cada 30 minutos
+    window._maxUpdatePoll = setInterval(pollUpdateReady, 30 * 60 * 1000);
+  });
+})();
+</script>
 </body>
 </html>

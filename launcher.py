@@ -121,7 +121,13 @@ def create_tray_image():
 
 
 def on_open_browser(icon, item, url):
-    webbrowser.open(url)
+    try:
+        import webview
+        if webview.windows:
+            webview.windows[0].restore()
+            webview.windows[0].show()
+    except Exception:
+        pass
 
 
 def on_exit(icon, item):
@@ -160,7 +166,16 @@ def open_browser(url):
     except Exception:
         pass
 
-    webbrowser.open(url)
+    try:
+        import webview
+        webview.create_window("MAX", url, width=1200, height=800)
+        webview.start(private_mode=False) # Keep local storage
+    except Exception:
+        import webbrowser
+        webbrowser.open(url)
+    
+    os._exit(0)
+
 
 
 if __name__ == "__main__":
@@ -176,12 +191,16 @@ if __name__ == "__main__":
     url = f"http://{bind_host}:{bind_port}"
 
     if getattr(sys, 'frozen', False):
-        # Start browser manager thread
-        threading.Thread(target=open_browser, args=(url,), daemon=True).start()
+        # Start uvicorn server in a background thread
+        threading.Thread(target=uvicorn.run, args=(app,), kwargs={"host": bind_host, "port": bind_port, "log_level": "info"}, daemon=True).start()
         # Start system tray manager thread
         threading.Thread(target=setup_system_tray, args=(url,), daemon=True).start()
-        # Start the silent background auto-updater (checks every 6h, downloads if new version available)
+        # Start the silent background auto-updater
         threading.Thread(target=start_background_updater, daemon=True).start()
-
-    uvicorn.run(app, host=bind_host, port=bind_port, log_level="info")
+        
+        # Start the native window on the main thread (blocks until window is closed)
+        open_browser(url)
+    else:
+        # Development mode
+        uvicorn.run(app, host=bind_host, port=bind_port, log_level="info")
 

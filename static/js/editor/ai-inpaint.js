@@ -48,7 +48,7 @@ export function wireInpaintButtons({
   saveState, createLayer, composite, renderLayerPanel,
   spinnerModule, uiModule,
 }) {
-  // Compartird inpaint runner — used by Generate, Remove, and Outpaint.
+  // Shared inpaint runner — used by Generate, Remove, and Outpaint.
   async function runInpaint({ prompt, strength, btnId, labelId, idleLabel, busyLabel }) {
     // Pre-check: build the union mask the AI will receive and verify
     // at least one pixel is painted.
@@ -364,7 +364,7 @@ export function wireInpaintButtons({
         idleLabel: 'Outpaint', busyLabel: 'Outpainting',
       });
     } finally {
-      // Restaurar the user's previous mask drawing so subsequent
+      // Restore the user's previous mask drawing so subsequent
       // Generate/Remove operates on what they actually drew.
       mask.ctx.clearRect(0, 0, mask.canvas.width, mask.canvas.height);
       mask.ctx.putImageData(savedMask, 0, 0);

@@ -82,7 +82,7 @@ export function init(apiBase) {
   initEnabledToggle();
   initNameDropdown();
   initResetButton();
-  initGuardarAsTemplate();
+  initSaveAsTemplate();
   initExpandButton();
   initPersistentChat();
   loadUserTemplates();
@@ -112,7 +112,7 @@ function initExpandButton() {
 
     // Get current model from picker
     const modelLabel = document.getElementById('model-picker-label');
-    const currentModelo = modelLabel ? modelLabel.textContent.trim() : '';
+    const currentModel = modelLabel ? modelLabel.textContent.trim() : '';
 
     btn.classList.add('expanding');
     const origText = btn.innerHTML;
@@ -136,7 +136,7 @@ function initExpandButton() {
       const res = await fetch(`${API_BASE}/api/presets/expand`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, prompt: draft, model: currentModelo }),
+        body: JSON.stringify({ name, prompt: draft, model: currentModel }),
       });
       const data = await res.json();
       if (data.success && data.prompt && promptInput) {
@@ -220,27 +220,27 @@ function initNameDropdown() {
     }
     // Load the selected template
     const nameInput = document.getElementById('custom-character-name');
-    const isGuardard = userTemplates.find(t => t.name === val);
+    const isSaved = userTemplates.find(t => t.name === val);
     const builtin = PROMPT_TEMPLATES.find(t => t.name === val);
-    const hasName = isGuardard || (builtin && builtin.isCharacter && !builtin.noName);
+    const hasName = isSaved || (builtin && builtin.isCharacter && !builtin.noName);
     if (nameInput) nameInput.value = hasName ? val : '';
     const nameRow = document.getElementById('char-name-row');
     if (nameRow) nameRow.style.display = (builtin && builtin.noName) ? 'none' : '';
     _tryLoadTemplate(val);
     const isPreset = builtin && builtin.isPreset;
-    if (delBtn) delBtn.style.display = (isGuardard || (builtin && !isPreset)) ? '' : 'none';
+    if (delBtn) delBtn.style.display = (isSaved || (builtin && !isPreset)) ? '' : 'none';
   });
 
-  // Eliminar template button — confirms, then removes template + character memories
+  // Delete template button — confirms, then removes template + character memories
   if (delBtn) {
     delBtn.addEventListener('click', async () => {
       const charName = select.value;
       if (!charName || charName === '__default__') return;
       const match = userTemplates.find(t => t.name === charName);
       const isBuiltin = PROMPT_TEMPLATES.some(t => t.name === charName);
-      if (!await window.styledConfirmar(`Eliminar "${charName}"?\n\nThis will remove the persona and all its memories.`, { confirmText: 'Eliminar', danger: true })) return;
+      if (!await window.styledConfirm(`Delete "${charName}"?\n\nThis will remove the persona and all its memories.`, { confirmText: 'Delete', danger: true })) return;
       try {
-        // Eliminar saved template if exists
+        // Delete saved template if exists
         if (match) {
           await fetch(`${API_BASE}/api/presets/templates/${match.id}`, { method: 'DELETE' });
         }
@@ -263,7 +263,7 @@ function initNameDropdown() {
         select.value = '__default__';
         select.dispatchEvent(new Event('change'));
         setTimeout(() => { _syncCharIndicator(); }, 0);
-      } catch (e) { console.error('Eliminar character failed:', e); }
+      } catch (e) { console.error('Delete character failed:', e); }
     });
   }
 }
@@ -319,7 +319,7 @@ function _populateCharSelect() {
   const savedNames = new Set(userTemplates.map(t => t.name));
   if (userTemplates.length) {
     const group = document.createElement('optgroup');
-    group.label = 'Guardard';
+    group.label = 'Saved';
     userTemplates.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.name;
@@ -342,7 +342,7 @@ function _populateCharSelect() {
     });
     select.appendChild(group);
   }
-  // Restaurar selection if it still exists
+  // Restore selection if it still exists
   if (currentVal) select.value = currentVal;
 }
 
@@ -384,10 +384,10 @@ async function loadUserTemplates() {
 
 
 /**
- * Init "Guardar as Character" button
+ * Init "Save as Character" button
  */
 /**
- * "Crear Persistent Chat" button — creates a favorited session for the current character
+ * "Create Persistent Chat" button — creates a favorited session for the current character
  */
 function initPersistentChat() {
   const btn = document.getElementById('create-persistent-chat-btn');
@@ -404,7 +404,7 @@ function initPersistentChat() {
       const sessions = sessionModule.getSessions();
       const current = sessions.find(s => s.id === sessionModule.getCurrentSessionId());
 
-      // Crear new session
+      // Create new session
       const fd = new FormData();
       fd.append('name', charName);
       if (current) {
@@ -422,28 +422,28 @@ function initPersistentChat() {
       favFd.append('important', true);
       await fetch(`${API_BASE}/api/session/${sessionId}/important`, { method: 'POST', body: favFd });
 
-      // Guardar session → character mapping so it restores on switch
+      // Save session → character mapping so it restores on switch
       const charSessions = loadStoredObject('odysseus-char-sessions');
       charSessions[sessionId] = charName;
       localStorage.setItem('odysseus-char-sessions', JSON.stringify(charSessions));
 
-      // Cerrar modal, reload sessions, switch to the new chat
+      // Close modal, reload sessions, switch to the new chat
       const modal = document.getElementById('custom-preset-modal');
       if (modal) modal.classList.add('hidden');
       await sessionModule.loadSessions();
       await sessionModule.selectSession(sessionId);
 
-      btn.textContent = 'Creard!';
-      setTimeout(() => { btn.textContent = 'Crear Persistent Chat'; }, 1500);
+      btn.textContent = 'Created!';
+      setTimeout(() => { btn.textContent = 'Create Persistent Chat'; }, 1500);
     } catch (e) {
       console.error('Failed to create persistent chat:', e);
       btn.textContent = 'Error';
-      setTimeout(() => { btn.textContent = 'Crear Persistent Chat'; }, 2000);
+      setTimeout(() => { btn.textContent = 'Create Persistent Chat'; }, 2000);
     }
   });
 }
 
-function initGuardarAsTemplate() {
+function initSaveAsTemplate() {
   const btn = document.getElementById('save-as-template-btn');
   if (!btn) return;
 
@@ -480,17 +480,17 @@ function initGuardarAsTemplate() {
       const data = await res.json();
       if (data.success) {
         await loadUserTemplates();
-        btn.textContent = 'Guardard!';
-        setTimeout(() => { btn.textContent = 'Guardar as Template'; }, 1500);
+        btn.textContent = 'Saved!';
+        setTimeout(() => { btn.textContent = 'Save as Template'; }, 1500);
       } else {
         btn.textContent = 'Error';
-        setTimeout(() => { btn.textContent = 'Guardar as Template'; }, 2000);
+        setTimeout(() => { btn.textContent = 'Save as Template'; }, 2000);
       }
     } catch (e) {
       console.error('Failed to save template:', e);
       btn.textContent = 'Restart server';
       btn.style.color = 'var(--color-error)';
-      setTimeout(() => { btn.textContent = 'Guardar as Template'; btn.style.color = ''; }, 3000);
+      setTimeout(() => { btn.textContent = 'Save as Template'; btn.style.color = ''; }, 3000);
     }
   });
 }
@@ -632,12 +632,12 @@ export function openCustomPresetModal() {
       // no persona.
       label = 'Start Prompt';
     } else {
-      // Character/persona tab. "Guardar & " prefix when the user edited a template,
+      // Character/persona tab. "Save & " prefix when the user edited a template,
       // so it's clear the edit is being saved on start.
-      label = changed ? 'Guardar & Start Persona' : 'Start Persona';
+      label = changed ? 'Save & Start Persona' : 'Start Persona';
     }
     btn.textContent = label;
-    // Show a "Cancelar" button next to Start when the active tab's feature is
+    // Show a "Cancel" button next to Start when the active tab's feature is
     // currently ON, so the user can turn it off here instead of hunting the
     // tiny X on the chat bar.
     const cancelBtn = document.getElementById('cancel-custom-preset');
@@ -645,7 +645,7 @@ export function openCustomPresetModal() {
       const groupOn = !!(window.groupModule && window.groupModule.isActive && window.groupModule.isActive());
       const featOn = activeTab === 'group' ? groupOn : !!(presets.custom && presets.custom.enabled);
       cancelBtn.style.display = featOn ? '' : 'none';
-      cancelBtn.textContent = activeTab === 'group' ? 'Cancelar group' : 'Cancelar';
+      cancelBtn.textContent = activeTab === 'group' ? 'Cancel group' : 'Cancel';
     }
     // Reset only makes sense on the character tab (it resets the persona).
     if (resetBtn) resetBtn.style.display = (changed && activeTab === 'character') ? '' : 'none';
@@ -661,7 +661,7 @@ export function openCustomPresetModal() {
     tab._startLabelSync = _updateStartBtn;
     tab.addEventListener('click', _updateStartBtn);
   });
-  // Wire the "Cancelar" button once — turn off the active tab's feature + close.
+  // Wire the "Cancel" button once — turn off the active tab's feature + close.
   const _cancelBtn = document.getElementById('cancel-custom-preset');
   if (_cancelBtn && !_cancelBtn._wired) {
     _cancelBtn._wired = true;
@@ -741,7 +741,7 @@ export function openCustomPresetModal() {
 }
 
 /**
- * Guardar custom preset
+ * Save custom preset
  */
 export async function saveCustomPreset(showToast, showError) {
   const nameInput = document.getElementById('custom-character-name');
@@ -813,12 +813,12 @@ export async function saveCustomPreset(showToast, showError) {
       if (enabled && _hasContent) {
         selectedPreset = 'custom';
         // Turn off research — doesn't make sense with a character
-        if (window._syncInvestigaciónIndicator) window._syncInvestigaciónIndicator(false);
+        if (window._syncResearchIndicator) window._syncResearchIndicator(false);
       } else {
         selectedPreset = null;
       }
 
-      // Actualizar mini button state
+      // Update mini button state
       const miniBtn = document.getElementById('overflow-preset-btn');
       if (miniBtn) {
         miniBtn.classList.toggle('active', enabled && _hasContent);
@@ -869,7 +869,7 @@ export async function saveCustomPreset(showToast, showError) {
           }
 
           if (showError) {
-            showError(_isInjectStart ? "Something went wrong. Guardard prompt has been undone." : "Something went wrong. Guardard persona has been undone.");
+            showError(_isInjectStart ? "Something went wrong. Saved prompt has been undone." : "Something went wrong. Saved persona has been undone.");
           }
         });
       }
@@ -967,7 +967,7 @@ export function deactivateCharacter() {
  * Called after presets load and after saving character.
  */
 /**
- * Copiar all user memories (non-character) into the character's memory pool.
+ * Copy all user memories (non-character) into the character's memory pool.
  */
 async function _mergeUserMemories(charName) {
   try {
@@ -987,10 +987,10 @@ async function _mergeUserMemories(charName) {
   }
 }
 
-function _reloadMemoriaList() {
+function _reloadMemoryList() {
   import('./memory.js').then(m => {
-    if (m.renderMemoriaList) m.renderMemoriaList();
-    if (m.updateMemoriaCount) m.updateMemoriaCount();
+    if (m.renderMemoryList) m.renderMemoryList();
+    if (m.updateMemoryCount) m.updateMemoryCount();
   }).catch(() => {});
 }
 
@@ -1043,7 +1043,7 @@ function _syncCharIndicator() {
           btn.classList.remove('active');
           const miniBtn = document.getElementById('overflow-preset-btn');
           if (miniBtn) miniBtn.classList.remove('active');
-          // Guardar disabled state to backend
+          // Save disabled state to backend
           fetch(`${API_BASE}/api/presets/custom`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -11,7 +11,7 @@ let API_BASE = '';
 
 export function init(apiBase) {
   API_BASE = apiBase;
-  _setupSubirZone();
+  _setupUploadZone();
 }
 
 function _humanSize(bytes) {
@@ -88,7 +88,7 @@ export async function loadPersonalDocs() {
 }
 
 async function _deleteFile(filepath, displayName) {
-  if (!await uiModule.styledConfirmar(`Remove "${displayName}" from RAG?`, { confirmText: 'Remove', danger: true })) return;
+  if (!await uiModule.styledConfirm(`Remove "${displayName}" from RAG?`, { confirmText: 'Remove', danger: true })) return;
   try {
     const res = await fetch(`${API_BASE}/api/personal/file?filepath=${encodeURIComponent(filepath)}`, {
       method: 'DELETE',
@@ -97,19 +97,19 @@ async function _deleteFile(filepath, displayName) {
     if (!res.ok) throw new Error(await res.text());
     await loadPersonalDocs();
   } catch (e) {
-    console.error('Eliminar failed:', e);
+    console.error('Delete failed:', e);
     alert('Failed to delete file: ' + e.message);
   }
 }
 
 /**
- * Subir files to RAG
+ * Upload files to RAG
  */
 export async function uploadRagFiles(fileList) {
   if (!fileList || !fileList.length) return;
 
   const zone = document.getElementById('rag-upload-zone');
-  if (zone) zone.textContent = 'Subiring…';
+  if (zone) zone.textContent = 'Uploading…';
 
   const fd = new FormData();
   for (const file of fileList) {
@@ -130,13 +130,13 @@ export async function uploadRagFiles(fileList) {
     await loadPersonalDocs();
     return data;
   } catch (e) {
-    console.error('Subir failed:', e);
+    console.error('Upload failed:', e);
     if (zone) zone.textContent = 'Drop files here or click to upload';
-    alert('Subir failed: ' + e.message);
+    alert('Upload failed: ' + e.message);
   }
 }
 
-function _setupSubirZone() {
+function _setupUploadZone() {
   const zone = document.getElementById('rag-upload-zone');
   const input = document.getElementById('rag-file-input');
   if (!zone || !input) return;

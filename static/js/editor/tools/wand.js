@@ -6,7 +6,7 @@
  * Clicking inside an existing selection with no modifier deselects.
  *
  * Wand is selection-only — it doesn't mutate the layer until the user
- * invokes an action (Erase / Copiar / etc.) from the panel. That's why
+ * invokes an action (Erase / Copy / etc.) from the panel. That's why
  * it has just a `click` handler instead of begin/drag/end.
  *
  * @param {{

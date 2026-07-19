@@ -10,7 +10,7 @@ function _clearProbeWaves() {
 }
 
 async function _checkUnprobed() {
-  const unprobed = state._selectedModelos.filter(m => !state._probed.has(m.model));
+  const unprobed = state._selectedModels.filter(m => !state._probed.has(m.model));
   if (unprobed.length === 0) {
     if (uiModule) uiModule.showToast('All models verified');
     return;
@@ -36,8 +36,8 @@ async function _checkUnprobed() {
   try {
   for (const m of unprobed) {
     try {
-      const _imageModeloPrefixes = ['dall-e', 'gpt-image', 'chatgpt-image', 'stable-diffusion', 'sdxl', 'flux', 'midjourney'];
-      if (_imageModeloPrefixes.some(p => m.model.toLowerCase().includes(p))) {
+      const _imageModelPrefixes = ['dall-e', 'gpt-image', 'chatgpt-image', 'stable-diffusion', 'sdxl', 'flux', 'midjourney'];
+      if (_imageModelPrefixes.some(p => m.model.toLowerCase().includes(p))) {
         state._probed.add(m.model);
         ok++;
         continue;
@@ -65,7 +65,7 @@ async function _checkUnprobed() {
     if (uiModule) uiModule.showToast(`${ok} model${ok > 1 ? 's' : ''} verified`);
   }
   } finally {
-    // Restaurar the Probe button (its label/visibility is refreshed below).
+    // Restore the Probe button (its label/visibility is refreshed below).
     if (_btn) {
       _btn.disabled = false;
       _btn.style.opacity = '';

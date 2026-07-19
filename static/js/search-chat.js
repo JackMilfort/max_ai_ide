@@ -1,4 +1,4 @@
-// Buscar Chat Module — Ctrl+K command palette for searching conversations
+// Search Chat Module — Ctrl+K command palette for searching conversations
 
 import uiModule from './ui.js';
 import sessionModule from './sessions.js';
@@ -10,7 +10,7 @@ let results = [];
 
 function el(id) { return document.getElementById(id); }
 
-export function openBuscar() {
+export function openSearch() {
   const overlay = el('search-overlay');
   if (!overlay) return;
   overlay.classList.remove('hidden');
@@ -24,7 +24,7 @@ export function openBuscar() {
   el('search-results').innerHTML = '';
 }
 
-export function closeBuscar() {
+export function closeSearch() {
   const overlay = el('search-overlay');
   if (!overlay) return;
   overlay.classList.add('hidden');
@@ -109,7 +109,7 @@ function renderResults(data, query) {
 }
 
 function navigateToSession(sessionId) {
-  closeBuscar();
+  closeSearch();
   if (sessionModule && sessionModule.selectSession) {
     sessionModule.selectSession(sessionId);
   }
@@ -168,7 +168,7 @@ function handleInput(e) {
       const data = await res.json();
       renderResults(data, query);
     } catch (err) {
-      console.error('Buscar error:', err);
+      console.error('Search error:', err);
     }
   }, 300);
 }
@@ -182,19 +182,19 @@ export function init(apiBase) {
     input.addEventListener('keydown', handleKeydown);
   }
 
-  // Cerrar on overlay click (not popup click)
+  // Close on overlay click (not popup click)
   const overlay = el('search-overlay');
   if (overlay) {
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeBuscar();
+      if (e.target === overlay) closeSearch();
     });
   }
 }
 
 const searchChatModule = {
   init,
-  openBuscar,
-  closeBuscar,
+  openSearch,
+  closeSearch,
   isOpen,
 };
 

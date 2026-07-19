@@ -8,12 +8,12 @@
  * call `reapplyTransform()` to redraw. This module owns the drag
  * branch.
  *
- * The dispatcher in galleryEditaror.js calls `tryBegin/tryContinue/
+ * The dispatcher in galleryEditor.js calls `tryBegin/tryContinue/
  * tryEnd` which return `true` when the event was for the transform
  * tool and was handled (so the dispatcher can short-circuit).
  *
  * @param {{
- *   beginMover:             (e: Event) => void,
+ *   beginMove:             (e: Event) => void,
  *   composite:              () => void,
  *   drawTransformHandles:   () => void,
  *   reapplyTransform:       () => void,
@@ -25,7 +25,7 @@ import { state } from '../state.js';
 import { canvasCoords } from '../canvas-coords.js';
 
 export function createTransformDragTool({
-  beginMover, composite, drawTransformHandles, reapplyTransform,
+  beginMove, composite, drawTransformHandles, reapplyTransform,
   getTransformHandle, cursorForHandle,
 }) {
   return {
@@ -52,7 +52,7 @@ export function createTransformDragTool({
         return true;
       }
       // No corner hit — if click inside the layer's bounding box, act
-      // like Mover so the user can drag the layer around without
+      // like Move so the user can drag the layer around without
       // switching tools.
       if (state.transformLayer) {
         const off = state.layerOffsets.get(state.transformLayer.id) || { x: 0, y: 0 };
@@ -60,7 +60,7 @@ export function createTransformDragTool({
         const h = state.transformLayer.canvas.height;
         if (coords.x >= off.x && coords.x <= off.x + w &&
             coords.y >= off.y && coords.y <= off.y + h) {
-          beginMover(e);
+          beginMove(e);
           return true;
         }
       }

@@ -55,7 +55,7 @@ export function enable(containerId, itemSelector, options = {}) {
     return ph;
   }
 
-  // --- Compartird drag logic ---
+  // --- Shared drag logic ---
 
   function startDrag(clientY, item) {
     const rect = item.getBoundingClientRect();
@@ -165,14 +165,14 @@ export function enable(containerId, itemSelector, options = {}) {
     e.preventDefault();
     e.stopPropagation();
     startDrag(e.clientY, item);
-    document.addEventListener('mousemove', onMouseMover);
+    document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  function onMouseMover(e) { moveDrag(e.clientY); }
+  function onMouseMove(e) { moveDrag(e.clientY); }
 
   function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMover);
+    document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
     endDrag();
   }
@@ -208,7 +208,7 @@ export function enable(containerId, itemSelector, options = {}) {
     }, 400);
   }
 
-  function onTouchMover(e) {
+  function onTouchMove(e) {
     // If long-press hasn't fired yet, cancel if finger moved too much
     if (_touchTimer) {
       const dy = Math.abs(e.touches[0].clientY - _touchStartY);
@@ -242,7 +242,7 @@ export function enable(containerId, itemSelector, options = {}) {
 
   container.addEventListener('mousedown', onMouseDown);
   container.addEventListener('touchstart', onTouchStart, { passive: true });
-  container.addEventListener('touchmove', onTouchMover, { passive: false });
+  container.addEventListener('touchmove', onTouchMove, { passive: false });
   container.addEventListener('touchend', onTouchEnd);
   container.addEventListener('touchcancel', onTouchEnd);
 
@@ -250,7 +250,7 @@ export function enable(containerId, itemSelector, options = {}) {
     cleanup: () => {
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchmove', onTouchMover);
+      container.removeEventListener('touchmove', onTouchMove);
       container.removeEventListener('touchend', onTouchEnd);
       container.removeEventListener('touchcancel', onTouchEnd);
     },

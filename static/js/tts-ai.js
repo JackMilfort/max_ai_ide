@@ -7,7 +7,7 @@ class AITTSManager {
         this.isPlaying = false;
         this.available = false;
         this.useBrowserTTS = false;
-        this.browserVoz = '';
+        this.browserVoice = '';
         this.playbackSpeed = 1;
         this._provider = 'disabled';
         this.autoPlay = false;
@@ -49,7 +49,7 @@ class AITTSManager {
 
             if (stats.provider === 'browser') {
                 this.useBrowserTTS = true;
-                this.browserVoz = stats.voice || '';
+                this.browserVoice = stats.voice || '';
                 this.available = 'speechSynthesis' in window;
                 if (!this.available) {
                     console.warn('TTS: browser mode selected but speechSynthesis not supported');
@@ -69,7 +69,7 @@ class AITTSManager {
         // Strip <think>/<thinking> blocks (model reasoning)
         let cleaned = content.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
 
-        // Crear a temporary div to parse HTML/markdown
+        // Create a temporary div to parse HTML/markdown
         const temp = document.createElement('div');
         temp.innerHTML = cleaned;
 
@@ -161,10 +161,10 @@ class AITTSManager {
         }
     }
 
-    _findBrowserVoz() {
-        if (!this.browserVoz) return null;
-        const voices = window.speechSynthesis.getVozs();
-        const target = this.browserVoz.toLowerCase();
+    _findBrowserVoice() {
+        if (!this.browserVoice) return null;
+        const voices = window.speechSynthesis.getVoices();
+        const target = this.browserVoice.toLowerCase();
         // Try exact match first, then partial
         return voices.find(v => v.name.toLowerCase() === target) ||
                voices.find(v => v.name.toLowerCase().includes(target)) ||
@@ -200,7 +200,7 @@ class AITTSManager {
     _playBrowser(plainText) {
         return new Promise((resolve, reject) => {
             const utterance = new SpeechSynthesisUtterance(plainText);
-            const voice = this._findBrowserVoz();
+            const voice = this._findBrowserVoice();
             if (voice) utterance.voice = voice;
             utterance.rate = this.playbackSpeed;
 
@@ -219,7 +219,7 @@ class AITTSManager {
     }
 
     stop() {
-        // Cancelar streaming TTS
+        // Cancel streaming TTS
         this._streamActive = false;
         if (this._streamDebounceTimer) {
             clearTimeout(this._streamDebounceTimer);
@@ -285,7 +285,7 @@ class AITTSManager {
         button.innerHTML = ICON_LOADING;
         button.classList.add('loading');
         button.style.color = '#ccc';
-        button.title = 'Cargando...';
+        button.title = 'Loading...';
 
         try {
             if (!this._processing) return;
@@ -348,7 +348,7 @@ class AITTSManager {
         this._streamResetFn = null;
     }
 
-    streamingActualizar(accumulatedText) {
+    streamingUpdate(accumulatedText) {
         if (!this._streamActive || !this.available || !this.autoPlay) return;
         if (this._streamDebounceTimer) return;
         this._streamDebounceTimer = setTimeout(() => {
@@ -452,7 +452,7 @@ class AITTSManager {
     }
 }
 
-// Crear global AI TTS manager instance
+// Create global AI TTS manager instance
 window.aiTTSManager = new AITTSManager();
 
 // Function to add AI TTS button to a message element's action bar

@@ -1,7 +1,7 @@
 // static/js/voiceRecorder.js
 
 /**
- * Voz recording with optional Speech-to-Text transcription.
+ * Voice recording with optional Speech-to-Text transcription.
  *
  * STT providers:
  *   "disabled"       — record audio as file attachment (original behavior)
@@ -148,7 +148,7 @@ function insertTranscription(text, showToast) {
 /**
  * Start voice recording
  */
-export function startRecording(onFileCreard, showToast, showError) {
+export function startRecording(onFileCreated, showToast, showError) {
   // Check for secure context (getUserMedia requires HTTPS or localhost)
   if (!window.isSecureContext) {
     if (showError) showError('Microphone requires HTTPS. Use a reverse proxy with SSL or access via localhost.');
@@ -187,7 +187,7 @@ export function startRecording(onFileCreard, showToast, showError) {
           } else {
             if (showToast) showToast('No speech detected');
             const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
-            if (onFileCreard) onFileCreard(audioFile);
+            if (onFileCreated) onFileCreated(audioFile);
           }
         } else if (provider === 'local' || provider.startsWith('endpoint:')) {
           // Show "Transcribing..." feedback
@@ -204,12 +204,12 @@ export function startRecording(onFileCreard, showToast, showError) {
             if (showError) showError('Transcription failed: ' + e.message);
             // Fallback: attach as file
             const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
-            if (onFileCreard) onFileCreard(audioFile);
+            if (onFileCreated) onFileCreated(audioFile);
           }
         } else {
           // STT disabled — attach audio file
           const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
-          if (onFileCreard) onFileCreard(audioFile);
+          if (onFileCreated) onFileCreated(audioFile);
         }
 
         _resetRecordingUI();

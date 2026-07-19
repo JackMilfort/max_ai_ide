@@ -7,11 +7,11 @@
 
 import uiModule from './ui.js';
 import { selectSession } from './sessions.js';
-import { sortModeloIds } from './modelSort.js';
+import { sortModelIds } from './modelSort.js';
 
 const API = '/api/assistant';
 
-let _cachedConfiguración = null;   // most recent GET /api/assistant/settings payload
+let _cachedSettings = null;   // most recent GET /api/assistant/settings payload
 let _modalEl = null;
 
 async function _fetchJSON(url, opts = {}) {
@@ -29,20 +29,20 @@ export async function openAssistantChat() {
     }
     await selectSession(info.session_id);
     // Refresh settings cache so the header buttons / gear act on fresh data.
-    _cachedConfiguración = null;
+    _cachedSettings = null;
   } catch (e) {
     console.error('openAssistantChat failed:', e);
     uiModule.showToast('Could not open assistant');
   }
 }
 
-async function _getConfiguración(force = false) {
-  if (!force && _cachedConfiguración) return _cachedConfiguración;
-  _cachedConfiguración = await _fetchJSON(`${API}/settings`);
-  return _cachedConfiguración;
+async function _getSettings(force = false) {
+  if (!force && _cachedSettings) return _cachedSettings;
+  _cachedSettings = await _fetchJSON(`${API}/settings`);
+  return _cachedSettings;
 }
 
-async function _saveConfiguración(payload) {
+async function _saveSettings(payload) {
   const res = await fetch(`${API}/settings`, {
     method: 'PATCH',
     credentials: 'same-origin',
@@ -50,8 +50,8 @@ async function _saveConfiguración(payload) {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`PATCH ${API}/settings → ${res.status}`);
-  _cachedConfiguración = await res.json();
-  return _cachedConfiguración;
+  _cachedSettings = await res.json();
+  return _cachedSettings;
 }
 
 async function _listTimezones() {
@@ -76,7 +76,7 @@ async function _runCheckInNow(taskId) {
   }
 }
 
-// ── Configuración modal ─────────────────────────────────────────────────────────
+// ── Settings modal ─────────────────────────────────────────────────────────
 
 function _closeModal() {
   if (_modalEl) {
@@ -120,12 +120,12 @@ function _esc(s) {
 
 // Tool groups for the tool selector UI
 const TOOL_GROUPS = {
-  'Correo': ['list_emails', 'read_email', 'send_email', 'reply_to_email', 'archive_email', 'delete_email', 'mark_email_read'],
-  'Calendario & Notas': ['manage_calendar', 'manage_notes', 'manage_tasks'],
+  'Email': ['list_emails', 'read_email', 'send_email', 'reply_to_email', 'archive_email', 'delete_email', 'mark_email_read'],
+  'Calendar & Notes': ['manage_calendar', 'manage_notes', 'manage_tasks'],
   'Knowledge': ['web_search', 'read_file', 'manage_memory', 'manage_rag', 'search_chats'],
   'Code': ['bash', 'python', 'write_file'],
-  'Documentos': ['create_document', 'edit_document', 'update_document', 'suggest_document'],
-  'AI & Modelos': ['chat_with_model', 'ask_teacher', 'pipeline', 'list_models', 'generate_image'],
+  'Documents': ['create_document', 'edit_document', 'update_document', 'suggest_document'],
+  'AI & Models': ['chat_with_model', 'ask_teacher', 'pipeline', 'list_models', 'generate_image'],
   'System': ['manage_session', 'manage_endpoints', 'manage_mcp', 'manage_settings', 'manage_skills', 'manage_webhooks', 'manage_tokens', 'manage_documents', 'create_session', 'list_sessions', 'send_to_session', 'ui_control'],
 };
 
@@ -136,7 +136,7 @@ async function _fetchEndpoints() {
   } catch { return []; }
 }
 
-function _renderConfiguraciónBody(body, data, tzList) {
+function _renderSettingsBody(body, data, tzList) {
   const crew = data.crew || {};
   const checkIns = data.check_ins || [];
   const enabledTools = new Set(crew.enabled_tools || []);
@@ -196,13 +196,13 @@ function _renderConfiguraciónBody(body, data, tzList) {
       </div>
       <div class="assistant-field-row">
         <label class="assistant-field" style="flex:1;">
-          <span>Modelo endpoint</span>
+          <span>Model endpoint</span>
           <select id="assistant-endpoint" style="width:100%;">
             <option value="">(loading...)</option>
           </select>
         </label>
         <label class="assistant-field" style="flex:1;">
-          <span>Modelo</span>
+          <span>Model</span>
           <select id="assistant-model" style="width:100%;">
             <option value="${_esc(crew.model || '')}">${_esc(crew.model || '(default)')}</option>
           </select>
@@ -222,8 +222,8 @@ function _renderConfiguraciónBody(body, data, tzList) {
         ${checkInsHTML || '<div style="opacity:0.6;">No check-ins configured.</div>'}
       </div>
       <div class="assistant-settings-actions">
-        <button type="button" class="cal-btn" id="assistant-settings-cancel">Cancelar</button>
-        <button type="button" class="cal-btn cal-btn-primary" id="assistant-settings-save">Guardar</button>
+        <button type="button" class="cal-btn" id="assistant-settings-cancel">Cancel</button>
+        <button type="button" class="cal-btn cal-btn-primary" id="assistant-settings-save">Save</button>
       </div>
     </div>
   `;
@@ -252,7 +252,7 @@ function _renderConfiguraciónBody(body, data, tzList) {
         const models = await _fetchJSON(`/api/model-endpoints/${ep.id}/models`);
         let mHTML = '';
         const modelIds = (models.models || models || []).map(m => typeof m === 'string' ? m : (m.id || m.name || '')).filter(Boolean);
-        for (const mid of sortModeloIds(modelIds)) {
+        for (const mid of sortModelIds(modelIds)) {
           const sel = mid === crew.model ? ' selected' : '';
           mHTML += `<option value="${_esc(mid)}"${sel}>${_esc(mid.split('/').pop())}</option>`;
         }
@@ -358,12 +358,12 @@ function _renderConfiguraciónBody(body, data, tzList) {
       })),
     };
     try {
-      await _saveConfiguración(payload);
+      await _saveSettings(payload);
       uiModule.showToast('Assistant settings saved');
       _closeModal();
     } catch (e) {
       console.error(e);
-      uiModule.showToast('Guardar failed');
+      uiModule.showToast('Save failed');
     }
   });
   body.querySelectorAll('.assistant-checkin-run').forEach((btn) => {
@@ -377,7 +377,7 @@ function _renderConfiguraciónBody(body, data, tzList) {
       await _runCheckInNow(taskId);
       _closeModal();
       // Poll until done, then navigate to assistant chat
-      const sid = _cachedConfiguración?.crew?.session_id;
+      const sid = _cachedSettings?.crew?.session_id;
       const _poll = setInterval(async () => {
         try {
           const res = await fetch(`${API}/run-status/${encodeURIComponent(taskId)}`, { credentials: 'same-origin' });
@@ -398,15 +398,15 @@ function _renderConfiguraciónBody(body, data, tzList) {
   });
 }
 
-export async function openAssistantConfiguración() {
+export async function openAssistantSettings() {
   const modal = _ensureModalEl();
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
   const body = modal.querySelector('#assistant-settings-body');
   body.innerHTML = '<div class="hwfit-loading">Loading…</div>';
   try {
-    const [data, tzList] = await Promise.all([_getConfiguración(true), _listTimezones()]);
-    _renderConfiguraciónBody(body, data, tzList);
+    const [data, tzList] = await Promise.all([_getSettings(true), _listTimezones()]);
+    _renderSettingsBody(body, data, tzList);
   } catch (e) {
     console.error(e);
     body.innerHTML = '<div style="padding:12px;opacity:0.6;">Could not load assistant settings.</div>';
@@ -414,14 +414,14 @@ export async function openAssistantConfiguración() {
 }
 
 // Sidebar wiring removed — Assistant chat + settings now live as
-// Activity / Configuración tabs inside the Tareas modal (see tasks.js). The
+// Activity / Settings tabs inside the Tasks modal (see tasks.js). The
 // exports below are still used by tasks.js to surface those views.
 
 // ── Chat-header affordances when the assistant session is active ───────────
 
 async function _ensureHeaderAffordances(sessionId) {
   try {
-    const settings = await _getConfiguración();
+    const settings = await _getSettings();
     if (settings?.crew?.session_id !== sessionId) return;
   } catch {
     return;
@@ -435,7 +435,7 @@ async function _ensureHeaderAffordances(sessionId) {
   gear.title = 'Assistant settings';
   gear.className = 'chat-header-btn';
   gear.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-  gear.addEventListener('click', openAssistantConfiguración);
+  gear.addEventListener('click', openAssistantSettings);
   headerRight.appendChild(gear);
 }
 
@@ -469,7 +469,7 @@ if (document.readyState === 'loading') {
 
 const assistantModule = {
   openAssistantChat,
-  openAssistantConfiguración,
+  openAssistantSettings,
 };
 
 export default assistantModule;

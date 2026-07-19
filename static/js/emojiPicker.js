@@ -145,7 +145,7 @@ function togglePicker(anchor, target) {
   }
   _targetEl = target;
   _savedRange = null;
-  if (target.isContentEditarable) {
+  if (target.isContentEditable) {
     const sel = window.getSelection();
     if (sel && sel.rangeCount) {
       const r = sel.getRangeAt(0);
@@ -216,7 +216,7 @@ function _buildPicker() {
 
   const search = document.createElement('input');
   search.type = 'text';
-  search.placeholder = 'Buscar…';
+  search.placeholder = 'Search…';
   search.className = 'emoji-picker-search';
   el.appendChild(search);
 
@@ -280,7 +280,7 @@ function _insertEmoji(char) {
   const cp = char.codePointAt(0);
   const ins = cp >= 0x80 ? char + VS15 : char;
   // Contenteditable (e.g. WYSIWYG email body) — insert at the saved caret.
-  if (_targetEl.isContentEditarable) {
+  if (_targetEl.isContentEditable) {
     _targetEl.focus();
     let range = _savedRange;
     if (!range) {

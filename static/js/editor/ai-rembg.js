@@ -27,7 +27,7 @@
  *
  * @param {{
  *   applyImageTool:             (endpoint, payload, layerName, btn, opts?) => Promise<void>,
- *   openRecetasForDependency:  (pkg: string) => void,
+ *   openCookbookForDependency:  (pkg: string) => void,
  *   composite:                  () => void,
  *   renderLayerPanel:           () => void,
  *   uiModule:                   object,
@@ -38,7 +38,7 @@
 import { state } from './state.js';
 
 export function wireRembgAndSharpen({
-  applyImageTool, openRecetasForDependency,
+  applyImageTool, openCookbookForDependency,
   composite, renderLayerPanel, uiModule,
 }) {
   // ── Sharpen ──
@@ -55,7 +55,7 @@ export function wireRembgAndSharpen({
 
   // ── Bg Remove ──
   document.getElementById('ge-rembg-install-link')?.addEventListener('click', () => {
-    openRecetasForDependency('rembg');
+    openCookbookForDependency('rembg');
   });
   document.getElementById('ge-rembg-run')?.addEventListener('click', async () => {
     const payload = {};

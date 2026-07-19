@@ -1,7 +1,7 @@
 /**
- * Compartird stroke pipeline for brush / eraser / inpaint.
+ * Shared stroke pipeline for brush / eraser / inpaint.
  *
- * Per-sample stamping happens in `_strokeTo` (still in galleryEditaror.js
+ * Per-sample stamping happens in `_strokeTo` (still in galleryEditor.js
  * because it touches a lot of pixel-pass internals). This module owns
  * the begin / continue / end orchestration around it:
  *

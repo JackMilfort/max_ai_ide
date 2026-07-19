@@ -12,12 +12,12 @@ let uploaded = [];
 // Holds the full meta (id/name/mime/size/width/height/…) from the most recent
 // uploadPending() so callers can stamp width/height onto their attachment
 // objects without changing uploadPending()'s return signature.
-let _lastSubiredMeta = [];
+let _lastUploadedMeta = [];
 let API_BASE = '';
 let _uploadSpinners = [];
 let _uploadAbortCtrl = null;
 let _uploading = false;
-let _lastSubirCancelarled = false;
+let _lastUploadCancelled = false;
 const _previewUrls = new WeakMap();
 
 const MAX_FILES = 10;
@@ -61,7 +61,7 @@ async function _openMobileCropper(file) {
           <div class="attach-crop-box"><span class="attach-crop-handle"></span></div>
         </div>
         <div class="attach-crop-actions">
-          <button type="button" class="attach-crop-btn" data-action="cancel">Cancelar</button>
+          <button type="button" class="attach-crop-btn" data-action="cancel">Cancel</button>
           <button type="button" class="attach-crop-btn" data-action="original">Original</button>
           <button type="button" class="attach-crop-btn attach-crop-primary" data-action="crop">Use crop</button>
         </div>
@@ -258,18 +258,18 @@ function _createChip(f, idx) {
  * Remove a pending file by index
  */
 export function removePending(idx) {
-  if (_uploading) cancelSubir();
+  if (_uploading) cancelUpload();
   _revokePreviewUrl(pendingFiles[idx]);
   pendingFiles.splice(idx, 1);
   renderAttachStrip();
 }
 
 /**
- * Subir all pending files to server
+ * Upload all pending files to server
  */
 export async function uploadPending(opts = {}) {
   if (pendingFiles.length === 0) return [];
-  _lastSubirCancelarled = false;
+  _lastUploadCancelled = false;
 
   // The message bubble is shown immediately, but the upload can take a moment —
   // dim the chips and overlay a whirlpool so it's clear the files are still
@@ -317,7 +317,7 @@ export async function uploadPending(opts = {}) {
       // pendingFiles so the strip re-renders for a retry (see finally below).
       let detail = '';
       try { const e = await res.json(); detail = e.detail || e.error || ''; } catch (_) {}
-      _showToast('Subir failed' + (detail ? ': ' + detail : ` (HTTP ${res.status})`));
+      _showToast('Upload failed' + (detail ? ': ' + detail : ` (HTTP ${res.status})`));
       return [];
     }
     const data = await res.json();
@@ -328,17 +328,17 @@ export async function uploadPending(opts = {}) {
     }
     pendingFiles = [];          // clear only on success
     // Stash the full meta (incl. width/height for images) on the module so
-    // callers that want it can grab it via getLastSubiredMeta(). Keep the
+    // callers that want it can grab it via getLastUploadedMeta(). Keep the
     // returned shape as `ids` for backward-compatibility with existing call sites.
-    _lastSubiredMeta = uploaded;
+    _lastUploadedMeta = uploaded;
     return uploaded.map(x => x.id);
   } catch (e) {
     if (e && e.name === 'AbortError') {
-      _lastSubirCancelarled = true;
-      _showToast('Subir cancelled');
+      _lastUploadCancelled = true;
+      _showToast('Upload cancelled');
       return [];
     }
-    _showToast('Subir failed: ' + (e?.message || 'network error'));
+    _showToast('Upload failed: ' + (e?.message || 'network error'));
     return [];
   } finally {
     clearTimeout(timeoutId);
@@ -354,7 +354,7 @@ export async function uploadPending(opts = {}) {
 }
 
 /**
- * Agregar files to pending list (capped at MAX_FILES)
+ * Add files to pending list (capped at MAX_FILES)
  */
 export async function addFiles(files) {
   for (const f of files) {
@@ -376,7 +376,7 @@ export async function addFiles(files) {
   renderAttachStrip();
 }
 
-export async function cropForMobileSubir(file) {
+export async function cropForMobileUpload(file) {
   if (!_isMobileViewport() || !_isCroppableImage(file)) return file;
   try {
     return await _openMobileCropper(file);
@@ -434,27 +434,27 @@ export function getPendingInfo() {
  * Clear all pending files
  */
 export function clearPending() {
-  if (_uploading) cancelSubir();
+  if (_uploading) cancelUpload();
   pendingFiles.forEach(_revokePreviewUrl);
   pendingFiles = [];
   renderAttachStrip();
 }
 
 /** Full meta (incl. width/height for images) from the most recent uploadPending(). */
-export function getLastSubiredMeta() {
-  return _lastSubiredMeta;
+export function getLastUploadedMeta() {
+  return _lastUploadedMeta;
 }
 
-export function isSubiring() {
+export function isUploading() {
   return _uploading;
 }
 
-export function wasLastSubirCancelarled() {
-  return _lastSubirCancelarled;
+export function wasLastUploadCancelled() {
+  return _lastUploadCancelled;
 }
 
-export function cancelSubir() {
-  _lastSubirCancelarled = true;
+export function cancelUpload() {
+  _lastUploadCancelled = true;
   if (_uploadAbortCtrl && !_uploadAbortCtrl.signal.aborted) {
     try { _uploadAbortCtrl.abort(); } catch (_) {}
   }
@@ -469,15 +469,15 @@ const fileHandlerModule = {
   removePending,
   uploadPending,
   addFiles,
-  cropForMobileSubir,
+  cropForMobileUpload,
   getPendingCount,
   getPendingInfo,
   getPendingRaw,
   clearPending,
-  getLastSubiredMeta,
-  isSubiring,
-  wasLastSubirCancelarled,
-  cancelSubir,
+  getLastUploadedMeta,
+  isUploading,
+  wasLastUploadCancelled,
+  cancelUpload,
 };
 
 export default fileHandlerModule;

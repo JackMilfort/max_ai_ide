@@ -9,11 +9,11 @@ import spinnerModule from './spinner.js';
 import { providerLogo } from './providers.js';
 import { modelColor } from './chatRenderer.js';
 import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
-import { openRecetasDependencies } from './cookbook-diagnosis.js';
+import { openCookbookDependencies } from './cookbook-diagnosis.js';
 import { _hwfitCache } from './cookbook-hwfit.js';
 import { topPortalZ } from './toolWindowZOrder.js';
 
-// Compartird state/functions injected by init()
+// Shared state/functions injected by init()
 let _envState;
 let _sshCmd;
 let _getPort;
@@ -29,7 +29,7 @@ let _shellQuote;
 let _psQuote;
 let _detectBackend;
 let _detectToolParser;
-let _detectModeloOptimizations;
+let _detectModelOptimizations;
 let _loadPresets;
 let _savePresets;
 let _copyText;
@@ -38,33 +38,33 @@ let _getGpuToggleTotal;
 let modelLogo;
 let esc;
 let _launchServeTask;
-let _retryDescargar;
+let _retryDownload;
 let _nextAvailablePort;
 
 // Storage keys
 const SERVE_STATE_KEY = 'cookbook-serve-state';
 const SERVE_FAVORITES_KEY = 'cookbook-serve-favorite-models';
 
-let _cachedAllModelos = [];
+let _cachedAllModels = [];
 const _CACHED_MODELS_SCAN_KEY = 'cookbook_cached_models_scan_v1';
 const _CACHED_MODELS_SCAN_TTL = 6 * 3600 * 1000;
 
-function _normalizeRecetasModeloDir(dir) {
+function _normalizeCookbookModelDir(dir) {
   const d = String(dir || '').replaceAll('✕', '').replaceAll('✖', '').trim();
   return /^(home|mnt|media|data|opt|srv|var)\//.test(d) ? `/${d}` : d;
 }
 
-function _readCachedModeloScan(sig) {
+function _readCachedModelScan(sig) {
   try {
     const all = JSON.parse(localStorage.getItem(_CACHED_MODELS_SCAN_KEY) || '{}');
     const entry = all[sig];
     if (entry && Date.now() - (entry.ts || 0) < _CACHED_MODELS_SCAN_TTL) {
       const data = entry.data || null;
       const models = Array.isArray(data?.models) ? data.models : [];
-      const staleDescargaring = models.some(m =>
-        (m?.status === 'downloading' || m?.has_incomplete) && !_isActivelyDescargaring(m?.repo_id)
+      const staleDownloading = models.some(m =>
+        (m?.status === 'downloading' || m?.has_incomplete) && !_isActivelyDownloading(m?.repo_id)
       );
-      if (!staleDescargaring) return data;
+      if (!staleDownloading) return data;
       delete all[sig];
       localStorage.setItem(_CACHED_MODELS_SCAN_KEY, JSON.stringify(all));
     }
@@ -72,7 +72,7 @@ function _readCachedModeloScan(sig) {
   return null;
 }
 
-function _writeCachedModeloScan(sig, data) {
+function _writeCachedModelScan(sig, data) {
   try {
     const all = JSON.parse(localStorage.getItem(_CACHED_MODELS_SCAN_KEY) || '{}');
     all[sig] = { ts: Date.now(), data };
@@ -152,7 +152,7 @@ function _repoLooksGgufLike(model, repo) {
   return !!model?.is_gguf || hasGgufFile || /^Q[2-8]/.test(q) || /^IQ/.test(q) || q === 'GGUF' || n.includes('gguf');
 }
 
-function _serveBackendAdvertencia(model, repo, backend, fields = {}) {
+function _serveBackendWarning(model, repo, backend, fields = {}) {
   const awqLike = _repoLooksAwqLike(model, repo);
   const ggufLike = _repoLooksGgufLike(model, repo);
   if (awqLike && (backend === 'llamacpp' || backend === 'ollama')) {
@@ -345,7 +345,7 @@ function _modelSizeGb(model, explicitGb = 0) {
     || 0
   );
   if (Number.isFinite(gb) && gb > 0) return gb;
-  if (_isMiniMaxM3Modelo(model)) return 240;
+  if (_isMiniMaxM3Model(model)) return 240;
   return 0;
 }
 
@@ -362,8 +362,8 @@ function _parseParamsB(text) {
   return 0;
 }
 
-function _knownModeloContextMax(model) {
-  if (_isMiniMaxM3Modelo(model)) return 1048576;
+function _knownModelContextMax(model) {
+  if (_isMiniMaxM3Model(model)) return 1048576;
   return 0;
 }
 
@@ -381,7 +381,7 @@ function _modelIdentityText(model) {
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
-function _isMiniMaxM3Modelo(model) {
+function _isMiniMaxM3Model(model) {
   const name = _modelIdentityText(model);
   return (
     (/minimax/.test(name) && /\bm3\b/.test(name))
@@ -391,7 +391,7 @@ function _isMiniMaxM3Modelo(model) {
   );
 }
 
-function _isMiniMaxM2Modelo(model) {
+function _isMiniMaxM2Model(model) {
   const name = _modelIdentityText(model);
   return /minimax/.test(name) && /\bm2(?:\.\d+)?\b/.test(name);
 }
@@ -399,7 +399,7 @@ function _isMiniMaxM2Modelo(model) {
 function _modelContextMaxForServe(model, explicitMax) {
   const explicit = Number(explicitMax || 0);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
-  const known = _knownModeloContextMax(model);
+  const known = _knownModelContextMax(model);
   if (known > 0) return known;
   for (const key of ['context_length', 'max_position_embeddings', 'n_ctx_train', 'model_max_length', 'max_seq_len']) {
     const value = Number(model?.[key] || 0);
@@ -412,7 +412,7 @@ function _modelContextMaxForServe(model, explicitMax) {
 
 function _estimateVllmContextFit(model, fields, modelCtxMax, modelWeightsGb = 0, fitSystem = null) {
   const sys = fitSystem || _hwfitCache?.system || {};
-  const isMiniMaxM3 = _isMiniMaxM3Modelo(model);
+  const isMiniMaxM3 = _isMiniMaxM3Model(model);
   const gpuIds = String(fields.gpus || '').split(',').map(s => parseInt(s.trim(), 10)).filter(Number.isFinite);
   const tp = Math.max(1, parseInt(fields.tp, 10) || gpuIds.length || 1);
   const selectedCount = Math.max(1, gpuIds.length || tp);
@@ -428,7 +428,7 @@ function _estimateVllmContextFit(model, fields, modelCtxMax, modelWeightsGb = 0,
   const gpuUtil = Math.min(0.99, Math.max(0.1, parseFloat(fields.gpu_mem) || 0.90));
   const budgetGb = perGpuGb * selectedCount * gpuUtil;
   const modelGb = _modelSizeGb(model, modelWeightsGb);
-  if (!modelGb) return { needsModeloSize: true, reason: 'model weight size unknown; scan model files or enter context manually' };
+  if (!modelGb) return { needsModelSize: true, reason: 'model weight size unknown; scan model files or enter context manually' };
   const modelMax = Math.max(1024, _modelContextMaxForServe(model, modelCtxMax));
 
   if (isMiniMaxM3) {
@@ -520,7 +520,7 @@ function _estimateLlamaContextFit(model, fields, modelCtxMax, modelWeightsGb = 0
   if (!modelGb) {
     return {
       ctx: Math.min(modelMax, 32768),
-      needsModeloSize: true,
+      needsModelSize: true,
       reason: 'model weight size unknown; using model limit fallback',
     };
   }
@@ -675,7 +675,7 @@ async function _fetchServeRuntimePackage(panel, backend) {
   const packageName = packageByBackend[backend];
   if (!packageName) return null;
   const target = _selectedServeTarget(panel);
-  const params = new URLBuscarParams();
+  const params = new URLSearchParams();
   if (target.host) {
     params.set('host', target.host);
     if (target.port) params.set('ssh_port', target.port);
@@ -728,7 +728,7 @@ function _filterCachedList() {
 // actively pulling it, it's really a stalled/partial download — so we label it
 // accordingly. Reads the running-tab tasks straight from localStorage (same
 // key the running module writes) to avoid a cross-module import cycle.
-function _isActivelyDescargaring(repoId) {
+function _isActivelyDownloading(repoId) {
   try {
     const tasks = JSON.parse(localStorage.getItem('cookbook-tasks')) || [];
     const short = (repoId || '').split('/').pop();
@@ -758,14 +758,14 @@ function _formatGgufSize(bytes) {
   return `${Math.max(1, Math.round(n / 1024))} KB`;
 }
 
-function _ggufFilesForModelo(model) {
+function _ggufFilesForModel(model) {
   return Array.isArray(model?.gguf_files)
     ? model.gguf_files.filter(f => f && typeof f.rel_path === 'string' && f.rel_path)
     : [];
 }
 
 function _runnableGgufFiles(model) {
-  const files = _ggufFilesForModelo(model);
+  const files = _ggufFilesForModel(model);
   const primary = files.filter(f => (f.role || 'model') === 'model');
   return primary.length ? primary : files;
 }
@@ -778,7 +778,7 @@ function _selectedGgufSizeGb(model, relPath) {
 }
 
 function _projectorGgufFiles(model) {
-  return _ggufFilesForModelo(model)
+  return _ggufFilesForModel(model)
     .filter(f => (f.role || '') === 'projector' || /(^|\/)mmproj[^/]*\.gguf$/i.test(f.rel_path || f.name || ''))
     .sort((a, b) => String(a.rel_path || a.name || '').localeCompare(String(b.rel_path || b.name || '')));
 }
@@ -796,7 +796,7 @@ function _ggufFileLabel(file) {
 function _ggufTaskDisplayPart(model, relPath) {
   const rel = String(relPath || '');
   if (!rel) return '';
-  const file = _ggufFilesForModelo(model).find(f => f.rel_path === rel);
+  const file = _ggufFilesForModel(model).find(f => f.rel_path === rel);
   if (file?.quant) return String(file.quant).toUpperCase().replace(/^UD-/, '');
   const parts = rel.split('/').filter(Boolean);
   const base = parts[parts.length - 1] || '';
@@ -822,7 +822,7 @@ function _safeGgufRelPath(relPath) {
   return rel;
 }
 
-function _ggufEliminarChoice(repo, files) {
+function _ggufDeleteChoice(repo, files) {
   return new Promise(resolve => {
     let overlay = document.getElementById('cookbook-gguf-delete-overlay');
     if (!overlay) {
@@ -831,15 +831,15 @@ function _ggufEliminarChoice(repo, files) {
       overlay.className = 'modal hidden';
       overlay.innerHTML =
         '<div class="modal-content styled-confirm-box cookbook-gguf-delete-box" role="dialog" aria-modal="true" aria-labelledby="cookbook-gguf-delete-title">' +
-          '<div class="modal-header"><h4 id="cookbook-gguf-delete-title">Eliminar GGUF files</h4></div>' +
+          '<div class="modal-header"><h4 id="cookbook-gguf-delete-title">Delete GGUF files</h4></div>' +
           '<div class="modal-body">' +
             '<p id="cookbook-gguf-delete-msg"></p>' +
             '<div id="cookbook-gguf-delete-list" class="cookbook-gguf-delete-list"></div>' +
           '</div>' +
           '<div class="modal-footer cookbook-gguf-delete-actions">' +
-            '<button type="button" id="cookbook-gguf-delete-cancel" class="confirm-btn confirm-btn-secondary">Cancelar</button>' +
+            '<button type="button" id="cookbook-gguf-delete-cancel" class="confirm-btn confirm-btn-secondary">Cancel</button>' +
             '<button type="button" id="cookbook-gguf-delete-repo" class="confirm-btn confirm-btn-secondary">Whole repo</button>' +
-            '<button type="button" id="cookbook-gguf-delete-selected" class="confirm-btn confirm-btn-danger">Eliminar selected</button>' +
+            '<button type="button" id="cookbook-gguf-delete-selected" class="confirm-btn confirm-btn-danger">Delete selected</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(overlay);
@@ -869,7 +869,7 @@ function _ggufEliminarChoice(repo, files) {
     function cleanup(result) {
       overlay.classList.add('hidden');
       overlay.style.display = 'none';
-      cancelBtn.removeEventListener('click', onCancelar);
+      cancelBtn.removeEventListener('click', onCancel);
       repoBtn.removeEventListener('click', onRepo);
       selectedBtn.removeEventListener('click', onSelected);
       overlay.removeEventListener('click', onBackdrop);
@@ -877,7 +877,7 @@ function _ggufEliminarChoice(repo, files) {
       try { prevFocus && prevFocus.focus && prevFocus.focus(); } catch {}
       resolve(result);
     }
-    function onCancelar() { cleanup(null); }
+    function onCancel() { cleanup(null); }
     function onRepo() { cleanup({ mode: 'repo' }); }
     function onSelected() {
       const selected = [...list.querySelectorAll('input[type="checkbox"]:checked')]
@@ -898,7 +898,7 @@ function _ggufEliminarChoice(repo, files) {
       }
     }
 
-    cancelBtn.addEventListener('click', onCancelar);
+    cancelBtn.addEventListener('click', onCancel);
     repoBtn.addEventListener('click', onRepo);
     selectedBtn.addEventListener('click', onSelected);
     overlay.addEventListener('click', onBackdrop);
@@ -931,18 +931,18 @@ function _selectedGgufExpr(model, repo, relPath) {
   return `$(printf %s \${HOME}${_shellQuote(`/.cache/huggingface/hub/models--${cacheRepo}/snapshots/${rel}`)})`;
 }
 
-function _ggufBuscarDirExpr(model, repo) {
+function _ggufSearchDirExpr(model, repo) {
   if (model.is_local_dir && model.path) return _shellQuote(`${String(model.path || '').replace(/\/+$/, '')}/${repo}`);
   if (model.path) return _shellQuote(`${String(model.path || '').replace(/\/+$/, '')}/models--${repo.replace(/\//g, '--')}/snapshots`);
   return `"$HOME/.cache/huggingface/hub/models--${repo.replace(/\//g, '--')}/snapshots"`;
 }
 
-function _rerenderCachedModelos() {
+function _rerenderCachedModels() {
   const list = document.getElementById('hwfit-cached-list');
   const tagContainer = document.getElementById('serve-tags');
-  if (!list || !_cachedAllModelos.length) return;
+  if (!list || !_cachedAllModels.length) return;
 
-  const allModelos = _cachedAllModelos;
+  const allModels = _cachedAllModels;
   const _h = (text) => `<span class="hwfit-hint" title="${text}">?</span>`;
 
   const activeTag = tagContainer?.querySelector('.memory-cat-chip.active')?.dataset.serveTag || '';
@@ -950,12 +950,12 @@ function _rerenderCachedModelos() {
 
   const sortVal = document.getElementById('serve-sort')?.value || 'name';
   const _parseSize = (s) => { const m = (s || '').match(/([\d.]+)\s*(GB|MB|KB)/i); if (!m) return 0; const n = parseFloat(m[1]); if (m[2] === 'GB') return n * 1024; if (m[2] === 'MB') return n; return n / 1024; };
-  if (sortVal === 'name') allModelos.sort((a, b) => (a.repo_id || '').localeCompare(b.repo_id || ''));
-  else if (sortVal === 'size-desc') allModelos.sort((a, b) => _parseSize(b.size) - _parseSize(a.size));
-  else if (sortVal === 'size-asc') allModelos.sort((a, b) => _parseSize(a.size) - _parseSize(b.size));
-  else if (sortVal === 'recent') allModelos.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+  if (sortVal === 'name') allModels.sort((a, b) => (a.repo_id || '').localeCompare(b.repo_id || ''));
+  else if (sortVal === 'size-desc') allModels.sort((a, b) => _parseSize(b.size) - _parseSize(a.size));
+  else if (sortVal === 'size-asc') allModels.sort((a, b) => _parseSize(a.size) - _parseSize(b.size));
+  else if (sortVal === 'recent') allModels.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
   const favorites = _loadServeFavorites();
-  allModelos.sort((a, b) => {
+  allModels.sort((a, b) => {
     const af = favorites.has(String(a.repo_id || '')) ? 1 : 0;
     const bf = favorites.has(String(b.repo_id || '')) ? 1 : 0;
     return bf - af;
@@ -963,7 +963,7 @@ function _rerenderCachedModelos() {
 
   let html = '';
   let visibleCount = 0;
-  for (const m of allModelos) {
+  for (const m of allModels) {
     if (activeTag && m._tag !== activeTag) continue;
     if (searchVal && !(m.repo_id || '').toLowerCase().includes(searchVal)) continue;
     visibleCount++;
@@ -980,8 +980,8 @@ function _rerenderCachedModelos() {
     // "downloading" status now renders as a title-row pill instead of
     // a meta-row text label, matching the "running" pill style and
     // living on the same line as the model name.
-    const _isDescargaring = m.status === 'downloading';
-    const _isDlActive = _isDescargaring ? _isActivelyDescargaring(m.repo_id) : false;
+    const _isDownloading = m.status === 'downloading';
+    const _isDlActive = _isDownloading ? _isActivelyDownloading(m.repo_id) : false;
     const _isFavorite = favorites.has(String(m.repo_id || ''));
     const isSelectMode = document.getElementById('hwfit-cache-select')?.classList.contains('active');
     html += `<div class="doclib-card memory-item${_isFavorite ? ' memory-pinned cookbook-serve-favorite-model' : ''}" data-repo="${esc(m.repo_id)}" data-tag="${m._tag || ''}" data-family="${m._family || ''}" style="cursor:pointer;">`;
@@ -991,8 +991,8 @@ function _rerenderCachedModelos() {
     const _runningPill = _isActivelyServing(m.repo_id)
       ? ` <span class="cookbook-serve-running-pill is-clickable" title="This model is currently being served — click to open in Running" data-repo="${esc(m.repo_id)}" role="button" tabindex="0">running</span>`
       : '';
-    const _downloadingPill = _isDescargaring
-      ? ` <span class="cookbook-serve-downloading-pill${_isDlActive ? '' : ' is-stalled'}" title="${_isDlActive ? 'Descargar in progress' : 'Descargar stalled — retry to resume'}">${_isDlActive ? 'downloading' : 'stalled'}</span>`
+    const _downloadingPill = _isDownloading
+      ? ` <span class="cookbook-serve-downloading-pill${_isDlActive ? '' : ' is-stalled'}" title="${_isDlActive ? 'Download in progress' : 'Download stalled — retry to resume'}">${_isDlActive ? 'downloading' : 'stalled'}</span>`
       : '';
     const _favoritePill = _isFavorite ? ' <span class="memory-cat-badge memory-cat-pinned cookbook-serve-fav-badge">pinned</span>' : '';
     html += `<div class="memory-item-title cookbook-serve-title"${_mc ? ` style="color:${_mc}"` : ''}><span class="cookbook-serve-title-name">${modelLogo(m.repo_id)}${esc(shortName)}</span>${_favoritePill}${hfLink ? ` <a href="${esc(hfLink)}" target="_blank" rel="noopener" class="cookbook-hf-link">HF ↗</a>` : ''}${_runningPill}${_downloadingPill}</div>`;
@@ -1003,7 +1003,7 @@ function _rerenderCachedModelos() {
       : _bk === 'diffusers' ? '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM6 9c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm6 4c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm4-8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="currentColor"/></svg>'
       : '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 4l8 16 8-16h-4l-4 8-4-8z" fill="currentColor"/></svg>';
     html += `<span class="cookbook-card-backend" data-detected="${_bk}">${_bkIco}</span>`;
-    html += `<div class="memory-item-actions"><button type="button" class="memory-item-btn hwfit-cached-menu-btn" title="Actions" aria-label="Modelo actions"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div>`;
+    html += `<div class="memory-item-actions"><button type="button" class="memory-item-btn hwfit-cached-menu-btn" title="Actions" aria-label="Model actions"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div>`;
     html += `</div>`;
   }
   if (!visibleCount) html += '<div class="hwfit-loading">No matching models</div>';
@@ -1063,13 +1063,13 @@ function _rerenderCachedModelos() {
       const item = btn.closest('.memory-item');
       const repo = item?.dataset.repo;
       if (!repo) return;
-      const m = allModelos.find(x => x.repo_id === repo);
+      const m = allModels.find(x => x.repo_id === repo);
 
       const dropdown = document.createElement('div');
       dropdown.className = 'hwfit-cached-dropdown';
       dropdown._anchor = btn;
       btn.classList.add('cookbook-menu-active');
-      // Compartird close — used by every item, the mobile Cancelar, outside-click,
+      // Shared close — used by every item, the mobile Cancel, outside-click,
       // and the Escape arbiter (reassigned to the registry-aware close below).
       let closeDropdown = () => { dropdown.remove(); btn.classList.remove('cookbook-menu-active'); };
       const _di = (svg) => `<span class="dropdown-icon">${svg}</span>`;
@@ -1088,7 +1088,7 @@ function _rerenderCachedModelos() {
       if (m && m.status === 'downloading') items.push({ label: 'Retry', icon: _retryIco, action: 'retry' });
       if (m && m.status === 'ready') items.push({ label: 'Schedule…', icon: _schedIco, action: 'schedule' });
       items.push({ label: 'Select', icon: _selectIco, action: 'select' });
-      items.push({ label: 'Eliminar', icon: _deleteIco, action: 'delete', danger: true });
+      items.push({ label: 'Delete', icon: _deleteIco, action: 'delete', danger: true });
       for (const opt of items) {
         const div = document.createElement('div');
         div.className = 'dropdown-item-compact' + (opt.danger ? ' dropdown-item-danger' : '');
@@ -1099,10 +1099,10 @@ function _rerenderCachedModelos() {
           else if (opt.action === 'favorite') {
             const favored = _toggleServeFavorite(repo);
             uiModule.showToast(favored ? 'Favorited — pinned to top' : 'Unfavorited');
-            _rerenderCachedModelos();
+            _rerenderCachedModels();
           }
-          else if (opt.action === 'delete') _deleteCachedModelo(repo, item, false, m);
-          else if (opt.action === 'retry') _retryCachedModelo(repo, m);
+          else if (opt.action === 'delete') _deleteCachedModel(repo, item, false, m);
+          else if (opt.action === 'retry') _retryCachedModel(repo, m);
           else if (opt.action === 'schedule') {
             // Same entry point as the ^ button next to Launch — let
             // cookbookSchedule.js handle it. Expand the panel first
@@ -1118,7 +1118,7 @@ function _rerenderCachedModelos() {
             const bulkBar = document.getElementById('serve-bulk-bar');
             if (selectBtn) {
               selectBtn.classList.add('active');
-              selectBtn.textContent = 'Cancelar';
+              selectBtn.textContent = 'Cancel';
             }
             if (bulkBar) bulkBar.classList.remove('hidden');
             document.querySelectorAll('.serve-select-cb').forEach(dot => {
@@ -1136,12 +1136,12 @@ function _rerenderCachedModelos() {
         });
         dropdown.appendChild(div);
       }
-      // Mobile-only Cancelar — gives an explicit close on touch devices where
+      // Mobile-only Cancel — gives an explicit close on touch devices where
       // outside-tap-to-close is fiddly. Hidden on desktop via CSS.
       const _cancelIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
       const cancelDiv = document.createElement('div');
       cancelDiv.className = 'dropdown-item-compact dropdown-cancel-mobile';
-      cancelDiv.innerHTML = _di(_cancelIco) + '<span>Cancelar</span>';
+      cancelDiv.innerHTML = _di(_cancelIco) + '<span>Cancel</span>';
       cancelDiv.addEventListener('click', () => { closeDropdown(); });
       dropdown.appendChild(cancelDiv);
       const rect = btn.getBoundingClientRect();
@@ -1176,12 +1176,12 @@ function _rerenderCachedModelos() {
       if (document.getElementById('hwfit-cache-select')?.classList.contains('active')) return;
       const repo = item.dataset.repo;
       if (!repo) return;
-      const m = allModelos.find(x => x.repo_id === repo);
+      const m = allModels.find(x => x.repo_id === repo);
       if (!m) return;
       if (m.status !== 'ready') {
-        if (m.status === 'downloading' && !_isActivelyDescargaring(m.repo_id)) {
+        if (m.status === 'downloading' && !_isActivelyDownloading(m.repo_id)) {
           uiModule.showToast?.('Refreshing cached model status…');
-          _fetchCachedModelos(true);
+          _fetchCachedModels(true);
         }
         return;
       }
@@ -1213,7 +1213,7 @@ function _rerenderCachedModelos() {
 
       const shortName = repo.split('/').pop();
       const _es = _envState;
-      // The venv set per-server in Configuración (server.envPath). Used as the venv
+      // The venv set per-server in Settings (server.envPath). Used as the venv
       // field default when the global active env path isn't carrying it, so a
       // configured server venv shows up without re-typing it.
       const _selSrv = _serverByVal?.(_es.remoteServerKey || _es.remoteHost || '') || {};
@@ -1232,8 +1232,8 @@ function _rerenderCachedModelos() {
         : (_lastUsed || (_isLegacyFlat ? _allSs : {}));
       const _modelSs = (_byRepo[repo] && typeof _byRepo[repo] === 'object') ? _byRepo[repo] : null;
       const _repoForcedBackend = !!(_modelSs && _modelSs._forceBackend);
-      const _isMiniMaxM3 = _isMiniMaxM3Modelo({ ...m, repo_id: repo });
-      const _isMiniMaxM2 = _isMiniMaxM2Modelo({ ...m, repo_id: repo });
+      const _isMiniMaxM3 = _isMiniMaxM3Model({ ...m, repo_id: repo });
+      const _isMiniMaxM2 = _isMiniMaxM2Model({ ...m, repo_id: repo });
       const _isMiniMaxMSeries = _isMiniMaxM3 || _isMiniMaxM2;
       const _toolParserDefault = _detectToolParser(repo);
       const _isStepFunStep = _toolParserDefault === 'step3p5';
@@ -1262,9 +1262,9 @@ function _rerenderCachedModelos() {
       const dtypeOpts = ['auto','float16','bfloat16'].map(d => `<option value="${d}"${sv('dtype','auto')===d?' selected':''}>${d}</option>`).join('');
       // KV cache default — most models are fine on auto, but a few
       // (e.g. DeepSeek-V3/V4/R1 MoE) need fp8 explicitly or the launch
-      // OOMs. _detectModeloOptimizations seeds opts.kvCacheDtype for
+      // OOMs. _detectModelOptimizations seeds opts.kvCacheDtype for
       // those families; honour it unless the user has a saved override.
-      const _kvOptsCheck = _detectModeloOptimizations(repo);
+      const _kvOptsCheck = _detectModelOptimizations(repo);
       const _kvAutoDefault = (_kvOptsCheck && _kvOptsCheck.kvCacheDtype) || (_isMiniMaxMSeries ? 'fp8' : 'auto');
       const _kvSelected = sv('vllm_kv_cache_dtype', _kvAutoDefault);
       const vllmKvCacheOpts = ['auto','fp8'].map(d => `<option value="${d}"${_kvSelected===d?' selected':''}>${d}</option>`).join('');
@@ -1285,18 +1285,18 @@ function _rerenderCachedModelos() {
         `<option value="${esc(f.rel_path)}"${f.rel_path === _defaultGguf ? ' selected' : ''}>${esc(_ggufFileLabel(f))}</option>`
       ).join('');
       const _minimaxM3Snapshot = '/home/pewds/.cache/huggingface/hub/models--cyankiwi--MiniMax-M3-AWQ-INT4/snapshots/4082acbbec1236d21828d55b6bb0fe02ade4ab5b';
-      const _defaultServeModelo = _isMiniMaxM3 ? _minimaxM3Snapshot : (m.is_local_dir && m.path ? `${m.path}/${repo}` : repo);
-      const _savedModeloPath = String(svm('model_path', _defaultServeModelo) || '').trim();
-      const _modelPathValue = _isMiniMaxM3 && (!_savedModeloPath || _savedModeloPath === repo) ? _minimaxM3Snapshot : _savedModeloPath;
-      const _defaultServedModeloName = _isMiniMaxM3 ? repo : '';
+      const _defaultServeModel = _isMiniMaxM3 ? _minimaxM3Snapshot : (m.is_local_dir && m.path ? `${m.path}/${repo}` : repo);
+      const _savedModelPath = String(svm('model_path', _defaultServeModel) || '').trim();
+      const _modelPathValue = _isMiniMaxM3 && (!_savedModelPath || _savedModelPath === repo) ? _minimaxM3Snapshot : _savedModelPath;
+      const _defaultServedModelName = _isMiniMaxM3 ? repo : '';
       // Build save slots
       const _allPresets = _loadPresets();
       const _repoShort = repo.split('/').pop();
-      const _modelPresets = _presetsForModelo(_allPresets, repo);
-      // Guardard configs live in a single dropdown (used to be a row of squeezed
+      const _modelPresets = _presetsForModel(_allPresets, repo);
+      // Saved configs live in a single dropdown (used to be a row of squeezed
       // chips). The toggle shows the count; the menu lists each config (click to
-      // load, × to delete) plus a "Guardar current config" row — see _showGuardardConfigMenu.
-      // Split button: "Guardar" saves the current config directly; the arrow opens
+      // load, × to delete) plus a "Save current config" row — see _showSavedConfigMenu.
+      // Split button: "Save" saves the current config directly; the arrow opens
       // the dropdown of saved configs (load / delete). Arrow shows the count.
       // The arrow button shows just the saved-config count next to a "▾".
       // Spell out what the number means in the tooltip so users don't have
@@ -1304,9 +1304,9 @@ function _rerenderCachedModelos() {
       const _arrowLabel = _modelPresets.length > 0 ? `${_modelPresets.length} ▾` : '▾';
       const _arrowTitle = _modelPresets.length > 0
         ? `${_modelPresets.length} saved launch config${_modelPresets.length === 1 ? '' : 's'} for ${_repoShort} — click ▾ to load or delete`
-        : `No saved launch configs for ${_repoShort} yet — click Guardar to add one`;
-      let _slotsHtml = `<div class="cookbook-serve-slots cookbook-saved-split" title="Guardard launch configurations for this model — click ▾ to load or delete">`
-        + `<button type="button" class="cookbook-slot-btn cookbook-saved-save" title="Guardar current preset"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Preset</button>`
+        : `No saved launch configs for ${_repoShort} yet — click Save to add one`;
+      let _slotsHtml = `<div class="cookbook-serve-slots cookbook-saved-split" title="Saved launch configurations for this model — click ▾ to load or delete">`
+        + `<button type="button" class="cookbook-slot-btn cookbook-saved-save" title="Save current preset"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Preset</button>`
         + `<button type="button" class="cookbook-slot-btn cookbook-saved-arrow" title="${esc(_arrowTitle)}">${_arrowLabel}</button>`
         + `</div>`;
 
@@ -1331,7 +1331,7 @@ function _rerenderCachedModelos() {
           : `This model's download isn't complete yet (${esc(m.size || 'partial')}). The serve will start but is likely to crash on a missing shard. Wait for the download to finish, or relaunch after it's done.`;
         panelHtml += `<div class="hwfit-serve-warn" style="margin:0 0 8px;padding:6px 10px;border-radius:5px;font-size:11px;background:color-mix(in srgb, var(--color-warning, #f0ad4e) 14%, transparent);border:1px solid color-mix(in srgb, var(--color-warning, #f0ad4e) 40%, transparent);color:var(--color-warning, #f0ad4e);display:flex;gap:6px;align-items:flex-start;line-height:1.4;"><span aria-hidden="true">⚠</span><span>${_warnText}</span></div>`;
       }
-      panelHtml += `<div class="hwfit-serve-vision-warn" style="display:none;margin:0 0 8px;padding:6px 10px;border-radius:5px;font-size:11px;background:color-mix(in srgb, var(--color-warning, #f0ad4e) 14%, transparent);border:1px solid color-mix(in srgb, var(--color-warning, #f0ad4e) 40%, transparent);color:var(--color-warning, #f0ad4e);gap:6px;align-items:flex-start;line-height:1.4;"><span aria-hidden="true">⚠</span><span>Vision is enabled, but no mmproj GGUF projector was found in the cached model scan. Descargar an mmproj-*.gguf for this model, then refresh the cached model list before launching.</span></div>`;
+      panelHtml += `<div class="hwfit-serve-vision-warn" style="display:none;margin:0 0 8px;padding:6px 10px;border-radius:5px;font-size:11px;background:color-mix(in srgb, var(--color-warning, #f0ad4e) 14%, transparent);border:1px solid color-mix(in srgb, var(--color-warning, #f0ad4e) 40%, transparent);color:var(--color-warning, #f0ad4e);gap:6px;align-items:flex-start;line-height:1.4;"><span aria-hidden="true">⚠</span><span>Vision is enabled, but no mmproj GGUF projector was found in the cached model scan. Download an mmproj-*.gguf for this model, then refresh the cached model list before launching.</span></div>`;
       // Row 1: Engine + Server + Env
       panelHtml += `<div class="hwfit-serve-row">`;
       const backendOpts = _backendChoices.map(([v,l]) => `<option value="${v}"${defaultBackend===v?' selected':''}>${l}</option>`).join('');
@@ -1412,11 +1412,11 @@ function _rerenderCachedModelos() {
       panelHtml += `<label class="hwfit-backend-vllm hwfit-backend-sglang hwfit-backend-llamacpp">${_l('Dtype','Data type for weights. auto picks best for GPU')}<select class="hwfit-sf" data-field="dtype">${dtypeOpts}</select></label>`;
       panelHtml += `<label class="hwfit-backend-vllm hwfit-backend-sglang">${_l('TP','Tensor Parallelism — split model across N GPUs')}<select class="hwfit-sf" data-field="tp">${tpOpts}</select></label>`;
       // ctx resets to the model's max on every panel open (the real ctx slider
-      // lives in the Scan/Descargar toolbar — see cookbook.js .hwfit-ctx-control).
-      const _knownCtxDefault = _knownModeloContextMax({ ...m, repo_id: repo });
+      // lives in the Scan/Download toolbar — see cookbook.js .hwfit-ctx-control).
+      const _knownCtxDefault = _knownModelContextMax({ ...m, repo_id: repo });
       const _ctxDefault = _knownCtxDefault ? String(_knownCtxDefault) : (m.context_length || m.context || '20000');
-      const _ctxGuardardValue = sv('ctx', _ctxDefault);
-      const _ctxValue = _isMiniMaxMSeries && ['20000', '32768'].includes(String(_ctxGuardardValue)) ? _ctxDefault : _ctxGuardardValue;
+      const _ctxSavedValue = sv('ctx', _ctxDefault);
+      const _ctxValue = _isMiniMaxMSeries && ['20000', '32768'].includes(String(_ctxSavedValue)) ? _ctxDefault : _ctxSavedValue;
       panelHtml += `<label class="hwfit-context-label">${_l('Context','Max tokens per request. Calculate suggests a value from model limit + selected GPU VRAM; edit manually to override.')}<span class="hwfit-context-control"><input type="text" class="hwfit-sf" data-field="ctx" value="${esc(_ctxValue)}" /><button type="button" class="hwfit-context-calc-btn cookbook-btn" title="Calculate and use suggested context from scanned hardware">Auto</button></span><span class="hwfit-auto-ctx-note"></span></label>`;
       panelHtml += `<label class="hwfit-backend-vllm hwfit-backend-sglang">${_l('Max Seqs','Maximum concurrent requests. Lower = less memory. Default 4 — prosumer GPUs often OOM on vLLM default 256 during CUDA graph capture.')}<input type="text" class="hwfit-sf" data-field="max_seqs" value="${esc(sv('max_seqs', '4'))}" placeholder="4" /></label>`;
       // GPU "auto" field removed — the GPU button strip below already
@@ -1435,8 +1435,8 @@ function _rerenderCachedModelos() {
       panelHtml += `<summary class="hwfit-serve-advanced-summary">Advanced</summary>`;
       // Advanced vLLM/SGLang row (KV Cache, Attention, Swap, Env)
       panelHtml += `<div class="hwfit-serve-row hwfit-backend-vllm hwfit-backend-sglang">`;
-      panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / -1;">${_l('Served Name','vLLM --served-model-name. Keeps the OpenAI model id stable when serving from a local snapshot path.')}<input type="text" class="hwfit-sf" data-field="served_model_name" value="${esc(svm('served_model_name', _defaultServedModeloName))}" placeholder="${esc(repo)}" style="width:100%;" /></label>`;
-      panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / -1;">${_l('Modelo Path','Argument passed after `vllm serve`. MiniMax M3 auto-fills the cached snapshot path because the nightly runtime needs the local repo files.')}<input type="text" class="hwfit-sf" data-field="model_path" value="${esc(_modelPathValue)}" placeholder="${esc(repo)}" style="width:100%;" /></label>`;
+      panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / -1;">${_l('Served Name','vLLM --served-model-name. Keeps the OpenAI model id stable when serving from a local snapshot path.')}<input type="text" class="hwfit-sf" data-field="served_model_name" value="${esc(svm('served_model_name', _defaultServedModelName))}" placeholder="${esc(repo)}" style="width:100%;" /></label>`;
+      panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / -1;">${_l('Model Path','Argument passed after `vllm serve`. MiniMax M3 auto-fills the cached snapshot path because the nightly runtime needs the local repo files.')}<input type="text" class="hwfit-sf" data-field="model_path" value="${esc(_modelPathValue)}" placeholder="${esc(repo)}" style="width:100%;" /></label>`;
       panelHtml += `<label class="hwfit-backend-vllm">${_l('KV Cache','vLLM --kv-cache-dtype. auto uses the model/runtime default; fp8 reduces KV memory for long context.')}<select class="hwfit-sf" data-field="vllm_kv_cache_dtype" style="height:32px;">${vllmKvCacheOpts}</select></label>`;
       // Attention backend selector — pin the kernel impl. Default `auto` lets
       // vLLM pick FlashInfer (which JITs on first use and breaks on older
@@ -1459,7 +1459,7 @@ function _rerenderCachedModelos() {
           ['', 'None'],
           ['minimax_m3_cuda', 'CUDA native sampler'],
         ].map(([v, label]) => `<option value="${v}"${_envPresetVal === v ? ' selected' : ''}>${label}</option>`).join('');
-        panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / 2;">${_l('Env Preset','Agregars known-good environment variables without typing them. CUDA native sampler adds VLLM_TARGET_DEVICE=cuda and disables FlashInfer sampler JIT; useful when system nvcc cannot compile the sampler for the GPU architecture.')}<select class="hwfit-sf" data-field="vllm_env_preset" style="height:32px;width:122px;">${_envPresetOpts}</select></label>`;
+        panelHtml += `<label class="hwfit-backend-vllm" style="grid-column:1 / 2;">${_l('Env Preset','Adds known-good environment variables without typing them. CUDA native sampler adds VLLM_TARGET_DEVICE=cuda and disables FlashInfer sampler JIT; useful when system nvcc cannot compile the sampler for the GPU architecture.')}<select class="hwfit-sf" data-field="vllm_env_preset" style="height:32px;width:122px;">${_envPresetOpts}</select></label>`;
       }
       // Free-text env-vars field. Anything pasted here is prepended to the
       // launch command verbatim. Use for CUDACXX, PATH overrides, NCCL_*
@@ -1489,7 +1489,7 @@ function _rerenderCachedModelos() {
       // it inline with the other vLLM toggles between Auto Tool and
       // Enforce Eager so the "what the model needs" decisions sit
       // together at the top.
-      const _opts2_row3 = _detectModeloOptimizations(repo);
+      const _opts2_row3 = _detectModelOptimizations(repo);
       const _rp_flag = _opts2_row3.flags.find(f => f.includes('--reasoning-parser'));
       const _rp_name = _rp_flag ? _rp_flag.split(' ')[1] : '';
       panelHtml += `<div class="hwfit-serve-checks hwfit-backend-vllm hwfit-backend-sglang">`;
@@ -1509,7 +1509,7 @@ function _rerenderCachedModelos() {
       // render so the user can flip them on for any MoE model.
       panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm hwfit-backend-sglang"><input type="checkbox" class="hwfit-sf" data-field="expert_parallel"${sv('expert_parallel',_expertParallelDefault)?' checked':''} /> Expert Parallel${_h('SGLang/vLLM MoE: shard expert layers across GPUs. Useful for DeepSeek/MiniMax/Qwen MoE; avoid on dense models.')}</label>`;
       panelHtml += `<label class="hwfit-sf-cb hwfit-backend-sglang">Decode Graph${_h('SGLang only: tune decode CUDA graph capture. Smaller batch can fix DeepSeek-V4 graph-capture errors; disabled is safest but slower.')} <select class="hwfit-sf" data-field="sglang_decode_graph" style="height:24px;max-width:92px;"><option value=""${sv('sglang_decode_graph','') === '' ? ' selected' : ''}>auto</option><option value="bs16"${sv('sglang_decode_graph','') === 'bs16' ? ' selected' : ''}>bs 16</option><option value="disabled"${sv('sglang_decode_graph','') === 'disabled' ? ' selected' : ''}>off</option></select></label>`;
-      panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm"><input type="checkbox" class="hwfit-sf" data-field="language_model_only"${sv('language_model_only',_isMiniMaxM3)?' checked':''} /> Idioma Modelo Only${_h('vLLM --language-model-only. Needed by MiniMax M3 text serving when the repo also contains VL components.')}</label>`;
+      panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm"><input type="checkbox" class="hwfit-sf" data-field="language_model_only"${sv('language_model_only',_isMiniMaxM3)?' checked':''} /> Language Model Only${_h('vLLM --language-model-only. Needed by MiniMax M3 text serving when the repo also contains VL components.')}</label>`;
       panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm"><input type="checkbox" class="hwfit-sf" data-field="disable_custom_all_reduce"${sv('disable_custom_all_reduce',_isMiniMaxM3)?' checked':''} /> Disable Custom All Reduce${_h('vLLM --disable-custom-all-reduce. Useful for some 8-GPU/nightly configurations.')}</label>`;
       {
         const _specDef = _opts2_row3.spec || { method: 'mtp', tokens: 3 };
@@ -1524,11 +1524,11 @@ function _rerenderCachedModelos() {
       // Always-render MoE Env Vars — the env vars dict is empty for
       // most dense models (toggle is a no-op then), but for MoE families
       // the user can still flip it on without re-fitting model detection.
-      panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm"><input type="checkbox" class="hwfit-sf" data-field="moe_env" /> MoE Env Vars${_h('Agregars MoE-specific env vars to the launch command: VLLM_USE_DEEP_GEMM=0, VLLM_USE_FLASHINFER_MOE_FP16=1, OMP_NUM_THREADS=4. Helpful on MoE models like Qwen3 A3B/A10B, MiniMax, DeepSeek V3+; ignored on dense models.')}</label>`;
+      panelHtml += `<label class="hwfit-sf-cb hwfit-backend-vllm"><input type="checkbox" class="hwfit-sf" data-field="moe_env" /> MoE Env Vars${_h('Adds MoE-specific env vars to the launch command: VLLM_USE_DEEP_GEMM=0, VLLM_USE_FLASHINFER_MOE_FP16=1, OMP_NUM_THREADS=4. Helpful on MoE models like Qwen3 A3B/A10B, MiniMax, DeepSeek V3+; ignored on dense models.')}</label>`;
       panelHtml += `</div>`;
       // ── llama.cpp Advanced — grouped by purpose ──
       // Three clean field rows + one checkbox row, all selects/inputs the
-      // same 28px height (no per-field `top:-Npx` nudges). Grupos follow
+      // same 28px height (no per-field `top:-Npx` nudges). Groups follow
       // user mental model: (1) where it runs on GPU, (2) how memory is
       // shaped, (3) how requests are batched, (4) on/off toggles.
       const _kvOpts = ['', 'q4_0', 'q8_0', 'f16'].map(k => `<option value="${k}"${sv('cache_type','')===k?' selected':''}>${k||'default'}</option>`).join('');
@@ -1542,7 +1542,7 @@ function _rerenderCachedModelos() {
       panelHtml += `<label>${_l('Main GPU','--main-gpu index inside the visible GPU set. Useful for split mode none/row.')}<input type="text" class="hwfit-sf" data-field="llama_main_gpu" value="${esc(sv('llama_main_gpu', ''))}" placeholder="auto" /></label>`;
       panelHtml += `</div>`;
 
-      // Group 2 — Memoria tuning (KV cache + MoE-on-CPU + Fit policy)
+      // Group 2 — Memory tuning (KV cache + MoE-on-CPU + Fit policy)
       panelHtml += `<div class="hwfit-serve-row hwfit-backend-llamacpp hwfit-llama-memory-row">`;
       panelHtml += `<label>${_l('KV Cache','cache-type-k/v: quantize the KV cache. q4_0 = smallest (more context), q8_0 = long-context, f16 = full.')}<select class="hwfit-sf" data-field="cache_type">${_kvOpts}</select></label>`;
       panelHtml += `<label class="cookbook-llama-gpu-only">${_l('CPU MoE','n-cpu-moe: number of MoE expert layers to run on CPU when the model is bigger than VRAM. 0 = all on GPU.')}<input type="text" class="hwfit-sf" data-field="n_cpu_moe" value="${esc(sv('n_cpu_moe',''))}" placeholder="0" /></label>`;
@@ -1575,9 +1575,9 @@ function _rerenderCachedModelos() {
       panelHtml += `<div class="hwfit-serve-checks hwfit-backend-llamacpp hwfit-llama-checks-row">`;
       panelHtml += `<label class="hwfit-sf-cb cookbook-llama-gpu-only"><input type="checkbox" class="hwfit-sf" data-field="flash_attn"${sv('flash_attn',false)?' checked':''} /> Flash Attn${_h('--flash-attn on: faster attention + needed for quantized KV cache. Auto by default.')}</label>`;
       panelHtml += `<label class="hwfit-sf-cb cookbook-llama-gpu-only"><input type="checkbox" class="hwfit-sf" data-field="llama_cpu_overflow"${sv('llama_cpu_overflow',false)?' checked':''} /> Allow CPU overflow${_h('OFF (default): cookbook blocks launches that would overflow GPU VRAM. ON: layers/KV cache that do not fit get pushed to CPU (slow).')}</label>`;
-      panelHtml += `<label class="hwfit-sf-cb cookbook-llama-gpu-only"><input type="checkbox" class="hwfit-sf" data-field="vision"${sv('vision',false)?' checked':''} /> Vision${_h('Serve with the vision encoder so the model can read images. Auto-finds an mmproj-*.gguf next to the model. Agregars ~1 GB VRAM.')}</label>`;
-      panelHtml += `<label class="hwfit-sf-cb"><input type="checkbox" class="hwfit-sf" data-field="llama_no_mmap"${sv('llama_no_mmap',false)?' checked':''} /> No mmap${_h('Agregars --no-mmap. Useful for some high-context/local-storage setups.')}</label>`;
-      panelHtml += `<label class="hwfit-sf-cb"><input type="checkbox" class="hwfit-sf" data-field="llama_no_warmup"${sv('llama_no_warmup',false)?' checked':''} /> Skip warmup${_h('Agregars --no-warmup. Reduces startup memory spikes; llama.cpp defaults to warming up.')}</label>`;
+      panelHtml += `<label class="hwfit-sf-cb cookbook-llama-gpu-only"><input type="checkbox" class="hwfit-sf" data-field="vision"${sv('vision',false)?' checked':''} /> Vision${_h('Serve with the vision encoder so the model can read images. Auto-finds an mmproj-*.gguf next to the model. Adds ~1 GB VRAM.')}</label>`;
+      panelHtml += `<label class="hwfit-sf-cb"><input type="checkbox" class="hwfit-sf" data-field="llama_no_mmap"${sv('llama_no_mmap',false)?' checked':''} /> No mmap${_h('Adds --no-mmap. Useful for some high-context/local-storage setups.')}</label>`;
+      panelHtml += `<label class="hwfit-sf-cb"><input type="checkbox" class="hwfit-sf" data-field="llama_no_warmup"${sv('llama_no_warmup',false)?' checked':''} /> Skip warmup${_h('Adds --no-warmup. Reduces startup memory spikes; llama.cpp defaults to warming up.')}</label>`;
       panelHtml += `<label class="hwfit-sf-cb hwfit-spec-group"><input type="checkbox" class="hwfit-sf" data-field="llama_speculative_mtp"${sv('llama_speculative_mtp',false)?' checked':''} /> MTP Spec${_h('llama.cpp native MTP speculative decoding: --spec-type draft-mtp. Requires a GGUF with MTP heads.')} <input type="number" class="hwfit-sf hwfit-spec-tokens hwfit-spec-tokens-bare" data-field="llama_spec_tokens" value="${esc(sv('llama_spec_tokens', '3'))}" min="1" max="10" title="--spec-draft-n-max" /></label>`;
       panelHtml += `</div>`;
       // Row 3b: Checkboxes (diffusers)
@@ -1588,7 +1588,7 @@ function _rerenderCachedModelos() {
       panelHtml += `</div><div class="hwfit-serve-row hwfit-backend-diffusers hwfit-diff-harmonize-row">`;
       panelHtml += `<label>Harmonize GPU${_h('Separate GPU for img2img/harmonize. Leave empty to use same GPU')}<input type="text" class="hwfit-sf" data-field="diff_harmonize_gpu" value="${esc(sv('diff_harmonize_gpu', ''))}" placeholder="auto" style="width:50px;" /></label>`;
       panelHtml += `</div>`;
-      // Modelo-specific optimizations. The checks row always renders for the
+      // Model-specific optimizations. The checks row always renders for the
       // vLLM backend so the Speculative (MTP) control is ALWAYS reachable —
       // even for models the auto-detector doesn't recognize. Expert-parallel,
       // reasoning-parser and MoE-env still only appear when auto-detected.
@@ -1601,26 +1601,26 @@ function _rerenderCachedModelos() {
       panelHtml += `</div>`;
       // ── End Advanced fold ──
       panelHtml += `</details>`;
-      // Command preview + actions. Wrap the textarea so a floating Copiar
+      // Command preview + actions. Wrap the textarea so a floating Copy
       // button can sit at its top-right corner — same pattern as the chat
       // run-output panel.
       panelHtml += `<details class="hwfit-serve-cmd-details">`;
       panelHtml += `<summary class="hwfit-serve-cmd-summary">Launch command</summary>`;
       panelHtml += `<div class="hwfit-serve-cmd-wrap">`;
       panelHtml += `<textarea class="hwfit-serve-cmd" spellcheck="false" rows="2"></textarea>`;
-      panelHtml += `<button type="button" class="cookbook-btn hwfit-serve-copy hwfit-serve-copy-inline" title="Copiar launch command" aria-label="Copiar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`;
+      panelHtml += `<button type="button" class="cookbook-btn hwfit-serve-copy hwfit-serve-copy-inline" title="Copy launch command" aria-label="Copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`;
       panelHtml += `</div>`;
       panelHtml += `</details>`;
       panelHtml += `<div class="hwfit-serve-actions">`;
-      panelHtml += `<button class="cookbook-btn hwfit-serve-cancel" type="button" title="Cerrar this configuration panel"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>`;
-      // Copiar moved inside the command textarea (top-right). Spacer then
+      panelHtml += `<button class="cookbook-btn hwfit-serve-cancel" type="button" title="Close this configuration panel"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancel</button>`;
+      // Copy moved inside the command textarea (top-right). Spacer then
       // pushes Clear Server + Launch to the right.
       panelHtml += `<span class="hwfit-serve-actions-spacer"></span>`;
       panelHtml += `<button class="cookbook-btn cookbook-gpu-clear" style="display:none;" title="Clear server GPU memory by stopping processes that hold VRAM (SIGTERM first)">Clear Server</button>`;
       panelHtml += `<button class="cookbook-btn cookbook-gpu-probe" style="display:none;" title="Probe GPU memory and running GPU processes">Probe GPUs</button>`;
       // Launch + a small ^ that opens an inline schedule form. The form
       // creates a ScheduledTask (action=cookbook_serve), so the schedule
-      // ends up in the existing Tareas UI for edit/delete/pause.
+      // ends up in the existing Tasks UI for edit/delete/pause.
       panelHtml += `<span class="hwfit-serve-launch-group">`;
       panelHtml += `<button class="cookbook-btn hwfit-serve-launch"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;flex-shrink:0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Launch</button>`;
       // Chevron points DOWN because the schedule form opens beneath the
@@ -1667,14 +1667,14 @@ function _rerenderCachedModelos() {
         const hostField = panel.querySelector('[data-field="host"]');
         if (hostField) hostField.value = f.host;
         const backend = f.backend || 'vllm';
-        const serveModelo = (f.model_path || '').trim() || (m.is_local_dir && m.path ? `${m.path}/${repo}` : repo);
+        const serveModel = (f.model_path || '').trim() || (m.is_local_dir && m.path ? `${m.path}/${repo}` : repo);
         if (backend === 'llamacpp') {
           const ggufChoices = _runnableGgufFiles(m);
           const selectedGguf = ggufChoices.find(file => file.rel_path === f.gguf_file);
           // For multi-part GGUFs, llama.cpp requires the first split
           // (-00001-of-NNNNN.gguf). Prefer it (sorted, so UD-IQ4_XS/001 comes
           // before Q4_K_M/001 etc); fall back to any single GGUF sorted.
-          const dir = _ggufBuscarDirExpr(m, repo);
+          const dir = _ggufSearchDirExpr(m, repo);
           // GGUF needs the actual .gguf FILE, not the folder. For a custom-dir
           // model the file lives under "<path>/<repo>" — search there just like we
           // search the HF snapshots dir, so serving a GGUF from a custom dir works
@@ -1703,7 +1703,7 @@ function _rerenderCachedModelos() {
           if (!hasEnv('VLLM_USE_FLASHINFER_SAMPLER')) envParts.push('VLLM_USE_FLASHINFER_SAMPLER=0');
           f.extra_env = envParts.join(' ');
         }
-        let cmd = _buildServeCmd(f, serveModelo, backend);
+        let cmd = _buildServeCmd(f, serveModel, backend);
         if (f.extra && f.extra.trim()) cmd += ' ' + f.extra.trim();
         const missingVisionProjector = backend === 'llamacpp' && !!f.vision && !f._mmproj_path;
         panel._visionMissingProjector = missingVisionProjector;
@@ -1724,7 +1724,7 @@ function _rerenderCachedModelos() {
       //  - panel._modelCtxMax: the model's actual trained limit (set by the
       //    profiles fetch below) — a tighter, model-specific cap when known.
       const ABSOLUTE_CTX_MAX = 1048576;   // 1M tokens — above any real n_ctx_train
-      panel._modelCtxMax = panel._modelCtxMax || _knownModeloContextMax(m) || 0;
+      panel._modelCtxMax = panel._modelCtxMax || _knownModelContextMax(m) || 0;
       panel._modelWeightsGb = panel._modelWeightsGb || 0;
       panel._fitSystem = panel._fitSystem || null;
       const _ctxEl0 = panel.querySelector('[data-field="ctx"]');
@@ -1758,7 +1758,7 @@ function _rerenderCachedModelos() {
           if (_ctxAutoNote) _ctxAutoNote.textContent = '';
           return;
         }
-        if ((fit.needsHardwareScan || fit.needsModeloSize) && !fit.ctx) {
+        if ((fit.needsHardwareScan || fit.needsModelSize) && !fit.ctx) {
           if (_ctxAutoNote) {
             _ctxAutoNote.textContent = fit.reason;
             _ctxAutoNote.title = fit.reason;
@@ -1767,11 +1767,11 @@ function _rerenderCachedModelos() {
         }
         if (_ctxAutoNote) {
           _ctxAutoNote.textContent = `Auto ${fit.ctx.toLocaleString()} · ${fit.reason}`;
-          const _llamaMemoriaLabel = String(f.llama_mode || '').toLowerCase() === 'unified' || f.unified_mem
+          const _llamaMemoryLabel = String(f.llama_mode || '').toLowerCase() === 'unified' || f.unified_mem
             ? 'unified system memory'
             : 'selected GPU memory';
           _ctxAutoNote.title = backend === 'llamacpp' || backend === 'ollama'
-            ? `Estimated from scanned GGUF/model size, trained context limit, and ${_llamaMemoriaLabel} for llama.cpp KV cache.`
+            ? `Estimated from scanned GGUF/model size, trained context limit, and ${_llamaMemoryLabel} for llama.cpp KV cache.`
             : `Estimated from model size, selected GPU VRAM, GPU utilization, TP, and KV dtype.`;
         }
         if (apply && _ctxEl0.dataset.autoCtx === '1') {
@@ -1785,9 +1785,9 @@ function _rerenderCachedModelos() {
       async function _loadContextProfile() {
         const target = _selectedServeTarget(panel);
         const host = (target.host || '').trim();
-        const params = new URLBuscarParams({ model: repo });
-        const profileModeloPath = panel.querySelector('[data-field="model_path"]')?.value?.trim();
-        if (profileModeloPath && profileModeloPath !== repo) params.set('model_path', profileModeloPath);
+        const params = new URLSearchParams({ model: repo });
+        const profileModelPath = panel.querySelector('[data-field="model_path"]')?.value?.trim();
+        if (profileModelPath && profileModelPath !== repo) params.set('model_path', profileModelPath);
         if (host) {
           params.set('host', host);
           const _sp = (_serverByVal?.(target.serverKey || host) || (_es.servers || []).find(s => s.host === host) || {}).port;
@@ -1803,7 +1803,7 @@ function _rerenderCachedModelos() {
         panel._contextProfileData = data || null;
         if (weightsGb > 0) panel._modelWeightsGb = weightsGb;
         if (ctxMax > 0) {
-          panel._modelCtxMax = Math.max(ctxMax, _knownModeloContextMax(m) || 0);
+          panel._modelCtxMax = Math.max(ctxMax, _knownModelContextMax(m) || 0);
           _clampCtx(false);
         }
         if (_ctxAutoNote && data?.model_probe_error && (!ctxMax || !weightsGb)) {
@@ -1899,7 +1899,7 @@ function _rerenderCachedModelos() {
         if (!el || !document.body.contains(el)) return false;  // panel closed → stop
         try {
           const host = (_es.remoteHost || '').trim();
-          const params = new URLBuscarParams();
+          const params = new URLSearchParams();
           if (host) {
             params.set('host', host);
             const _sp = (_es.servers || []).find(s => s.host === host)?.port;
@@ -2112,7 +2112,7 @@ function _rerenderCachedModelos() {
               link.style.cssText = 'color:var(--accent, var(--red));text-decoration:underline;font-weight:600;margin-left:4px;';
               link.addEventListener('click', (ev) => {
                 ev.preventDefault();
-                if (pkgName) openRecetasDependencies(pkgName, { expandRecipe: pkgName, model: repo });
+                if (pkgName) openCookbookDependencies(pkgName, { expandRecipe: pkgName, model: repo });
               });
               noteText.appendChild(link);
             }
@@ -2140,7 +2140,7 @@ function _rerenderCachedModelos() {
       // Wire save slots
       function _loadSlotIntoPanel(slotIdx) {
         const presets = _loadPresets();
-        const modelSlots = _presetsForModelo(presets, repo);
+        const modelSlots = _presetsForModel(presets, repo);
         const p = modelSlots[slotIdx];
         if (!p) return;
         const cmd = p.cmd || '';
@@ -2202,14 +2202,14 @@ function _rerenderCachedModelos() {
             if (f && checks[f] !== undefined && el.type === 'checkbox') { el.checked = checks[f]; }
           });
         }
-        // Restaurar the venv path from the saved config — OVERRIDE whatever's in the
+        // Restore the venv path from the saved config — OVERRIDE whatever's in the
         // box (don't just fill when empty), so loading a config reliably brings its
         // venv with it. (task-saved / older presets keep it as p.envPath.) Only
         // skip when the preset has no venv at all, so we don't blank a typed one.
         const _vf = panel.querySelector('[data-field="venv"]');
         const _savedVenv = (p.fields && p.fields.venv) || p.envPath || '';
         if (_vf && _savedVenv) _vf.value = _savedVenv;
-        // Restaurar the activated GPUs: saved field → command's CUDA_VISIBLE_DEVICES
+        // Restore the activated GPUs: saved field → command's CUDA_VISIBLE_DEVICES
         // → the preset's top-level gpus. Reflect them on both the hidden field
         // and the GPU buttons so the rebuilt command pins the same devices.
         const gpuVal = (p.fields && p.fields.gpus) || _ex(/CUDA_VISIBLE_DEVICES=(\S+)/) || p.gpus || '';
@@ -2252,21 +2252,21 @@ function _rerenderCachedModelos() {
       }
 
       // Keep the arrow button's count + tooltip in sync with stored presets.
-      function _updateGuardardToggleLabel() {
-        const n = _presetsForModelo(_loadPresets(), repo).length;
+      function _updateSavedToggleLabel() {
+        const n = _presetsForModel(_loadPresets(), repo).length;
         const t = panel.querySelector('.cookbook-saved-arrow');
         if (!t) return;
         t.textContent = n > 0 ? `${n} ▾` : '▾';
         t.title = n > 0
           ? `${n} saved launch config${n === 1 ? '' : 's'} for ${_repoShort} — click ▾ to load or delete`
-          : `No saved launch configs for ${_repoShort} yet — click Guardar to add one`;
+          : `No saved launch configs for ${_repoShort} yet — click Save to add one`;
       }
 
-      // Guardar the current panel fields as a new named preset (shared by the menu's
-      // "Guardar current config" row). Returns true if a config was actually saved.
+      // Save the current panel fields as a new named preset (shared by the menu's
+      // "Save current config" row). Returns true if a config was actually saved.
       async function _saveCurrentConfig() {
         const presets = _loadPresets();
-        const modelSlots = _presetsForModelo(presets, repo);
+        const modelSlots = _presetsForModel(presets, repo);
         // Compute the current launch command first so we can detect a no-op save.
         updateCmd();
         const cmd = panel._cmd;
@@ -2275,12 +2275,12 @@ function _rerenderCachedModelos() {
         const _norm = s => String(s || '').replace(/\s+/g, ' ').trim();
         const _existing = modelSlots.find(p => _norm(p.cmd) === _norm(cmd));
         if (_existing) {
-          await window.styledConfirmar(`This config is already saved as "${_existing.label || 'Unnamed'}".`, { confirmText: 'OK', cancelText: 'Cerrar' });
+          await window.styledConfirm(`This config is already saved as "${_existing.label || 'Unnamed'}".`, { confirmText: 'OK', cancelText: 'Close' });
           return false;
         }
         if (modelSlots.length >= 5) { uiModule.showToast('Max 5 saves per model'); return false; }
         const label = await uiModule.styledPrompt('Name this config so you can recall it later.', {
-          title: 'Guardar Config', placeholder: 'e.g. LoRA, 8-bit, fast', confirmText: 'Guardar',
+          title: 'Save Config', placeholder: 'e.g. LoRA, 8-bit, fast', confirmText: 'Save',
         });
         if (!label) return false;
         const host = panel._host || '';
@@ -2291,17 +2291,17 @@ function _rerenderCachedModelos() {
         });
         presets.push(_redactServeStateForStorage({ name: shortName, model: repo, cmd, remoteHost: host, port: fields.port || '8000', label, fields }));
         _savePresets(presets);
-        uiModule.showToast(`Guardard "${label}"`);
-        _updateGuardardToggleLabel();
+        uiModule.showToast(`Saved "${label}"`);
+        _updateSavedToggleLabel();
         return true;
       }
 
-      // Guardard-configs dropdown. Rebuilt each open (and after delete) so it always
+      // Saved-configs dropdown. Rebuilt each open (and after delete) so it always
       // reflects the stored presets. Standard Odysseus .dropdown look, positioned
       // fixed at the toggle and right-aligned to it.
-      function _showGuardardConfigMenu(anchor) {
+      function _showSavedConfigMenu(anchor) {
         document.querySelectorAll('.cookbook-saved-menu').forEach(d => { if (typeof d._dismiss === 'function') d._dismiss(); else d.remove(); });
-        const modelSlots = _presetsForModelo(_loadPresets(), repo)
+        const modelSlots = _presetsForModel(_loadPresets(), repo)
           .map((preset, slotIdx) => ({ preset, slotIdx }))
           .sort((a, b) => {
             const favDelta = (b.preset.favorite ? 1 : 0) - (a.preset.favorite ? 1 : 0);
@@ -2338,7 +2338,7 @@ function _rerenderCachedModelos() {
           const del = document.createElement('button');
           del.type = 'button';
           del.innerHTML = '×';
-          del.title = 'Eliminar';
+          del.title = 'Delete';
           del.style.cssText = 'background:none;border:none;color:var(--fg-muted);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0;';
           del.addEventListener('mouseenter', () => { del.style.color = '#f44'; });
           del.addEventListener('mouseleave', () => { del.style.color = 'var(--fg-muted)'; });
@@ -2352,7 +2352,7 @@ function _rerenderCachedModelos() {
           if (p.confirmedWorking) {
             const badge = document.createElement('span');
             badge.className = 'cookbook-saved-confirmed';
-            badge.title = 'Confirmared working — this config launched and registered an endpoint';
+            badge.title = 'Confirmed working — this config launched and registered an endpoint';
             badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#50fa7b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
             it.appendChild(badge);
           }
@@ -2361,10 +2361,10 @@ function _rerenderCachedModelos() {
           it.addEventListener('click', (e) => {
             if (e.target === del || e.target === fav || fav.contains(e.target)) return;
             e.stopPropagation();
-            // Cerrar the menu FIRST so it always dismisses, even if loading throws.
+            // Close the menu FIRST so it always dismisses, even if loading throws.
             closeMenu();
             _loadSlotIntoPanel(slotIdx);
-            // Confirmar the click landed — loading is silent otherwise, so it was
+            // Confirm the click landed — loading is silent otherwise, so it was
             // unclear the settings actually changed.
             uiModule.showToast(`Loaded "${p.label || `Config ${idx + 1}`}"`);
             // Briefly flash the command box so the user sees the panel update.
@@ -2377,28 +2377,28 @@ function _rerenderCachedModelos() {
           fav.addEventListener('click', (e) => {
             e.stopPropagation();
             const cur = _loadPresets();
-            const target = _presetsForModelo(cur, repo)[slotIdx];
+            const target = _presetsForModel(cur, repo)[slotIdx];
             if (target) {
               target.favorite = !target.favorite;
               _savePresets(cur.map(_redactServeStateForStorage));
               uiModule.showToast(target.favorite ? 'Favorited — pinned to top' : 'Unfavorited');
-              _showGuardardConfigMenu(anchor);
+              _showSavedConfigMenu(anchor);
             }
           });
           del.addEventListener('click', async (e) => {
             e.stopPropagation();
             const label = p.label || `Config ${idx + 1}`;
-            if (!await window.styledConfirmar(`Eliminar saved config "${label}"?`, { confirmText: 'Eliminar', danger: true })) return;
+            if (!await window.styledConfirm(`Delete saved config "${label}"?`, { confirmText: 'Delete', danger: true })) return;
             const cur = _loadPresets();
-            const toRemove = _presetsForModelo(cur, repo)[slotIdx];
+            const toRemove = _presetsForModel(cur, repo)[slotIdx];
             if (toRemove) {
               const gi = cur.indexOf(toRemove);
               if (gi >= 0) cur.splice(gi, 1);
               _savePresets(cur.map(_redactServeStateForStorage));
             }
-            uiModule.showToast(`Eliminard "${label}"`);
-            _updateGuardardToggleLabel();
-            _showGuardardConfigMenu(anchor);   // rebuild in place
+            uiModule.showToast(`Deleted "${label}"`);
+            _updateSavedToggleLabel();
+            _showSavedConfigMenu(anchor);   // rebuild in place
           });
           dropdown.appendChild(it);
         });
@@ -2417,10 +2417,10 @@ function _rerenderCachedModelos() {
         closeMenu = bindMenuDismiss(dropdown, () => { dropdown.remove(); anchor.classList.remove('cookbook-menu-active'); }, (ev) => !dropdown.contains(ev.target) && ev.target !== anchor && !anchor.contains(ev.target));
       }
 
-      // "Guardar" segment — save the current config directly.
-      const savedGuardarBtn = panel.querySelector('.cookbook-saved-save');
-      if (savedGuardarBtn) {
-        savedGuardarBtn.addEventListener('click', async (e) => {
+      // "Save" segment — save the current config directly.
+      const savedSaveBtn = panel.querySelector('.cookbook-saved-save');
+      if (savedSaveBtn) {
+        savedSaveBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           document.querySelectorAll('.cookbook-saved-menu').forEach(dismissOrRemove);
           await _saveCurrentConfig();
@@ -2431,14 +2431,14 @@ function _rerenderCachedModelos() {
       if (savedArrowBtn) {
         savedArrowBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const openGuardard = document.querySelector('.cookbook-saved-menu');
-          if (openGuardard) {
-            if (typeof openGuardard._dismiss === 'function') openGuardard._dismiss();
-            else { openGuardard.remove(); savedArrowBtn.classList.remove('cookbook-menu-active'); }
+          const openSaved = document.querySelector('.cookbook-saved-menu');
+          if (openSaved) {
+            if (typeof openSaved._dismiss === 'function') openSaved._dismiss();
+            else { openSaved.remove(); savedArrowBtn.classList.remove('cookbook-menu-active'); }
             return;
           }
           savedArrowBtn.classList.add('cookbook-menu-active');
-          _showGuardardConfigMenu(savedArrowBtn);
+          _showSavedConfigMenu(savedArrowBtn);
         });
       }
 
@@ -2496,10 +2496,10 @@ function _rerenderCachedModelos() {
             });
             return it;
           };
-          menu.appendChild(mk('Copiar launch command', '', () => {
+          menu.appendChild(mk('Copy launch command', '', () => {
             updateCmd();
             const cmdBox = panel.querySelector('.hwfit-serve-cmd');
-            const cmd = (_cmdManuallyEditared && cmdBox)
+            const cmd = (_cmdManuallyEdited && cmdBox)
               ? cmdBox.value
               : _formatServeCmdPreview(panel._cmd || cmdBox?.value || '');
             _copyText(cmd).then(() => uiModule.showToast('Launch command copied'));
@@ -2510,7 +2510,7 @@ function _rerenderCachedModelos() {
             _launchMoreBtn.dispatchEvent(direct);
           }));
           menu.appendChild(mk('Clear Server', 'cookbook-dropdown-danger', () => _clearBtn?.click()));
-          menu.appendChild(mk('Cancelar', 'dropdown-cancel-mobile', () => {}));
+          menu.appendChild(mk('Cancel', 'dropdown-cancel-mobile', () => {}));
           const r = _launchMoreBtn.getBoundingClientRect();
           menu.style.position = 'fixed';
           menu.style.right = (window.innerWidth - r.right) + 'px';
@@ -2528,13 +2528,13 @@ function _rerenderCachedModelos() {
             }
             menu.style.top = top + 'px';
           }
-          const _scrollCerrar = () => closeMenu();
-          closeMenu = bindMenuDismiss(menu, () => { menu.remove(); window.removeEventListener('scroll', _scrollCerrar, true); }, (e) => !menu.contains(e.target) && e.target !== _launchMoreBtn);
-          window.addEventListener('scroll', _scrollCerrar, true);
+          const _scrollClose = () => closeMenu();
+          closeMenu = bindMenuDismiss(menu, () => { menu.remove(); window.removeEventListener('scroll', _scrollClose, true); }, (e) => !menu.contains(e.target) && e.target !== _launchMoreBtn);
+          window.addEventListener('scroll', _scrollClose, true);
         });
       }
       // Split-button arrow opens a small popup with the secondary action
-      // (Probe GPUs) + a Cancelar item. The popup re-uses the same probe
+      // (Probe GPUs) + a Cancel item. The popup re-uses the same probe
       // logic by programmatically clicking the hidden .cookbook-gpu-probe.
       if (_splitArrow) {
         _splitArrow.addEventListener('click', (ev) => {
@@ -2556,7 +2556,7 @@ function _rerenderCachedModelos() {
             return it;
           };
           menu.appendChild(mk('Probe GPUs', '', () => _probeBtn?.click()));
-          menu.appendChild(mk('Cancelar', 'dropdown-cancel-mobile', () => {}));
+          menu.appendChild(mk('Cancel', 'dropdown-cancel-mobile', () => {}));
           const r = _splitArrow.getBoundingClientRect();
           menu.style.position = 'fixed';
           menu.style.right = (window.innerWidth - r.right) + 'px';
@@ -2577,11 +2577,11 @@ function _rerenderCachedModelos() {
             }
             menu.style.top = top + 'px';
           }
-          // Cerrar on outside click or Escape (via the registry); also dismiss
+          // Close on outside click or Escape (via the registry); also dismiss
           // on scroll since the popup is fixed-positioned to the arrow.
-          const _scrollCerrar = () => closeMenu();
-          closeMenu = bindMenuDismiss(menu, () => { menu.remove(); window.removeEventListener('scroll', _scrollCerrar, true); }, (e) => !menu.contains(e.target) && e.target !== _splitArrow);
-          window.addEventListener('scroll', _scrollCerrar, true);
+          const _scrollClose = () => closeMenu();
+          closeMenu = bindMenuDismiss(menu, () => { menu.remove(); window.removeEventListener('scroll', _scrollClose, true); }, (e) => !menu.contains(e.target) && e.target !== _splitArrow);
+          window.addEventListener('scroll', _scrollClose, true);
         });
       }
       const _withSpinner = async (btn, fn) => {
@@ -2654,7 +2654,7 @@ function _rerenderCachedModelos() {
             <div class="cookbook-gpu-popup-head">
               GPU ${gpu.index} · ${esc(gpu.name)}
               <span class="cookbook-gpu-popup-stats">${(gpu.free_mb/1024).toFixed(1)} / ${(gpu.total_mb/1024).toFixed(1)} GB free · util ${gpu.util_pct}%</span>
-              <button type="button" class="cookbook-gpu-popup-close" title="Cerrar">×</button>
+              <button type="button" class="cookbook-gpu-popup-close" title="Close">×</button>
             </div>
             <div class="cookbook-gpu-popup-body">${procHtml}</div>`;
           document.body.appendChild(popup);
@@ -2686,7 +2686,7 @@ function _rerenderCachedModelos() {
               const row = btn.closest('.cookbook-gpu-proc');
               const pid = parseInt(row.dataset.pid);
               const sig = btn.dataset.sig;
-              if (sig === 'KILL' && !await window.styledConfirmar(`SIGKILL PID ${pid}? This force-terminates without cleanup.`, { confirmText: 'SIGKILL', danger: true })) return;
+              if (sig === 'KILL' && !await window.styledConfirm(`SIGKILL PID ${pid}? This force-terminates without cleanup.`, { confirmText: 'SIGKILL', danger: true })) return;
               btn.disabled = true;
               btn.textContent = '…';
               const ok = await _doKill(pid, sig, hostVal);
@@ -2718,7 +2718,7 @@ function _rerenderCachedModelos() {
           _closeProbePopup();
           const hostEl = panel.querySelector('[data-field="host"]');
           const remoteHost = (hostEl && hostEl.value || '').trim();
-          const params = new URLBuscarParams();
+          const params = new URLSearchParams();
           if (remoteHost) params.set('host', remoteHost);
           const url = '/api/cookbook/gpus' + (params.toString() ? '?' + params.toString() : '');
           const res = await fetch(url, { credentials: 'same-origin' });
@@ -2833,7 +2833,7 @@ function _rerenderCachedModelos() {
                   return;
                 }
                 const summary = pids.map(p => `${p.pid} (${p.name})`).join(', ');
-                if (!await window.styledConfirmar(`Clear server GPU memory by sending SIGTERM to ${pids.length} process(es)?\n\n${summary}\n\nIf any survive, the next prompt can force-kill them with SIGKILL.`, { confirmText: 'SIGTERM', danger: true })) return;
+                if (!await window.styledConfirm(`Clear server GPU memory by sending SIGTERM to ${pids.length} process(es)?\n\n${summary}\n\nIf any survive, the next prompt can force-kill them with SIGKILL.`, { confirmText: 'SIGTERM', danger: true })) return;
                 // First pass: SIGTERM
                 const hostVal = panel._gpuProbe.host;
                 const results = await Promise.all(pids.map(p =>
@@ -2859,7 +2859,7 @@ function _rerenderCachedModelos() {
                   uiModule.showToast(`Cleared ${pids.length} GPU process(es)`, 4000);
                   return;
                 }
-                if (!await window.styledConfirmar(`${survivors.length} process(es) survived SIGTERM:\n\n${survivors.map(p => p.pid + ' (' + p.name + ')').join(', ')}\n\nForce-kill with SIGKILL?`, { confirmText: 'SIGKILL', danger: true })) return;
+                if (!await window.styledConfirm(`${survivors.length} process(es) survived SIGTERM:\n\n${survivors.map(p => p.pid + ' (' + p.name + ')').join(', ')}\n\nForce-kill with SIGKILL?`, { confirmText: 'SIGKILL', danger: true })) return;
                 const killResults = await Promise.all(survivors.map(p =>
                   fetch('/api/cookbook/kill-pid', {
                     method: 'POST', credentials: 'same-origin',
@@ -2897,7 +2897,7 @@ function _rerenderCachedModelos() {
         });
       }
 
-      // Actualizar preview on input change
+      // Update preview on input change
       panel.querySelectorAll('.hwfit-sf').forEach(el => {
         el.addEventListener('input', updateCmd);
         el.addEventListener('change', (e) => {
@@ -2974,7 +2974,7 @@ function _rerenderCachedModelos() {
           panel.querySelectorAll('.cookbook-llama-gpu-only').forEach(el => { el.style.display = 'none'; });
         }
       }
-      // Temad +/- buttons next to spec_tokens — step the adjacent number input.
+      // Themed +/- buttons next to spec_tokens — step the adjacent number input.
       panel.querySelectorAll('.hwfit-numstep-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -2992,11 +2992,11 @@ function _rerenderCachedModelos() {
       });
 
       // Track manual edits
-      let _cmdManuallyEditared = false;
+      let _cmdManuallyEdited = false;
       const _cmdTextarea = panel.querySelector('.hwfit-serve-cmd');
-      if (_cmdTextarea) _cmdTextarea.addEventListener('input', () => { _cmdManuallyEditared = true; });
+      if (_cmdTextarea) _cmdTextarea.addEventListener('input', () => { _cmdManuallyEdited = true; });
 
-      // Cancelar button — collapses the serve config panel (same effect as
+      // Cancel button — collapses the serve config panel (same effect as
       // tapping the row to toggle it shut). Mobile users wanted an explicit
       // "back out" affordance next to Launch.
       const _collapsePanel = () => {
@@ -3014,15 +3014,15 @@ function _rerenderCachedModelos() {
       // Esc anywhere on the page closes the open serve panel. Skips when
       // the user is typing in a field — they want Esc to deselect / blur
       // those, not collapse the form they're configuring.
-      const _onEscCerrar = (ev) => {
+      const _onEscClose = (ev) => {
         if (ev.key !== 'Escape') return;
         if (!panel.isConnected) {
-          document.removeEventListener('keydown', _onEscCerrar, true);
+          document.removeEventListener('keydown', _onEscClose, true);
           return;
         }
         const t = ev.target;
         const inField = t && (
-          t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditarable
+          t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable
         );
         if (inField) return;
         // Skip when one of the dropdown/menu popovers is open — the
@@ -3031,7 +3031,7 @@ function _rerenderCachedModelos() {
         ev.stopPropagation();
         _collapsePanel();
       };
-      document.addEventListener('keydown', _onEscCerrar, true);
+      document.addEventListener('keydown', _onEscClose, true);
 
       // Launch button
       panel.querySelector('.hwfit-serve-launch').addEventListener('click', async (ev) => {
@@ -3070,14 +3070,14 @@ function _rerenderCachedModelos() {
         // stale preset or typo (e.g. 16000000) overflows and, with a quantized
         // KV cache, can crash the GPU. Skip only if the user hand-edited the raw
         // command (then we respect their literal text).
-        if (!_cmdManuallyEditared) _clampCtx(true);
-        if (!_cmdManuallyEditared) updateCmd();
+        if (!_cmdManuallyEdited) _clampCtx(true);
+        if (!_cmdManuallyEdited) updateCmd();
         // Pasted commands often carry hidden newlines / CRs / tabs from copies
         // out of model cards or wrapped help text. The backend cmd allowlist
         // rejects \n / \r outright (`Invalid characters in cmd`), so collapse
         // all whitespace to single spaces before launch — same effect as the
         // user manually re-flowing the textarea, no behavior change.
-        const _rawLaunchCmd = (_cmdManuallyEditared && _cmdTextarea) ? _cmdTextarea.value : panel._cmd;
+        const _rawLaunchCmd = (_cmdManuallyEdited && _cmdTextarea) ? _cmdTextarea.value : panel._cmd;
         const launchCmd = _normalizeServeCmdForLaunch(_rawLaunchCmd);
         const serveState = {};
         panel.querySelectorAll('.hwfit-sf').forEach(el => {
@@ -3105,7 +3105,7 @@ function _rerenderCachedModelos() {
           const _runningMod = await import('./cookbookRunning.js');
           const _hostStr = launchTarget.host || '';
           const _serverKeyStr = launchTarget.serverKey || (_hostStr || 'local');
-          const _active = (_runningMod._loadTareas ? _runningMod._loadTareas() : []).filter(t =>
+          const _active = (_runningMod._loadTasks ? _runningMod._loadTasks() : []).filter(t =>
             t && t.type === 'serve'
             && ((t.remoteHost || '') === _hostStr || (t.remoteServerKey || '') === _serverKeyStr)
             && (t.status === 'running' || t.status === 'ready' || t._serveReady)
@@ -3120,9 +3120,9 @@ function _rerenderCachedModelos() {
             if (_clashing.length) {
               const _names = _clashing.map(t => t.payload?.repo_id || t.repo || t.name || '?').filter(Boolean);
               const _portNote = _newPort ? ` on port ${_newPort}` : '';
-              const _ok = await window.styledConfirmar(
+              const _ok = await window.styledConfirm(
                 `${_clashing.length} model${_clashing.length === 1 ? '' : 's'} already serving on ${_hostStr || 'local'} (${_names.join(', ')})${_portNote}. Stop it and launch this one?`,
-                { title: _newPort ? `Port ${_newPort} in use` : 'Server already running', confirmText: 'Stop & launch', cancelText: 'Cancelar' },
+                { title: _newPort ? `Port ${_newPort} in use` : 'Server already running', confirmText: 'Stop & launch', cancelText: 'Cancel' },
               );
               if (!_ok) { _restoreLaunchBtn(); return; }
               // Kill each clashing serve; prefer the rendered Stop button so
@@ -3148,13 +3148,13 @@ function _rerenderCachedModelos() {
           }
         } catch (_e) { /* best-effort */ }
 
-        const backendAdvertencia = _serveBackendAdvertencia(m, repo, serveState.backend, serveState);
-        if (backendAdvertencia) {
+        const backendWarning = _serveBackendWarning(m, repo, serveState.backend, serveState);
+        if (backendWarning) {
           _restoreLaunchBtn();
-          await window.styledConfirmar(backendAdvertencia.body, {
-            title: backendAdvertencia.title,
-            confirmText: 'Editar settings',
-            cancelText: 'Cerrar',
+          await window.styledConfirm(backendWarning.body, {
+            title: backendWarning.title,
+            confirmText: 'Edit settings',
+            cancelText: 'Close',
           });
           return;
         }
@@ -3169,7 +3169,7 @@ function _rerenderCachedModelos() {
             && !serveState.llama_cpu_overflow) {
           try {
             const _ctx = Math.max(1, parseInt(serveState.ctx, 10) || 8192);
-            // Modelo size on disk — close enough for GPU footprint of a GGUF.
+            // Model size on disk — close enough for GPU footprint of a GGUF.
             const _modelBytes = Number(m?.size_bytes || 0) || Math.round((Number(m?.size_gb || 0)) * 1024 * 1024 * 1024);
             const _modelGb = _modelBytes / (1024 ** 3);
             // KV cache heuristic. ~0.7MB / token / 7.5GB-of-model at fp16
@@ -3188,7 +3188,7 @@ function _rerenderCachedModelos() {
             let _hwGpus = [];
             try {
               const _gh = (launchTarget.host || '').trim();
-              const _gp = new URLBuscarParams();
+              const _gp = new URLSearchParams();
               if (_gh) {
                 _gp.set('host', _gh);
                 const _sp = (_serverByVal?.(launchTarget.serverKey || _gh) || {}).port;
@@ -3222,12 +3222,12 @@ function _rerenderCachedModelos() {
                 _addGpus.push(c.i); _runFree += c.free;
                 if (_runFree >= _needGb) break;
               }
-              const _canAgregarGpu = _runFree >= _needGb && _addGpus.length > 0;
+              const _canAddGpu = _runFree >= _needGb && _addGpus.length > 0;
               // Recommend ctx that just-fits on current selection.
               const _recCtxRaw = Math.floor((_selFreeGb - _modelGb) / _kvGbPerToken);
               const _recCtx = Math.max(1024, Math.floor(_recCtxRaw / 1024) * 1024);
-              // Custom modal — styledConfirmar only takes 2 buttons; this
-              // surface needs up to 4 actions (Reduce / Agregar GPUs / Allow / Cancelar).
+              // Custom modal — styledConfirm only takes 2 buttons; this
+              // surface needs up to 4 actions (Reduce / Add GPUs / Allow / Cancel).
               const _action = await new Promise(resolve => {
                 const ov = document.createElement('div');
                 ov.className = 'modal';
@@ -3236,17 +3236,17 @@ function _rerenderCachedModelos() {
                 if (_recCtx > 1024 && _recCtx < _ctx) {
                   _btnRow.push(`<button data-vram-action="reduce" class="confirm-btn confirm-btn-primary" style="width:100%;">Reduce ctx to ${_recCtx.toLocaleString()}</button>`);
                 }
-                if (_canAgregarGpu) {
-                  _btnRow.push(`<button data-vram-action="add_gpus" class="confirm-btn confirm-btn-primary" style="width:100%;">Agregar GPU${_addGpus.length > 1 ? 's' : ''} ${_addGpus.join(', ')}</button>`);
+                if (_canAddGpu) {
+                  _btnRow.push(`<button data-vram-action="add_gpus" class="confirm-btn confirm-btn-primary" style="width:100%;">Add GPU${_addGpus.length > 1 ? 's' : ''} ${_addGpus.join(', ')}</button>`);
                 }
                 _btnRow.push(`<button data-vram-action="allow_cpu" class="confirm-btn confirm-btn-secondary" style="width:100%;">Allow CPU overflow (slow)</button>`);
-                _btnRow.push(`<button data-vram-action="cancel" class="confirm-btn confirm-btn-secondary" style="width:100%;">Cancelar</button>`);
+                _btnRow.push(`<button data-vram-action="cancel" class="confirm-btn confirm-btn-secondary" style="width:100%;">Cancel</button>`);
                 ov.innerHTML = '<div class="modal-content" style="max-width:480px;">'
                   + '<div class="modal-header"><h4>Will not fit on selected GPU' + (_selIdx.length > 1 ? 's' : '') + '</h4></div>'
                   + '<div class="modal-body" style="font-size:12px;line-height:1.5;">'
-                  +   '<p>Modelo + KV cache would overflow VRAM on the selected GPU' + (_selIdx.length > 1 ? 's' : '') + '. llama-cpp-python will silently spill to CPU → very slow inference.</p>'
+                  +   '<p>Model + KV cache would overflow VRAM on the selected GPU' + (_selIdx.length > 1 ? 's' : '') + '. llama-cpp-python will silently spill to CPU → very slow inference.</p>'
                   +   '<ul style="opacity:0.75;padding-left:18px;">'
-                  +     '<li>Modelo: ~' + _modelGb.toFixed(1) + ' GB</li>'
+                  +     '<li>Model: ~' + _modelGb.toFixed(1) + ' GB</li>'
                   +     '<li>KV cache (ctx ' + _ctx.toLocaleString() + '): ~' + _kvGb.toFixed(1) + ' GB</li>'
                   +     '<li>Total needed: ~' + _needGb.toFixed(1) + ' GB</li>'
                   +     '<li>Free on GPU ' + _selIdx.join(', ') + ': ~' + _selFreeGb.toFixed(1) + ' GB</li>'
@@ -3301,7 +3301,7 @@ function _rerenderCachedModelos() {
         if (_needsGpu) {
           try {
             const _probeHost = (launchTarget.host || '').trim();
-            const _probeParams = new URLBuscarParams();
+            const _probeParams = new URLSearchParams();
             if (_probeHost) {
               _probeParams.set('host', _probeHost);
               if (launchTarget.port) _probeParams.set('ssh_port', launchTarget.port);
@@ -3310,9 +3310,9 @@ function _rerenderCachedModelos() {
             const _probeData = await _probeRes.json();
             const _probeGpus = Array.isArray(_probeData) ? _probeData : (_probeData.gpus || []);
             if (!_probeGpus.length) {
-              const _proceed = await window.styledConfirmar(
+              const _proceed = await window.styledConfirm(
                 `No GPU detected on ${_probeHost ? _probeHost : 'this host'}. ${serveState.backend.toUpperCase()} needs a visible CUDA/ROCm accelerator to start — launching now will most likely crash early.\n\nLaunch anyway?`,
-                { title: 'No GPU detected', confirmText: 'Launch anyway', cancelText: 'Cancelar', danger: true },
+                { title: 'No GPU detected', confirmText: 'Launch anyway', cancelText: 'Cancel', danger: true },
               );
               if (!_proceed) { _restoreLaunchBtn(); return; }
             }
@@ -3325,7 +3325,7 @@ function _rerenderCachedModelos() {
 
         // Pre-launch PORT probe — second most common failure pattern is
         // collision with an already-running server (vllm crashing with
-        // "Agregarress already in use" because Ollama owns 11434, or a
+        // "Address already in use" because Ollama owns 11434, or a
         // previous vllm on the same port wasn't killed). The post-mortem
         // "Suggested action: Kill existing vLLM" came AFTER the failed
         // launch — user wants to know BEFORE clicking Launch. Parse the
@@ -3356,12 +3356,12 @@ function _rerenderCachedModelos() {
                 ? `${_procMatch[1]} (PID ${_procMatch[2]})`
                 : 'another process';
               const _hostLabel = _portHost ? _portHost : 'this host';
-              const _proceed = await window.styledConfirmar(
-                `Port ${_port} on ${_hostLabel} is already in use by ${_procDesc}. Launching ${serveState.backend.toUpperCase()} now will fail with "Agregarress already in use".\n\nStop the existing process first, OR change the --port in the command above, OR launch anyway and watch it crash.`,
+              const _proceed = await window.styledConfirm(
+                `Port ${_port} on ${_hostLabel} is already in use by ${_procDesc}. Launching ${serveState.backend.toUpperCase()} now will fail with "Address already in use".\n\nStop the existing process first, OR change the --port in the command above, OR launch anyway and watch it crash.`,
                 {
                   title: `Port ${_port} taken`,
                   confirmText: 'Launch anyway',
-                  cancelText: 'Cancelar',
+                  cancelText: 'Cancel',
                   danger: true,
                 },
               );
@@ -3372,7 +3372,7 @@ function _rerenderCachedModelos() {
           // Probe failure — don't block. If the port check can't run we'd
           // rather let the launch try than silently refuse.
         }
-        // Guardar in the { _byRepo, _lastUsed } schema — no legacy flat keys at
+        // Save in the { _byRepo, _lastUsed } schema — no legacy flat keys at
         // the root so per-model state doesn't leak between models.
         // Stamp `_forceBackend: true` so the next open of this model defaults
         // to the launched configuration end-to-end, even when the detector
@@ -3404,7 +3404,7 @@ function _rerenderCachedModelos() {
         const _srvEnv = launchTarget.env || '';
         const _srvEnvPath = launchTarget.venv || '';
         // The venv field wins; otherwise fall back to the env configured for the
-        // selected server in Configuración, so the activation isn't silently dropped
+        // selected server in Settings, so the activation isn't silently dropped
         // when the field is left blank (the per-server venv wasn't being applied).
         if (venvVal) { _envState.env = (_srvEnv === 'conda' ? 'conda' : 'venv'); _envState.envPath = venvVal; }
         else if (_srvEnvPath) { _envState.env = (_srvEnv === 'conda' ? 'conda' : 'venv'); _envState.envPath = _srvEnvPath; }
@@ -3423,12 +3423,12 @@ function _rerenderCachedModelos() {
           const _detectedBackend = String(_hwfitCache?.system?.backend || '').toLowerCase();
           const _gpuBackends = ['cuda', 'rocm', 'vulkan', 'metal', 'mps', 'apple'];
           if (_isLocalInContainer && _wantsGpu && _detectedBackend && !_gpuBackends.includes(_detectedBackend)) {
-            const _proceed = await window.styledConfirmar(
-              `The local (in-container) target has no GPU backend detected (hwfit reports: "${_detectedBackend || 'none'}"). ${serveState.backend.toUpperCase()} will run on CPU only and may be unusably slow.\n\nIf this machine has a GPU on the host, add the host as a server in Configuración and target that instead. Otherwise launch anyway for CPU inference.`,
+            const _proceed = await window.styledConfirm(
+              `The local (in-container) target has no GPU backend detected (hwfit reports: "${_detectedBackend || 'none'}"). ${serveState.backend.toUpperCase()} will run on CPU only and may be unusably slow.\n\nIf this machine has a GPU on the host, add the host as a server in Settings and target that instead. Otherwise launch anyway for CPU inference.`,
               {
                 title: 'No GPU on local target',
                 confirmText: 'Launch anyway (CPU)',
-                cancelText: 'Cancelar',
+                cancelText: 'Cancel',
                 danger: true,
               },
             );
@@ -3444,7 +3444,7 @@ function _rerenderCachedModelos() {
         try {
           await _withSpinner(_launchBtn, async () => {
             // Pass the exact form values so the running task can be re-opened
-            // in the Serve panel pre-filled with these settings (Editar button).
+            // in the Serve panel pre-filled with these settings (Edit button).
             const taskDisplayName = _serveTaskDisplayName(shortName, m, serveState);
             await _launchServeTask(taskDisplayName, repo, launchCmd, serveState, serveHost, { serverKey: serveServerKey, serverName: serveServerName });
           });
@@ -3455,7 +3455,7 @@ function _rerenderCachedModelos() {
         }
       });
 
-      // Copiar button — now icon-only, so flash a green checkmark on success
+      // Copy button — now icon-only, so flash a green checkmark on success
       // instead of swapping to text (which would also break the width).
       panel.querySelector('.hwfit-serve-copy').addEventListener('click', (e) => {
         // Without stopPropagation the click bubbles up to the
@@ -3463,7 +3463,7 @@ function _rerenderCachedModelos() {
         // copying collapses the whole serve panel mid-flight.
         e.preventDefault();
         e.stopPropagation();
-        const cmd = _cmdManuallyEditared ? panel.querySelector('.hwfit-serve-cmd').value : _formatServeCmdPreview(panel._cmd);
+        const cmd = _cmdManuallyEdited ? panel.querySelector('.hwfit-serve-cmd').value : _formatServeCmdPreview(panel._cmd);
         _copyText(cmd).then(() => {
           const btn = panel.querySelector('.hwfit-serve-copy');
           const origHtml = btn.innerHTML;
@@ -3476,10 +3476,10 @@ function _rerenderCachedModelos() {
   });
 }
 
-// ── Eliminar / retry cached model ──
+// ── Delete / retry cached model ──
 
 // Resolve the host the cached list was scanned from, mirroring
-// _fetchCachedModelos — so a delete targets the SAME machine the model
+// _fetchCachedModels — so a delete targets the SAME machine the model
 // actually lives on, not just the globally-selected serve host.
 function _resolveCacheHost() {
   let host = _envState.remoteHost || '';
@@ -3506,9 +3506,9 @@ function _resolveCacheHost() {
   return host;
 }
 
-async function _deleteCachedModelo(repo, itemEl, skipConfirmar = false, model = null) {
-  const m = model || _cachedAllModelos.find(x => x.repo_id === repo);
-  // Eliminar the EXACT on-disk path the scan reported. Modelos in a custom
+async function _deleteCachedModel(repo, itemEl, skipConfirm = false, model = null) {
+  const m = model || _cachedAllModels.find(x => x.repo_id === repo);
+  // Delete the EXACT on-disk path the scan reported. Models in a custom
   // model dir live at <path>/<repo>; HF-cache models at
   // <path>/models--<org>--<name>. The old code always rm'd the hardcoded
   // ~/.cache/huggingface/hub path, so models in a custom dir were never
@@ -3523,12 +3523,12 @@ async function _deleteCachedModelo(repo, itemEl, skipConfirmar = false, model = 
     target = `~/.cache/huggingface/hub/models--${repo.replace(/\//g, '--')}`;
   }
   let deleteChoice = { mode: 'repo' };
-  const ggufFiles = _ggufFilesForModelo(m);
-  if (!skipConfirmar) {
+  const ggufFiles = _ggufFilesForModel(m);
+  if (!skipConfirm) {
     if (ggufFiles.length > 1) {
-      deleteChoice = await _ggufEliminarChoice(repo, ggufFiles);
+      deleteChoice = await _ggufDeleteChoice(repo, ggufFiles);
       if (!deleteChoice) return;
-    } else if (!(await uiModule.styledConfirmar(`Eliminar ${repo} from cache?`, { confirmText: 'Eliminar', danger: true }))) {
+    } else if (!(await uiModule.styledConfirm(`Delete ${repo} from cache?`, { confirmText: 'Delete', danger: true }))) {
       return;
     }
   }
@@ -3590,13 +3590,13 @@ async function _deleteCachedModelo(repo, itemEl, skipConfirmar = false, model = 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command: cmd }),
     });
-    if (!res.ok) { uiModule.showError(`Eliminar failed (${res.status})`); return; }
+    if (!res.ok) { uiModule.showError(`Delete failed (${res.status})`); return; }
     if (deleteChoice.mode === 'files') {
       if (m && Array.isArray(m.gguf_files)) {
         const removed = new Set(deleteChoice.files.map(f => _safeGgufRelPath(f.rel_path)));
         m.gguf_files = m.gguf_files.filter(f => !removed.has(_safeGgufRelPath(f.rel_path)));
       }
-      await _fetchCachedModelos(false);
+      await _fetchCachedModels(false);
     } else if (itemEl) {
       itemEl.querySelector('.cookbook-delete-overlay')?.remove();
       itemEl.style.transition = 'opacity 0.24s ease, transform 0.24s ease, max-height 0.28s ease, padding 0.28s ease, margin 0.28s ease';
@@ -3612,10 +3612,10 @@ async function _deleteCachedModelo(repo, itemEl, skipConfirmar = false, model = 
       await new Promise(resolve => setTimeout(resolve, 300));
       if (itemEl.parentElement) itemEl.remove();
       // Drop from the in-memory list so a re-render/filter doesn't resurrect it.
-      _cachedAllModelos = _cachedAllModelos.filter(x => x.repo_id !== repo);
+      _cachedAllModels = _cachedAllModels.filter(x => x.repo_id !== repo);
     }
   } catch (e) {
-    uiModule.showError('Eliminar failed: ' + (e && e.message ? e.message : e));
+    uiModule.showError('Delete failed: ' + (e && e.message ? e.message : e));
   } finally {
     // Tear down the spinner. On success the row is already gone; on error the
     // row survives, so restore it (remove overlay, re-enable interaction).
@@ -3628,7 +3628,7 @@ async function _deleteCachedModelo(repo, itemEl, skipConfirmar = false, model = 
   }
 }
 
-function _retryCachedModelo(repo, m) {
+function _retryCachedModel(repo, m) {
   const payload = { repo_id: repo };
   if (_envState.hfToken) payload.hf_token = _envState.hfToken;
   const _target = _selectedServeTarget(document.getElementById('cookbook-modal') || document);
@@ -3651,12 +3651,12 @@ function _retryCachedModelo(repo, m) {
       payload.env_prefix = 'eval "$(conda shell.bash hook)" && conda activate ' + _shellQuote(_envState.envPath);
     }
   }
-  _retryDescargar((m?.name || repo).split('/').pop(), payload);
+  _retryDownload((m?.name || repo).split('/').pop(), payload);
 }
 
 // ── Open the Serve panel for a specific repo, pre-filled ──
 //
-// Used by the running-task "Editar / relaunch" button. Writes the supplied
+// Used by the running-task "Edit / relaunch" button. Writes the supplied
 // field values into the per-repo serve state so the panel's existing
 // restore logic fills the form exactly, switches to the Serve tab, then
 // finds the model's cached card and expands it.
@@ -3677,13 +3677,13 @@ export async function openServePanelForRepo(repo, fields) {
       localStorage.setItem(SERVE_STATE_KEY, JSON.stringify(_redactServeStateForStorage({ _byRepo: byRepo, _lastUsed: _seeded })));
     } catch {}
   }
-  // Switch to the Serve tab (its click handler triggers _fetchCachedModelos).
+  // Switch to the Serve tab (its click handler triggers _fetchCachedModels).
   const serveTab = document.querySelector('.cookbook-tab[data-backend="Serve"]');
   if (serveTab && !serveTab.classList.contains('active')) {
     serveTab.click();
   } else {
     // Already on the Serve tab — refresh the list so the card is present.
-    try { await _fetchCachedModelos(); } catch {}
+    try { await _fetchCachedModels(); } catch {}
   }
   // Poll for the model's card to render, then expand it. Cached-model
   // fetch is async and we don't get a direct completion hook from the
@@ -3704,7 +3704,7 @@ export async function openServePanelForRepo(repo, fields) {
       // If we were given fields to restore, force a fresh render of the
       // serve panel so it reads the just-written _byRepo[repo] values
       // from localStorage. Without this, an already-expanded card kept
-      // its stale form and the "Editar serve" → previous settings round-
+      // its stale form and the "Edit serve" → previous settings round-
       // trip looked broken from the user's side.
       if (fields && card.classList.contains('doclib-card-expanded')) {
         card.click();
@@ -3718,28 +3718,28 @@ export async function openServePanelForRepo(repo, fields) {
     }
     await new Promise(r => setTimeout(r, 100));
   }
-  uiModule.showToast('Modelo not found in cache — switch to the Serve tab manually');
+  uiModule.showToast('Model not found in cache — switch to the Serve tab manually');
   return false;
 }
 
 // ── Fetch cached models from server ──
 
-function _renderCachedModelosData(list, data, host) {
+function _renderCachedModelsData(list, data, host) {
   // CHANGELOG: 'ready' already excludes partial downloads;
   // show every complete model regardless of size/backend.
   const ready = (data.models || []).filter(m => m.status === 'ready');
 
   const downloading = (data.models || []).filter(m => m.status === 'downloading');
-  const allModelos = [...ready, ...downloading];
-  _cachedAllModelos = allModelos;
+  const allModels = [...ready, ...downloading];
+  _cachedAllModels = allModels;
 
-  if (!allModelos.length) {
+  if (!allModels.length) {
     if (!host) {
-      list.innerHTML = '<div class="hwfit-loading" style="flex-direction:column;gap:6px;text-align:center;"><div>No cached models found</div><div style="font-size:11px;opacity:0.55;max-width:420px;line-height:1.4;">Docker Local uses Odysseus’s cache in <code>data/huggingface</code>. Descargar a model here, or copy an existing host HuggingFace cache into that folder once.</div></div>';
+      list.innerHTML = '<div class="hwfit-loading" style="flex-direction:column;gap:6px;text-align:center;"><div>No cached models found</div><div style="font-size:11px;opacity:0.55;max-width:420px;line-height:1.4;">Docker Local uses Odysseus’s cache in <code>data/huggingface</code>. Download a model here, or copy an existing host HuggingFace cache into that folder once.</div></div>';
     } else {
       list.innerHTML = '<div class="hwfit-loading" style="flex-direction:column;gap:8px;text-align:center;"><div>No cached models found</div><div style="font-size:11px;opacity:0.55;max-width:420px;line-height:1.4;">No complete model folders were found on this server.</div><button type="button" class="hwfit-gpu-btn serve-empty-scan-btn" style="height:26px;padding:3px 10px;">Refresh</button></div>';
       list.querySelector('.serve-empty-scan-btn')?.addEventListener('click', () => {
-        _fetchCachedModelos(true);
+        _fetchCachedModels(true);
       });
     }
     const tagContainer = document.getElementById('serve-tags');
@@ -3758,7 +3758,7 @@ function _renderCachedModelosData(list, data, host) {
     [/whisper/i, 'whisper'], [/command|cohere/i, 'cohere'],
     [/yi-/i, 'yi'], [/intern/i, 'intern'], [/falcon/i, 'falcon'],
   ];
-  for (const m of allModelos) {
+  for (const m of allModels) {
     const n = (m.repo_id || '').toLowerCase();
     let tag = 'other';
     if (m.backend === 'ollama' || m.is_ollama) tag = 'llm';
@@ -3784,7 +3784,7 @@ function _renderCachedModelosData(list, data, host) {
   const tagContainer = document.getElementById('serve-tags');
   if (tagContainer) {
     const tagOrder = ['llm', 'image', 'lora', 'embedding', 'tts', 'stt', 'other'];
-    let tagHtml = `<button class="memory-cat-chip active" data-serve-tag="">All (${allModelos.length})</button>`;
+    let tagHtml = `<button class="memory-cat-chip active" data-serve-tag="">All (${allModels.length})</button>`;
     for (const t of tagOrder) {
       if (!_tagMap[t]) continue;
       tagHtml += `<button class="memory-cat-chip" data-serve-tag="${t}">${t} (${_tagMap[t]})</button>`;
@@ -3800,10 +3800,10 @@ function _renderCachedModelosData(list, data, host) {
     tagContainer.innerHTML = tagHtml;
   }
 
-  _rerenderCachedModelos();
+  _rerenderCachedModels();
 }
 
-export async function _fetchCachedModelos(fresh = false, opts = {}) {
+export async function _fetchCachedModels(fresh = false, opts = {}) {
   const list = document.getElementById('hwfit-cached-list');
   if (!list) return;
   const allowNetwork = fresh || opts.allowNetwork !== false;
@@ -3851,7 +3851,7 @@ export async function _fetchCachedModelos(fresh = false, opts = {}) {
     const modelDirs = [];
     if (selectedServer && Array.isArray(selectedServer.modelDirs)) {
       for (const d of selectedServer.modelDirs) {
-        const normalized = _normalizeRecetasModeloDir(d);
+        const normalized = _normalizeCookbookModelDir(d);
         if (normalized && normalized !== '~/.cache/huggingface/hub') modelDirs.push(normalized);
       }
     }
@@ -3864,22 +3864,22 @@ export async function _fetchCachedModelos(fresh = false, opts = {}) {
       const _allDirs = (Array.isArray(selectedServer.modelDirs) && selectedServer.modelDirs.length
         ? selectedServer.modelDirs
         : [selectedServer.modelDir || '~/.cache/huggingface/hub'])
-        .map(d => _normalizeRecetasModeloDir(d)).filter(Boolean);
+        .map(d => _normalizeCookbookModelDir(d)).filter(Boolean);
       _dirsEl.innerHTML = _allDirs.map(d => `<span class="cookbook-serve-dir-pill">${esc(d)}</span>`).join('')
-        + '<span class="cookbook-serve-dir-edit" title="Editar in Configuración">edit</span>';
+        + '<span class="cookbook-serve-dir-edit" title="Edit in Settings">edit</span>';
       _dirsEl.querySelector('.cookbook-serve-dir-edit')?.addEventListener('click', () => {
-        document.querySelector('#cookbook-modal .cookbook-tab[data-backend="Configuración"]')?.click();
+        document.querySelector('#cookbook-modal .cookbook-tab[data-backend="Settings"]')?.click();
       });
     }
-    const qp = new URLBuscarParams();
+    const qp = new URLSearchParams();
     if (host) { qp.set('host', host); const _sp4 = _getPort(host); if (_sp4) qp.set('ssh_port', _sp4); const _plat = _getPlatform(host); if (_plat) qp.set('platform', _plat); }
     if (modelDirs.length) qp.set('model_dir', modelDirs.join(','));
     const params = qp.toString() ? `?${qp}` : '';
     const scanSig = params || 'local';
-    const cached = fresh ? null : _readCachedModeloScan(scanSig);
+    const cached = fresh ? null : _readCachedModelScan(scanSig);
     if (cached) {
       _dlWp.destroy();
-      _renderCachedModelosData(list, cached, host);
+      _renderCachedModelsData(list, cached, host);
       return;
     }
     if (!allowNetwork) {
@@ -3888,7 +3888,7 @@ export async function _fetchCachedModelos(fresh = false, opts = {}) {
       list.innerHTML = '<div class="hwfit-loading serve-empty-auto-scan" style="flex-direction:column;gap:8px;text-align:center;"><div class="serve-empty-auto-wp"></div><div>No cached model scan yet</div><div style="font-size:11px;opacity:0.55;max-width:420px;line-height:1.4;">Scanning this server\'s model cache…</div></div>';
       list.querySelector('.serve-empty-auto-wp')?.appendChild(wp.element);
       setTimeout(() => {
-        if (list.querySelector('.serve-empty-auto-scan')) _fetchCachedModelos(true);
+        if (list.querySelector('.serve-empty-auto-scan')) _fetchCachedModels(true);
       }, 60);
       const tagContainer = document.getElementById('serve-tags');
       if (tagContainer) tagContainer.innerHTML = '';
@@ -3909,20 +3909,20 @@ export async function _fetchCachedModelos(fresh = false, opts = {}) {
     }
     const data = await res.json();
     if (data && data.error) throw new Error(data.error);
-    _writeCachedModeloScan(scanSig, data);
+    _writeCachedModelScan(scanSig, data);
     _dlWp.destroy();
-    _renderCachedModelosData(list, data, host);
+    _renderCachedModelsData(list, data, host);
   } catch (e) {
     _dlWp.destroy();
     list.innerHTML = `<div class="hwfit-loading" style="flex-direction:column;gap:8px;text-align:center;"><div style="color:var(--red);font-weight:600;">Cached model scan failed</div><div style="font-size:11px;opacity:0.65;max-width:420px;line-height:1.4;">${esc(e.message)}</div><button type="button" class="hwfit-gpu-btn serve-empty-scan-btn" style="height:26px;padding:3px 10px;">Retry</button></div>`;
     list.querySelector('.serve-empty-scan-btn')?.addEventListener('click', () => {
-      _fetchCachedModelos(true);
+      _fetchCachedModels(true);
     });
   }
 }
 
 /** Filter presets matching a model repo */
-function _presetsForModelo(presets, repo) {
+function _presetsForModel(presets, repo) {
   const short = repo.split('/').pop();
   return presets.filter(p => {
     const pm = p.model || ''; const pn = p.name || '';
@@ -3948,7 +3948,7 @@ export function initServe(shared) {
   _psQuote = shared._psQuote;
   _detectBackend = shared._detectBackend;
   _detectToolParser = shared._detectToolParser;
-  _detectModeloOptimizations = shared._detectModeloOptimizations;
+  _detectModelOptimizations = shared._detectModelOptimizations;
   _loadPresets = shared._loadPresets;
   _savePresets = shared._savePresets;
   _copyText = shared._copyText;
@@ -3957,16 +3957,16 @@ export function initServe(shared) {
   modelLogo = shared.modelLogo;
   esc = shared.esc;
   _launchServeTask = shared._launchServeTask;
-  _retryDescargar = shared._retryDescargar;
+  _retryDownload = shared._retryDownload;
   _nextAvailablePort = shared._nextAvailablePort;
 }
 
-export { _cachedAllModelos, _filterCachedList, _rerenderCachedModelos, _deleteCachedModelo };
+export { _cachedAllModels, _filterCachedList, _rerenderCachedModels, _deleteCachedModel };
 
-// Click the "running" pill on a serve-card → switch to Recetas → Running
+// Click the "running" pill on a serve-card → switch to Cookbook → Running
 // tab and scroll the matching task into view, with a brief flash so the
 // user can find it among a long list. Tracks the click via event
-// delegation so it survives every _rerenderCachedModelos() pass.
+// delegation so it survives every _rerenderCachedModels() pass.
 function _openRunningTabForRepo(repo) {
   const body = document.querySelector('#cookbook-modal .cookbook-body');
   if (!body) return;

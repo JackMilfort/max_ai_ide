@@ -1,4 +1,4 @@
-// Memoria Management Functions
+// Memory Management Functions
 // This module handles all memory-related operations
 
 import uiModule from './ui.js';
@@ -19,7 +19,7 @@ let selectedIds = new Set();
 
 const MEMORY_CATEGORIES = ['fact', 'identity', 'preference', 'contact', 'project', 'goal', 'task'];
 
-// Sort-option icons for the custom Memoria sort picker (and Skills picker
+// Sort-option icons for the custom Memory sort picker (and Skills picker
 // once it reuses the same markup). Each value maps to a 13px Feather-style
 // SVG so the icon visually distinguishes Newest / Oldest / A-Z / Most used.
 const _MEMORY_SORT_ICONS = {
@@ -33,7 +33,7 @@ function _memorySortIcon(value) {
   return _MEMORY_SORT_ICONS[value] || _MEMORY_SORT_ICONS.newest;
 }
 
-function _renderMemoriaSortPickerCurrent() {
+function _renderMemorySortPickerCurrent() {
   const sel = document.getElementById('memory-sort');
   const btn = document.getElementById('memory-sort-btn');
   if (!sel || !btn) return;
@@ -46,7 +46,7 @@ function _renderMemoriaSortPickerCurrent() {
   if (labelEl) labelEl.textContent = label;
 }
 
-function _initMemoriaSortPicker() {
+function _initMemorySortPicker() {
   const sel = document.getElementById('memory-sort');
   const picker = document.getElementById('memory-sort-picker');
   const btn = document.getElementById('memory-sort-btn');
@@ -77,7 +77,7 @@ function _initMemoriaSortPicker() {
     if (!item) return;
     sel.value = item.dataset.value;
     sel.dispatchEvent(new Event('change', { bubbles: true }));
-    _renderMemoriaSortPickerCurrent();
+    _renderMemorySortPickerCurrent();
     close();
   });
   document.addEventListener('click', (e) => {
@@ -90,10 +90,10 @@ function _initMemoriaSortPicker() {
     }
   }, { capture: true });
 
-  _renderMemoriaSortPickerCurrent();
+  _renderMemorySortPickerCurrent();
 }
 
-function _ensureNewMemoriaCategorySelect() {
+function _ensureNewMemoryCategorySelect() {
   const sel = document.getElementById('new-memory-category');
   if (!sel || sel.dataset.wired === '1') return;
   sel.dataset.wired = '1';
@@ -106,15 +106,15 @@ function _ensureNewMemoriaCategorySelect() {
   });
 }
 
-function _readNewMemoriaCategory() {
-  _ensureNewMemoriaCategorySelect();
+function _readNewMemoryCategory() {
+  _ensureNewMemoryCategorySelect();
   const sel = document.getElementById('new-memory-category');
   const cat = sel?.value || 'fact';
   return MEMORY_CATEGORIES.includes(cat) ? cat : 'fact';
 }
 
 let _memoryDragWired = false;
-function _wireMemoriaDrag() {
+function _wireMemoryDrag() {
   if (_memoryDragWired) return;
   const modal = document.getElementById('memory-modal');
   const content = modal && modal.querySelector('.modal-content');
@@ -174,17 +174,17 @@ function buildCategoryChips() {
       activeCategory = cat;
       container.querySelectorAll('.memory-cat-chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      renderMemoriaList();
-      updateMemoriaCount();
+      renderMemoryList();
+      updateMemoryCount();
     });
     container.appendChild(btn);
   });
 }
 
 async function syncToggles() {
-  // The settings tab no longer hosts a separate "Memoria in context" toggle —
+  // The settings tab no longer hosts a separate "Memory in context" toggle —
   // the header toggle owns that pref directly now.
-  await syncPrefToggle('memory-enabled-header-toggle', 'memory_enabled', 'Memoria enabled', 'Memoria disabled', false);
+  await syncPrefToggle('memory-enabled-header-toggle', 'memory_enabled', 'Memory enabled', 'Memory disabled', false);
   // The Skills header toggle owns the `skills_enabled` pref (was never wired —
   // toggling it did nothing, so skills stayed on). Now it actually gates skill
   // injection (see chat_helpers.py: uprefs.skills_enabled).
@@ -200,12 +200,12 @@ async function syncToggles() {
   if (headerToggle) {
     const modalBody = document.querySelector('.memory-modal-body');
     if (modalBody) modalBody.style.opacity = headerToggle.checked ? '' : '0.3';
-    reflectMemoriaToggleInSidebar(headerToggle.checked);
+    reflectMemoryToggleInSidebar(headerToggle.checked);
     if (!headerToggle.dataset.boundUx) {
       headerToggle.dataset.boundUx = '1';
       headerToggle.addEventListener('change', () => {
         if (modalBody) modalBody.style.opacity = headerToggle.checked ? '' : '0.3';
-        reflectMemoriaToggleInSidebar(headerToggle.checked);
+        reflectMemoryToggleInSidebar(headerToggle.checked);
       });
     }
   }
@@ -223,7 +223,7 @@ async function syncToggles() {
   }
 }
 
-function reflectMemoriaToggleInSidebar(enabled) {
+function reflectMemoryToggleInSidebar(enabled) {
   const btn = document.getElementById('tool-memory-btn');
   if (btn) btn.classList.toggle('tool-disabled', !enabled);
 }
@@ -369,16 +369,16 @@ async function syncPrefToggle(elementId, prefKey, onMsg, offMsg, dimBelow = true
 }
 
 export async function loadMemories() {
-  _ensureNewMemoriaCategorySelect();
+  _ensureNewMemoryCategorySelect();
   try {
     const response = await fetch(`${window.location.origin}/api/memory`);
 
     if (!response.ok) {
-      console.error('Memoria fetch failed with status:', response.status);
+      console.error('Memory fetch failed with status:', response.status);
       memories = [];
       buildCategoryChips();
-      renderMemoriaList();
-      updateMemoriaCount();
+      renderMemoryList();
+      updateMemoryCount();
       syncToggles();
       return;
     }
@@ -394,14 +394,14 @@ export async function loadMemories() {
     }
 
     buildCategoryChips();
-    renderMemoriaList();
-    updateMemoriaCount();
+    renderMemoryList();
+    updateMemoryCount();
   } catch (error) {
     console.error('Failed to load memories:', error);
     memories = [];
     buildCategoryChips();
-    renderMemoriaList();
-    updateMemoriaCount();
+    renderMemoryList();
+    updateMemoryCount();
   }
   // Always wire toggles, even if memory API failed
   syncToggles();
@@ -418,9 +418,9 @@ function enterSelectMode() {
   const bulkBar = document.getElementById('memory-bulk-bar');
   const selectBtn = document.getElementById('memory-select-btn');
   if (bulkBar) bulkBar.classList.remove('hidden');
-  if (selectBtn) { selectBtn.classList.add('active'); selectBtn.innerHTML = _SELECT_BTN_X_SVG + 'Cancelar'; }
+  if (selectBtn) { selectBtn.classList.add('active'); selectBtn.innerHTML = _SELECT_BTN_X_SVG + 'Cancel'; }
   updateBulkCount();
-  renderMemoriaList();
+  renderMemoryList();
 }
 
 function exitSelectMode() {
@@ -432,7 +432,7 @@ function exitSelectMode() {
   if (bulkBar) bulkBar.classList.add('hidden');
   if (selectBtn) { selectBtn.classList.remove('active'); selectBtn.innerHTML = _SELECT_BTN_DOT_SVG + 'Select'; }
   if (selectAll) selectAll.checked = false;
-  renderMemoriaList();
+  renderMemoryList();
 }
 
 function toggleSelectItem(id) {
@@ -463,13 +463,13 @@ function toggleSelectAll() {
     selectedIds.clear();
   }
   updateBulkCount();
-  renderMemoriaList();
+  renderMemoryList();
 }
 
-async function bulkEliminar() {
+async function bulkDelete() {
   if (selectedIds.size === 0) return;
   const count = selectedIds.size;
-  if (!await uiModule.styledConfirmar(`Eliminar ${count} ${count === 1 ? 'memory' : 'memories'}?`, { confirmText: 'Eliminar', danger: true })) return;
+  if (!await uiModule.styledConfirm(`Delete ${count} ${count === 1 ? 'memory' : 'memories'}?`, { confirmText: 'Delete', danger: true })) return;
 
   let deleted = 0;
   const deletedIds = [];
@@ -485,10 +485,10 @@ async function bulkEliminar() {
     }
   }
 
-  await animateMemoriaRemoval(deletedIds);
+  await animateMemoryRemoval(deletedIds);
   exitSelectMode();
   await loadMemories();
-  showToast(`Eliminard ${deleted} ${deleted === 1 ? 'memory' : 'memories'}`);
+  showToast(`Deleted ${deleted} ${deleted === 1 ? 'memory' : 'memories'}`);
 }
 
 // ---- Tidy (audit) ----
@@ -557,8 +557,8 @@ export async function tidyMemories() {
     // Now load the clean state
     memories = afterList;
     buildCategoryChips();
-    renderMemoriaList();
-    updateMemoriaCount();
+    renderMemoryList();
+    updateMemoryCount();
 
     showToast(`Tidied: ${data.removed} removed (${data.before} \u2192 ${data.after})`);
   } catch (error) {
@@ -579,7 +579,7 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function animateMemoriaRemoval(ids) {
+async function animateMemoryRemoval(ids) {
   const idSet = new Set([...ids].map(id => String(id)));
   const memoryList = document.getElementById('memory-list');
   if (!memoryList || !idSet.size) return;
@@ -675,10 +675,10 @@ function getFilteredMemories() {
 
 // ---- Render ----
 
-export function renderMemoriaList() {
+export function renderMemoryList() {
   const memoryList = document.getElementById('memory-list');
   if (!memoryList) {
-    console.error('Memoria list element not found');
+    console.error('Memory list element not found');
     return;
   }
 
@@ -697,7 +697,7 @@ export function renderMemoriaList() {
       memoryList.innerHTML = `<div class="memory-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
         <span>No memories yet${_smiley}</span>
         <span style="opacity:0.7;font-size:11px;display:block;">
-          <a href="#" data-mem-goto-add style="color:var(--accent,var(--red));text-decoration:underline;">Import in Agregar tab</a>
+          <a href="#" data-mem-goto-add style="color:var(--accent,var(--red));text-decoration:underline;">Import in Add tab</a>
         </span>
       </div>`;
       memoryList.querySelector('[data-mem-goto-add]')?.addEventListener('click', (e) => {
@@ -793,7 +793,7 @@ export function renderMemoriaList() {
     if (!selectMode) {
       textSpan.addEventListener('dblclick', (e) => {
         e.stopPropagation();
-        startInlineEditar(item, memory);
+        startInlineEdit(item, memory);
       });
       textSpan.style.cursor = 'text';
     }
@@ -821,13 +821,13 @@ export function renderMemoriaList() {
 
       const editItem = document.createElement('div');
       editItem.className = 'dropdown-item-compact';
-      editItem.textContent = '✎ Editar';
-      editItem.addEventListener('click', () => { dropdown.style.display = 'none'; startInlineEditar(item, memory); });
+      editItem.textContent = '✎ Edit';
+      editItem.addEventListener('click', () => { dropdown.style.display = 'none'; startInlineEdit(item, memory); });
 
       const deleteItem = document.createElement('div');
       deleteItem.className = 'dropdown-item-compact memory-dropdown-delete';
-      deleteItem.textContent = '✕ Eliminar';
-      deleteItem.addEventListener('click', () => { dropdown.style.display = 'none'; deleteMemoria(memory.id); });
+      deleteItem.textContent = '✕ Delete';
+      deleteItem.addEventListener('click', () => { dropdown.style.display = 'none'; deleteMemory(memory.id); });
 
       // Select — enters bulk-select mode and pre-selects this memory. Same
       // pattern as the email/documents/skills Select item.
@@ -840,15 +840,15 @@ export function renderMemoriaList() {
         if (!selectMode) enterSelectMode();
         selectedIds.add(memory.id);
         updateBulkCount();
-        renderMemoriaList();
+        renderMemoryList();
       });
 
-      // Mobile-only Cancelar — mirrors the email/documents popup pattern. CSS
+      // Mobile-only Cancel — mirrors the email/documents popup pattern. CSS
       // hides `.dropdown-cancel-mobile` on desktop where outside-click already
       // dismisses cleanly.
       const cancelItem = document.createElement('div');
       cancelItem.className = 'dropdown-item-compact dropdown-cancel-mobile';
-      cancelItem.textContent = '✕ Cancelar';
+      cancelItem.textContent = '✕ Cancel';
       cancelItem.addEventListener('click', (e) => { e.stopPropagation(); if (dropdown.parentNode) dropdown.remove(); });
 
       dropdown.appendChild(pinItem);
@@ -859,7 +859,7 @@ export function renderMemoriaList() {
 
       menuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Cerrar any other open dropdowns
+        // Close any other open dropdowns
         document.querySelectorAll('.memory-item-dropdown').forEach(d => d.remove());
         const rect = menuBtn.getBoundingClientRect();
         dropdown.style.position = 'fixed';
@@ -939,7 +939,7 @@ export function renderMemoriaList() {
       {
         let hold = null;
         let start = null;
-        const _lpCancelar = () => { if (hold) { clearTimeout(hold); hold = null; } start = null; };
+        const _lpCancel = () => { if (hold) { clearTimeout(hold); hold = null; } start = null; };
         item.addEventListener('pointerdown', (e) => {
           if (e.target.closest('.memory-menu-btn, .memory-select-cb, button, input')) return;
           start = { x: e.clientX, y: e.clientY };
@@ -953,13 +953,13 @@ export function renderMemoriaList() {
         });
         item.addEventListener('pointermove', (e) => {
           if (!start) return;
-          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) _lpCancelar();
+          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) _lpCancel();
         });
-        item.addEventListener('pointerup', _lpCancelar);
-        item.addEventListener('pointercancel', _lpCancelar);
+        item.addEventListener('pointerup', _lpCancel);
+        item.addEventListener('pointercancel', _lpCancel);
       }
 
-      // Cerrar dropdown on outside click
+      // Close dropdown on outside click
       document.addEventListener('click', () => { if (dropdown.parentNode) dropdown.remove(); }, { once: false });
     }
 
@@ -970,7 +970,7 @@ export function renderMemoriaList() {
 
 // ---- Inline edit with category picker ----
 
-function startInlineEditar(item, memory) {
+function startInlineEdit(item, memory) {
   item.innerHTML = '';
   item.className = 'memory-item memory-item-editing';
 
@@ -1002,12 +1002,12 @@ function startInlineEditar(item, memory) {
   const saveBtn = document.createElement('button');
   saveBtn.className = 'memory-item-btn save';
   saveBtn.textContent = 'save';
-  saveBtn.addEventListener('click', () => saveInlineEditar(memory.id, input.value, catSelect.value));
+  saveBtn.addEventListener('click', () => saveInlineEdit(memory.id, input.value, catSelect.value));
 
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'memory-item-btn';
   cancelBtn.textContent = 'cancel';
-  cancelBtn.addEventListener('click', () => renderMemoriaList());
+  cancelBtn.addEventListener('click', () => renderMemoryList());
 
   actions.appendChild(saveBtn);
   actions.appendChild(cancelBtn);
@@ -1019,28 +1019,28 @@ function startInlineEditar(item, memory) {
   input.select();
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveInlineEditar(memory.id, input.value, catSelect.value);
+    if (e.key === 'Enter') saveInlineEdit(memory.id, input.value, catSelect.value);
     if (e.key === 'Escape') {
       e.stopPropagation();
       e.stopImmediatePropagation();
-      renderMemoriaList();
+      renderMemoryList();
     }
   });
 }
 
-async function saveInlineEditar(id, newText, newCategory) {
+async function saveInlineEdit(id, newText, newCategory) {
   newText = newText.trim();
   if (!newText) return;
 
   const memory = memories.find(m => m.id === id);
   const catChanged = newCategory && newCategory !== (memory?.category || 'fact');
   if (!memory || (newText === memory.text && !catChanged)) {
-    renderMemoriaList();
+    renderMemoryList();
     return;
   }
 
   try {
-    const params = new URLBuscarParams({ text: newText });
+    const params = new URLSearchParams({ text: newText });
     if (newCategory) params.append('category', newCategory);
 
     const response = await fetch(`${window.location.origin}/api/memory/${id}`, {
@@ -1050,7 +1050,7 @@ async function saveInlineEditar(id, newText, newCategory) {
 
     if (response.ok) {
       await loadMemories();
-      showToast('Memoria updated');
+      showToast('Memory updated');
     } else {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Failed to update memory');
@@ -1061,7 +1061,7 @@ async function saveInlineEditar(id, newText, newCategory) {
   }
 }
 
-export function updateMemoriaCount() {
+export function updateMemoryCount() {
   const h2Count = document.getElementById('memory-count-h2');
   const tabCount = document.getElementById('memory-count'); // optional (may be absent)
   if (!h2Count && !tabCount) return;
@@ -1080,18 +1080,18 @@ export function updateMemoriaCount() {
 
   const num = visible.length === scopeTotal ? `${scopeTotal}` : `${visible.length}/${scopeTotal}`;
   // Header (next to the "Memories" title) reads "N memories", like the
-  // Documentos header. The bare number still feeds any tab badge if present.
+  // Documents header. The bare number still feeds any tab badge if present.
   if (h2Count) h2Count.textContent = `${num} ${scopeTotal === 1 && visible.length === scopeTotal ? 'memory' : 'memories'}`;
   if (tabCount) tabCount.textContent = num;
 }
 
-export async function addNewMemoria() {
+export async function addNewMemory() {
   const input = document.getElementById('new-memory-input');
   const text = input.value.trim();
-  const category = _readNewMemoriaCategory();
+  const category = _readNewMemoryCategory();
 
   if (!text) {
-    showError('Memoria text cannot be empty');
+    showError('Memory text cannot be empty');
     return;
   }
 
@@ -1110,7 +1110,7 @@ export async function addNewMemoria() {
     if (response.ok) {
       input.value = '';
       await loadMemories();
-      showToast('Memoria added');
+      showToast('Memory added');
     } else {
       const errorData = await response.json();
       console.error('Server error details:', errorData);
@@ -1122,26 +1122,26 @@ export async function addNewMemoria() {
   }
 }
 
-export async function editMemoria(id) {
+export async function editMemory(id) {
   const memory = memories.find(m => m.id === id);
   if (!memory) return;
 
-  const newText = prompt('Editar memory:', memory.text);
+  const newText = prompt('Edit memory:', memory.text);
   if (!newText || newText === memory.text) return;
 
-  await saveInlineEditar(id, newText);
+  await saveInlineEdit(id, newText);
 }
 
 async function togglePin(id, pinned) {
   try {
     const res = await fetch(`${window.location.origin}/api/memory/${id}/pin`, {
       method: 'POST',
-      body: new URLBuscarParams({ pinned: pinned.toString() })
+      body: new URLSearchParams({ pinned: pinned.toString() })
     });
     if (res.ok) {
       const mem = memories.find(m => m.id === id);
       if (mem) mem.pinned = pinned;
-      renderMemoriaList();
+      renderMemoryList();
       showToast(pinned ? 'Pinned — always in context' : 'Unpinned — RAG only');
     }
   } catch (e) {
@@ -1150,11 +1150,11 @@ async function togglePin(id, pinned) {
   }
 }
 
-export async function deleteMemoria(id) {
+export async function deleteMemory(id) {
   const memory = memories.find(m => m.id === id);
   if (!memory) return;
 
-  if (!await uiModule.styledConfirmar(`Eliminar this memory?\n"${memory.text}"`, { confirmText: 'Eliminar', danger: true })) return;
+  if (!await uiModule.styledConfirm(`Delete this memory?\n"${memory.text}"`, { confirmText: 'Delete', danger: true })) return;
 
   try {
     const response = await fetch(`${window.location.origin}/api/memory/${id}`, {
@@ -1162,9 +1162,9 @@ export async function deleteMemoria(id) {
     });
 
     if (response.ok) {
-      await animateMemoriaRemoval([id]);
+      await animateMemoryRemoval([id]);
       await loadMemories();
-      showToast('Memoria deleted');
+      showToast('Memory deleted');
     } else {
       throw new Error('Failed to delete');
     }
@@ -1173,10 +1173,10 @@ export async function deleteMemoria(id) {
   }
 }
 
-export async function extractMemoria(sessionId) {
+export async function extractMemory(sessionId) {
   const res = await fetch(`${window.location.origin}/api/memory/extract`, {
     method: 'POST',
-    body: new URLBuscarParams({ session: sessionId })
+    body: new URLSearchParams({ session: sessionId })
   });
   if (!res.ok) {
     showError('Failed to extract memory suggestions');
@@ -1232,7 +1232,7 @@ export async function extractMemoria(sessionId) {
         });
         btn.disabled = true;
         btn.textContent = 'saved';
-        showToast('Guardard to memory');
+        showToast('Saved to memory');
       });
       div.appendChild(txt);
       div.appendChild(btn);
@@ -1366,7 +1366,7 @@ async function handleImportFile(file) {
         if (memList) memList.classList.remove('hidden');
         await loadMemories();
         document.querySelector('.memory-tab[data-memory-tab="browse"]')?.click();
-        showToast(`Guardard ${saved} memories`);
+        showToast(`Saved ${saved} memories`);
       });
       headerActions.appendChild(saveAllBtn);
       headerActions.appendChild(backBtn);
@@ -1405,7 +1405,7 @@ async function handleImportFile(file) {
           updateHeaderTitle();
           btn.disabled = true;
           btn.textContent = 'saved';
-          showToast('Guardard to memory');
+          showToast('Saved to memory');
         });
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'memory-item-btn delete';
@@ -1447,9 +1447,9 @@ var showError = uiModule.showError;
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
-  _wireMemoriaDrag();
+  _wireMemoryDrag();
 
-  // Memoria modal tabs
+  // Memory modal tabs
   document.querySelectorAll('.memory-tab[data-memory-tab]').forEach(tab => {
     tab.addEventListener('click', () => {
       const target = tab.dataset.memoryTab;
@@ -1468,10 +1468,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sortSelect) {
     sortSelect.addEventListener('change', () => {
       sortOrder = sortSelect.value;
-      renderMemoriaList();
+      renderMemoryList();
     });
   }
-  _initMemoriaSortPicker();
+  _initMemorySortPicker();
 
   const tidyBtn = document.getElementById('memory-tidy-btn');
   if (tidyBtn) tidyBtn.addEventListener('click', tidyMemories);
@@ -1492,11 +1492,11 @@ document.addEventListener('DOMContentLoaded', () => {
     selectAll.dispatchEvent(new Event('change'));
   });
 
-  const bulkEliminarBtn = document.getElementById('memory-bulk-delete');
-  if (bulkEliminarBtn) bulkEliminarBtn.addEventListener('click', bulkEliminar);
+  const bulkDeleteBtn = document.getElementById('memory-bulk-delete');
+  if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDelete);
 
-  const bulkCancelarBtn = document.getElementById('memory-bulk-cancel');
-  if (bulkCancelarBtn) bulkCancelarBtn.addEventListener('click', exitSelectMode);
+  const bulkCancelBtn = document.getElementById('memory-bulk-cancel');
+  if (bulkCancelBtn) bulkCancelBtn.addEventListener('click', exitSelectMode);
 
   const exportBtn = document.getElementById('memory-export-btn');
   if (exportBtn) exportBtn.addEventListener('click', exportMemories);
@@ -1516,12 +1516,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const memoryModule = {
   loadMemories,
-  renderMemoriaList,
-  updateMemoriaCount,
-  addNewMemoria,
-  editMemoria,
-  deleteMemoria,
-  extractMemoria,
+  renderMemoryList,
+  updateMemoryCount,
+  addNewMemory,
+  editMemory,
+  deleteMemory,
+  extractMemory,
   buildCategoryChips,
   tidyMemories,
   importMemories,

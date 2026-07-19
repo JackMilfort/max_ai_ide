@@ -140,7 +140,7 @@ export function wireInpaintControls({
   document.getElementById('ge-inpaint-mode-erase')?.addEventListener('click', () => setInpaintMode(true));
 
   // ── Mask color picker ──
-  // Actualizars state.maskTintColor live so the user can pick a colour
+  // Updates state.maskTintColor live so the user can pick a colour
   // that contrasts with their photo. Wire both the topbar picker AND
   // the inpaint-section picker so changing one syncs the other.
   function applyMaskTintFromHex(hex) {

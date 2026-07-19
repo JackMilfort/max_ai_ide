@@ -18,7 +18,7 @@ export const _prefEnabled = () => {
 
 // Patterns that indicate sensitive data
 const PATTERNS = [
-  // Correos
+  // Emails
   { re: /\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/g, label: 'email' },
   // API key prefixes (common services)
   { re: /\b(sk-[a-zA-Z0-9]{20,}|pk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36,}|gho_[a-zA-Z0-9]{36,}|glpat-[a-zA-Z0-9\-_]{20,}|xox[bpras]-[a-zA-Z0-9\-]{10,}|npm_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{12,})\b/g, label: 'api-key' },
@@ -27,7 +27,7 @@ const PATTERNS = [
   // Generic tokens/secrets in key=value or key: value patterns
   // Credentials with delimiters (key: value, key=value, key  value)
   { re: /(?:password|passwd|secret|api[_\-]?key|access[_\-]?token|auth[_\-]?token|private[_\-]?key|client[_\-]?secret)[\s]*[:=]\s*["']?[^\s"'<]{4,}["']?/gi, label: 'credential' },
-  // Credentials in tabular/label-value format (Contraseña    xyzABC123)
+  // Credentials in tabular/label-value format (Password    xyzABC123)
   { re: /(?:password|passwd|secret|api[_\-]?key|access[_\-]?token|auth[_\-]?token|private[_\-]?key|client[_\-]?secret)\s{2,}[^\s<]{4,}/gi, label: 'credential' },
   // Value after a line starting with password-like label
   { re: /(?:^|\n)\s*(?:password|passwd|secret|api[_\-]?key|token|private[_\-]?key)[\t ]*\n\s*([^\s<]{4,})/gim, label: 'credential' },
@@ -207,7 +207,7 @@ function _contextCensor(el) {
     // Found a label — censor value via multiple strategies
     let censored = false;
 
-    // A) Next text sibling node (e.g. <strong>Contraseña</strong> value123)
+    // A) Next text sibling node (e.g. <strong>Password</strong> value123)
     let sibling = elem.nextSibling;
     while (sibling && !censored) {
       if (sibling.nodeType === 3) { // text node
@@ -272,7 +272,7 @@ function _contextCensor(el) {
   }
 
   // Strategy 2: Full-text scan for label-value patterns across lines
-  // Get the full text, find patterns like "Contraseña\n  value" or "Contraseña: value"
+  // Get the full text, find patterns like "Password\n  value" or "Password: value"
   const fullText = el.textContent || '';
   const labelValueRe = /(?:password|passwd|secret|api[_\-]?key|access[_\-]?token|private[_\-]?key|client[_\-]?secret|token|auth[_\-]?token)\s*[:\s]\s*(\S{4,})/gi;
   let m;

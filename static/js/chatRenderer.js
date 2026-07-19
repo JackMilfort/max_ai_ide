@@ -9,7 +9,7 @@ import { providerLogo, providerLabel } from './providers.js';
 import settingsModule from './settings.js';
 import spinnerModule from './spinner.js';
 import { bindMenuDismiss } from './escMenuStack.js';
-import { matchModeloKey } from './model/matchKey.js';
+import { matchModelKey } from './model/matchKey.js';
 
 const SEARCH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
 const REPORT_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
@@ -78,7 +78,7 @@ function _formatSize(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-// Build the `.attach-cards` element for a message's attachment list. Compartird by
+// Build the `.attach-cards` element for a message's attachment list. Shared by
 // addMessage and updateMessageAttachments so a live (optimistic) user bubble
 // can be re-rendered with real upload ids once the upload resolves.
 export function buildAttachCards(attachments) {
@@ -166,7 +166,7 @@ export function buildAttachCards(attachments) {
           ocrBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg><span class="attach-ocr-label">Caption</span>';
           ocrBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            _openVisionEditaror(att, ocrBtn.closest('.msg'));
+            _openVisionEditor(att, ocrBtn.closest('.msg'));
           });
           imgWrap.appendChild(ocrBtn);
         }
@@ -194,7 +194,7 @@ export function buildAttachCards(attachments) {
         card.dataset.fileId = att.id;
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => {
-          // PDFs & text/code/markdown → open in the Documentos viewer
+          // PDFs & text/code/markdown → open in the Documents viewer
           // (others fall back to the raw file).
           if (window.chatModule?.openAttachment) window.chatModule.openAttachment(att, false);
           else window.open(`/api/upload/${att.id}`, '_blank');
@@ -232,7 +232,7 @@ export function updateMessageAttachments(msgWrap, attachments) {
 }
 
 // Quick full-size preview when the user taps a chat photo thumbnail. Just an
-// overlay with the original image centered — no Galería panel, no editor.
+// overlay with the original image centered — no Gallery panel, no editor.
 function _openImageLightbox(att) {
   if (!att?.id) return;
   const overlay = document.createElement('div');
@@ -284,29 +284,29 @@ function _openImageLightbox(att) {
 // the LLM (e.g. when OCR misreads a word). Persists to the server's vision
 // cache (PUT /api/upload/{id}/vision), so any subsequent message that
 // references the same file picks up the corrected text.
-let _visionEditarorEl = null;
-let _visionEditarorEsc = null;
-function _closeVisionEditaror() {
-  if (_visionEditarorEsc) { document.removeEventListener('keydown', _visionEditarorEsc); _visionEditarorEsc = null; }
-  if (_visionEditarorEl) { _visionEditarorEl.remove(); _visionEditarorEl = null; }
+let _visionEditorEl = null;
+let _visionEditorEsc = null;
+function _closeVisionEditor() {
+  if (_visionEditorEsc) { document.removeEventListener('keydown', _visionEditorEsc); _visionEditorEsc = null; }
+  if (_visionEditorEl) { _visionEditorEl.remove(); _visionEditorEl = null; }
 }
-function _openVisionEditaror(att, userMsgEl) {
+function _openVisionEditor(att, userMsgEl) {
   if (!att?.id) return;
-  _closeVisionEditaror();
+  _closeVisionEditor();
   const overlay = document.createElement('div');
   overlay.className = 'vision-editor-overlay';
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) _closeVisionEditaror(); });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) _closeVisionEditor(); });
   const panel = document.createElement('div');
   panel.className = 'vision-editor-panel';
   const title = document.createElement('div');
   title.className = 'vision-editor-title';
-  // Eye icon matches the one in Configuración → Vision so users recognise where
+  // Eye icon matches the one in Settings → Vision so users recognise where
   // this text originates.
   title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span>Vision text</span>';
   panel.appendChild(title);
   const desc = document.createElement('div');
   desc.className = 'vision-editor-desc';
-  desc.textContent = 'Editar text and save, new chats will have the new context. Regenerate or continue from there.';
+  desc.textContent = 'Edit text and save, new chats will have the new context. Regenerate or continue from there.';
   panel.appendChild(desc);
   const ta = document.createElement('textarea');
   ta.className = 'vision-editor-text';
@@ -319,8 +319,8 @@ function _openVisionEditaror(att, userMsgEl) {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'vision-editor-btn';
-  closeBtn.innerHTML = '<span class="vision-btn-label">Cerrar</span>';
-  closeBtn.addEventListener('click', _closeVisionEditaror);
+  closeBtn.innerHTML = '<span class="vision-btn-label">Close</span>';
+  closeBtn.addEventListener('click', _closeVisionEditor);
   const _saveVisionText = async () => {
     const res = await fetch(`/api/upload/${att.id}/vision`, {
       method: 'PUT',
@@ -333,18 +333,18 @@ function _openVisionEditaror(att, userMsgEl) {
   const saveBtn = document.createElement('button');
   saveBtn.type = 'button';
   saveBtn.className = 'vision-editor-btn vision-editor-btn-primary';
-  saveBtn.innerHTML = '<span class="vision-btn-label">Guardar</span>';
+  saveBtn.innerHTML = '<span class="vision-btn-label">Save</span>';
   saveBtn.disabled = true;
   saveBtn.addEventListener('click', async () => {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="vision-btn-label">Saving…</span>';
     try {
       await _saveVisionText();
-      if (uiModule?.showToast) uiModule.showToast('Guardard');
-      _closeVisionEditaror();
+      if (uiModule?.showToast) uiModule.showToast('Saved');
+      _closeVisionEditor();
     } catch (e) {
       saveBtn.disabled = false;
-      saveBtn.innerHTML = '<span class="vision-btn-label">Guardar</span>';
+      saveBtn.innerHTML = '<span class="vision-btn-label">Save</span>';
       if (uiModule?.showError) uiModule.showError('Failed to save OCR text');
     }
   });
@@ -353,7 +353,7 @@ function _openVisionEditaror(att, userMsgEl) {
   const regenBtn = document.createElement('button');
   regenBtn.type = 'button';
   regenBtn.className = 'vision-editor-btn vision-editor-btn-primary';
-  regenBtn.title = 'Guardar and regenerate the message';
+  regenBtn.title = 'Save and regenerate the message';
   regenBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.74 9.74 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span class="vision-btn-label">Regenerate message</span>';
   regenBtn.disabled = true;
   regenBtn.addEventListener('click', async () => {
@@ -361,11 +361,11 @@ function _openVisionEditaror(att, userMsgEl) {
     saveBtn.disabled = true;
     try {
       await _saveVisionText();
-      _closeVisionEditaror();
+      _closeVisionEditor();
       if (userMsgEl && window.chatModule?.resendUserMessage) {
         window.chatModule.resendUserMessage(userMsgEl, { replaceFromHere: true });
       } else if (uiModule?.showToast) {
-        uiModule.showToast('Guardard');
+        uiModule.showToast('Saved');
       }
     } catch (e) {
       regenBtn.disabled = false;
@@ -379,12 +379,12 @@ function _openVisionEditaror(att, userMsgEl) {
   panel.appendChild(actions);
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
-  _visionEditarorEl = overlay;
+  _visionEditorEl = overlay;
 
   // ESC closes the popup. Registered on document so it works regardless of
   // focus (the textarea swallows the event otherwise).
-  _visionEditarorEsc = (e) => { if (e.key === 'Escape') _closeVisionEditaror(); };
-  document.addEventListener('keydown', _visionEditarorEsc);
+  _visionEditorEsc = (e) => { if (e.key === 'Escape') _closeVisionEditor(); };
+  document.addEventListener('keydown', _visionEditorEsc);
 
   fetch(`/api/upload/${att.id}/vision`, { credentials: 'same-origin' })
     .then(r => r.ok ? r.json() : Promise.reject(r))
@@ -482,8 +482,8 @@ const QWEN_BARE_MARKER_RE = /(?:^|[\t\r\n ])(?:\|?end\|?|\/?\|end\|)(?=[\t\r\n ]
 const TOOL_NARRATION_RE = /(?:The (?:result|output) shows?:?\s*)?-?\s*(?:stdout|stderr|exit_code):\s*.+/gi;
 
 
-// Modelo pricing table — per million tokens
-// Modelo info: pricing (per 1M tokens) + context window length
+// Model pricing table — per million tokens
+// Model info: pricing (per 1M tokens) + context window length
 const MODEL_INFO = {
   // --- Anthropic ---
   'claude-sonnet-4-5':    { input: 3.00,  output: 15.00, ctx: 200000 },
@@ -579,7 +579,7 @@ const IMAGE_PRICING = {
   'gpt-image-1-mini': { 'low': { '1024x1024': 0.005, '1024x1536': 0.006, '1536x1024': 0.006 }, 'medium': { '1024x1024': 0.011, '1024x1536': 0.015, '1536x1024': 0.015 }, 'high': { '1024x1024': 0.036, '1024x1536': 0.052, '1536x1024': 0.052 } },
 };
 
-export function shortModelo(name) {
+export function shortModel(name) {
   if (!name) return '...';
   if (typeof name !== 'string') name = String(name);
   let short = name.split('/').pop();
@@ -603,32 +603,32 @@ function modelValue(name) {
   return String(name).trim();
 }
 
-export function sameModeloName(left, right) {
+export function sameModelName(left, right) {
   const a = modelValue(left);
   const b = modelValue(right);
   if (!a || !b) return false;
   return a.toLowerCase() === b.toLowerCase()
-    || shortModelo(a).toLowerCase() === shortModelo(b).toLowerCase();
+    || shortModel(a).toLowerCase() === shortModel(b).toLowerCase();
 }
 
-export function modelRouteLabel(requestedModelo, actualModelo) {
-  const requested = modelValue(requestedModelo);
-  const actual = modelValue(actualModelo) || requested;
-  if (!requested || sameModeloName(requested, actual)) return shortModelo(actual || requested);
-  return shortModelo(requested) + ' -> ' + shortModelo(actual);
+export function modelRouteLabel(requestedModel, actualModel) {
+  const requested = modelValue(requestedModel);
+  const actual = modelValue(actualModel) || requested;
+  if (!requested || sameModelName(requested, actual)) return shortModel(actual || requested);
+  return shortModel(requested) + ' -> ' + shortModel(actual);
 }
 
-export function replyModeloPair(modelName, metadata) {
+export function replyModelPair(modelName, metadata) {
   const meta = metadata || {};
   const actualFromMeta = modelValue(meta.model || meta.actual_model);
   const requestedFromMeta = modelValue(meta.requested_model || meta.selected_model);
   if (actualFromMeta || requestedFromMeta) {
     const actual = actualFromMeta || requestedFromMeta || modelValue(modelName);
     const requested = requestedFromMeta || actual;
-    return { requestedModelo: requested, actualModelo: actual };
+    return { requestedModel: requested, actualModel: actual };
   }
   const fallback = modelValue(modelName);
-  return { requestedModelo: fallback, actualModelo: fallback };
+  return { requestedModel: fallback, actualModel: fallback };
 }
 
 /**
@@ -648,9 +648,9 @@ export function modelColor(name) {
 }
 
 /** Look up model info (pricing + context) by substring match */
-export function getModeloInfo(modelName) {
+export function getModelInfo(modelName) {
   if (!modelName) return null;
-  const key = matchModeloKey(modelName, Object.keys(MODEL_INFO));
+  const key = matchModelKey(modelName, Object.keys(MODEL_INFO));
   return key ? { key, ...MODEL_INFO[key] } : null;
 }
 
@@ -662,7 +662,7 @@ function _fmtCtx(n) {
 /**
  * Apply model color to a role element (sets color + dot color).
  */
-export function applyModeloColor(roleEl, modelName) {
+export function applyModelColor(roleEl, modelName) {
   if (!modelName) return;
   const color = modelColor(modelName);
   if (color) {
@@ -689,15 +689,15 @@ export function applyModeloColor(roleEl, modelName) {
     roleEl.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.ctx-popup').forEach(p => { if (typeof p._dismiss === 'function') p._dismiss(); else p.remove(); });
-      const info = getModeloInfo(modelName);
-      const short = shortModelo(modelName);
+      const info = getModelInfo(modelName);
+      const short = shortModel(modelName);
       const logoHtml = providerLogo(modelName);
       const popup = document.createElement('div');
       popup.className = 'ctx-popup';
       let html = '<div style="font-weight:600;margin-bottom:6px;color:var(--fg);display:flex;align-items:center;gap:6px;">';
       if (logoHtml) html += '<span class="role-provider-logo" style="opacity:0.7">' + logoHtml + '</span>';
       html += uiModule.esc(short) + '</div>';
-      html += '<div><span class="ctx-label">Modelo</span> ' + uiModule.esc(modelName.split('/').pop()) + '</div>';
+      html += '<div><span class="ctx-label">Model</span> ' + uiModule.esc(modelName.split('/').pop()) + '</div>';
       // Provider = the serving endpoint, distinct from the model vendor/logo
       // (e.g. the same model via OpenRouter vs Copilot vs Anthropic direct).
       const _epUrl = (window.sessionModule && window.sessionModule.getCurrentEndpointUrl)
@@ -759,9 +759,9 @@ export function applyModeloColor(roleEl, modelName) {
   }
 }
 
-export function getModeloCost(modelName, inputTokens, outputTokens) {
+export function getModelCost(modelName, inputTokens, outputTokens) {
   if (!modelName) return null;
-  const key = matchModeloKey(modelName, Object.keys(MODEL_PRICING));
+  const key = matchModelKey(modelName, Object.keys(MODEL_PRICING));
   if (!key) return null;
   const price = MODEL_PRICING[key];
   return (inputTokens * price.input + outputTokens * price.output) / 1_000_000;
@@ -823,7 +823,7 @@ export function isCostTrackedEndpoint(url) {
 function _billableCost(model, inputTokens, outputTokens) {
   const url = _currentEndpointUrl();
   if (!isCostTrackedEndpoint(url)) return null;
-  return getModeloCost(model, inputTokens, outputTokens);
+  return getModelCost(model, inputTokens, outputTokens);
 }
 
 export function getImageCost(model, quality, size) {
@@ -863,7 +863,7 @@ export function resetSessionCost(sessionId) {
   updateSessionCostUI();
 }
 
-/** Actualizar the persistent session-cost badge in the input bar. */
+/** Update the persistent session-cost badge in the input bar. */
 export function updateSessionCostUI() {
   const el = document.getElementById('session-cost-display');
   if (!el) return;
@@ -891,7 +891,7 @@ export function updateSessionCostUI() {
   }
 }
 
-/** Crear a timestamp span for role labels.
+/** Create a timestamp span for role labels.
  * Pass an ISO string / Date / epoch-ms to render the message's own time
  * (used when replaying history). Falls back to "now" when no value is given. */
 export function roleTimestamp(when) {
@@ -948,7 +948,7 @@ export function buildSourcesBox(sources, type, expanded) {
   var esc = uiModule.esc;
   var id = 'sources-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
   var count = sources.length;
-  var label = type === 'research' ? 'Investigación sources' : 'Web sources';
+  var label = type === 'research' ? 'Research sources' : 'Web sources';
   var lines = '';
   for (var i = 0; i < count; i++) {
     var s = sources[i];
@@ -1046,7 +1046,7 @@ function _appendContinuePrompt(container) {
   wrap.innerHTML =
     '<div class="continue-research-hint">'
     + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'
-    + '<span>Dig deeper? Activate Investigación again and type a follow-up question to continue this research.</span>'
+    + '<span>Dig deeper? Activate Research again and type a follow-up question to continue this research.</span>'
     + '</div>';
   container.appendChild(wrap);
 }
@@ -1145,8 +1145,8 @@ function resolveDocumentPlaceholderLinks(text, metadata) {
 }
 
 // Jump-to-entity anchors — the agent emits links like
-//   [Nuevo chat](#session-89effa28)
-//   [Notas](#document-abc123)
+//   [New Chat](#session-89effa28)
+//   [Notes](#document-abc123)
 //   [Reminder](#note-42)
 // and the chat-history click delegate turns them into navigation
 // instead of default in-page anchor jumps. Each prefix routes to the
@@ -1215,22 +1215,22 @@ document.addEventListener('click', function(e) {
     }).catch(() => {});
   } else if (kind === 'image') {
     import('./gallery.js').then(mod => {
-      const open = mod.openGaleríaImage || (mod.default && mod.default.openGaleríaImage);
+      const open = mod.openGalleryImage || (mod.default && mod.default.openGalleryImage);
       if (open) open(id);
     }).catch(() => {});
   } else if (kind === 'email') {
     import('./emailLibrary.js').then(mod => {
-      const open = mod.openCorreoLibrary || (mod.default && mod.default.openCorreoLibrary);
+      const open = mod.openEmailLibrary || (mod.default && mod.default.openEmailLibrary);
       if (open) open({ uid: id });
     }).catch(() => {});
   } else if (kind === 'event') {
     import('./calendar.js').then(mod => {
-      const open = mod.openCalendarioTo || (mod.default && mod.default.openCalendarioTo);
+      const open = mod.openCalendarTo || (mod.default && mod.default.openCalendarTo);
       if (open) open(id);
     }).catch(() => {});
   } else if (kind === 'task') {
     import('./tasks.js').then(mod => {
-      const open = mod.openTareas || (mod.default && mod.default.openTareas);
+      const open = mod.openTasks || (mod.default && mod.default.openTasks);
       if (open) open(id);
       else { const b = document.getElementById('tasks-btn'); if (b) b.click(); }
     }).catch(() => { const b = document.getElementById('tasks-btn'); if (b) b.click(); });
@@ -1296,7 +1296,7 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
   const copyBtn = document.createElement('button');
   copyBtn.className = 'footer-copy-btn';
   copyBtn.type = 'button';
-  copyBtn.title = 'Copiar prompt';
+  copyBtn.title = 'Copy prompt';
   copyBtn.innerHTML = COPY_ICON;
   copyBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1309,7 +1309,7 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
   const dlBtn = document.createElement('button');
   dlBtn.className = 'footer-copy-btn';
   dlBtn.type = 'button';
-  dlBtn.title = 'Descargar image';
+  dlBtn.title = 'Download image';
   dlBtn.textContent = '\u2913';
   dlBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -1332,18 +1332,18 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
   const editBtn = document.createElement('button');
   editBtn.className = 'footer-copy-btn';
   editBtn.type = 'button';
-  editBtn.title = 'Editar in image editor';
+  editBtn.title = 'Edit in image editor';
   editBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
   editBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
     try {
       const [galleryMod, editorMod] = await Promise.all([
         import('./gallery.js'),
-        import('./galleryEditaror.js'),
+        import('./galleryEditor.js'),
       ]);
-      // Ensure the Galería modal is open so the editor has a container
-      // to render into; switch its tabs to the Editar tab.
-      galleryMod.default.openGalería();
+      // Ensure the Gallery modal is open so the editor has a container
+      // to render into; switch its tabs to the Edit tab.
+      galleryMod.default.openGallery();
       const modal = document.getElementById('gallery-modal');
       if (modal) {
         modal.querySelectorAll('.gallery-tab').forEach(t => t.classList.remove('active'));
@@ -1356,7 +1356,7 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
       const editorContainer = document.getElementById('gallery-editor-container');
       if (editorContainer) editorContainer.style.display = 'flex';
       const label = (prompt || '').trim().slice(0, 60) || 'Generated image';
-      editorMod.openEditaror(imageUrl, null, null, label);
+      editorMod.openEditor(imageUrl, null, null, label);
     } catch (err) {
       console.error('[chat] open in editor failed', err);
     }
@@ -1373,7 +1373,7 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
       e.stopPropagation();
       try {
         const mod = await import('./gallery.js');
-        const open = mod.openGaleríaImage || (mod.default && mod.default.openGaleríaImage);
+        const open = mod.openGalleryImage || (mod.default && mod.default.openGalleryImage);
         if (open) open(imageId);
       } catch (err) {
         console.error('[chat] open in gallery failed', err);
@@ -1385,13 +1385,13 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
   const delBtn = document.createElement('button');
   delBtn.className = 'footer-copy-btn footer-delete-btn';
   delBtn.type = 'button';
-  delBtn.title = 'Eliminar image';
+  delBtn.title = 'Delete image';
   delBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
   delBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const ok = await uiModule.styledConfirmar('Eliminar this image?', {
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+    const ok = await uiModule.styledConfirm('Delete this image?', {
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
       danger: true,
     });
     if (!ok) return;
@@ -1403,12 +1403,12 @@ export function buildImageBubble(imageUrl, prompt, model, size, quality, imageId
           method: 'DELETE', credentials: 'same-origin',
         });
         if (!res.ok && res.status !== 404) {
-          uiModule.showToast?.('Eliminar failed', 4000);
+          uiModule.showToast?.('Delete failed', 4000);
           return;
         }
         window.dispatchEvent(new CustomEvent('gallery-refresh'));
       } catch (_) {
-        uiModule.showToast?.('Eliminar failed', 4000);
+        uiModule.showToast?.('Delete failed', 4000);
         return;
       }
     }
@@ -1438,7 +1438,7 @@ export function hideWelcomeScreen() {
   const cc = document.getElementById('chat-container');
   if (ws) ws.classList.add('hidden');
   if (cc) cc.classList.remove('welcome-active');
-  // Actualizar send button — switches from muted arrow to + Chat
+  // Update send button — switches from muted arrow to + Chat
   if (window._updateSendBtnIcon) setTimeout(window._updateSendBtnIcon, 50);
   const ib = document.getElementById('incognito-btn');
   if (ib) ib.style.display = ib.classList.contains('active') ? '' : 'none';
@@ -1449,7 +1449,7 @@ export function showWelcomeScreen() {
   const cc = document.getElementById('chat-container');
   if (ws) ws.classList.remove('hidden');
   if (cc) cc.classList.add('welcome-active');
-  // Entering the Nuevo chat / welcome state: discard any stale draft left in the
+  // Entering the New Chat / welcome state: discard any stale draft left in the
   // composer from the previous session so the input starts empty (issue #1343).
   // Switching between existing sessions loads them directly and does NOT call
   // this, so genuine drafts are not erased. Reset the autosized height and fire
@@ -1470,7 +1470,7 @@ export function showWelcomeScreen() {
     void wn.offsetHeight;
     wn.style.animation = '';
   }
-  // Actualizar send button — switches from + Chat to muted arrow on empty session
+  // Update send button — switches from + Chat to muted arrow on empty session
   if (window._updateSendBtnIcon) setTimeout(window._updateSendBtnIcon, 50);
   const ib = document.getElementById('incognito-btn');
   const _researchChk = document.getElementById('research-toggle');
@@ -1496,7 +1496,7 @@ function _trackAction(id) {
 }
 
 /**
- * Crear a footer row for an AI message with timestamp and action buttons.
+ * Create a footer row for an AI message with timestamp and action buttons.
  */
 export function createMsgFooter(msgElement) {
   const footer = document.createElement('div');
@@ -1507,14 +1507,14 @@ export function createMsgFooter(msgElement) {
 
   // Define all available actions: { id, icon, title, className, handler }
   const allActions = [
-    { id: 'copy', icon: COPY_ICON, title: 'Copiar message', cls: 'footer-copy-btn', html: true, handler(e) {
+    { id: 'copy', icon: COPY_ICON, title: 'Copy message', cls: 'footer-copy-btn', html: true, handler(e) {
       e.stopPropagation();
       const btn = e.currentTarget;
       uiModule.copyToClipboard(copyMessageText(msgElement));
       btn.innerHTML = CHECK_ICON;
       setTimeout(() => { btn.innerHTML = COPY_ICON; }, 1500);
     }},
-    { id: 'edit', icon: '\u270E', title: 'Editar', cls: 'msg-action-btn', handler(e) {
+    { id: 'edit', icon: '\u270E', title: 'Edit', cls: 'msg-action-btn', handler(e) {
       e.stopPropagation();
       if (window.chatModule?.editAIMessage) window.chatModule.editAIMessage(msgElement);
     }},
@@ -1534,7 +1534,7 @@ export function createMsgFooter(msgElement) {
       e.stopPropagation();
       if (window.chatModule?.forkFrom) window.chatModule.forkFrom(msgElement);
     }},
-    { id: 'delete', icon: '\u2715', title: 'Eliminar message', cls: 'msg-action-btn msg-delete-btn', handler(e) {
+    { id: 'delete', icon: '\u2715', title: 'Delete message', cls: 'msg-action-btn msg-delete-btn', handler(e) {
       e.stopPropagation();
       if (window.chatModule?.deleteMessage) window.chatModule.deleteMessage(msgElement);
     }},
@@ -1615,13 +1615,13 @@ export function createMsgFooter(msgElement) {
       // Keep within right edge
       const mr = menu.getBoundingClientRect();
       if (mr.right > window.innerWidth - 8) menu.style.left = (window.innerWidth - mr.width - 8) + 'px';
-      // Cerrar on outside click or Escape. The trigger button is treated as
+      // Close on outside click or Escape. The trigger button is treated as
       // "inside" so its own click toggles rather than double-fires.
       closeMenu = bindMenuDismiss(menu, () => menu.remove(), (ev) => !menu.contains(ev.target) && ev.target !== moreBtn);    });
     actions.appendChild(moreBtn);
   }
 
-  // Memoria-used indicator pill
+  // Memory-used indicator pill
   const mems = msgElement._memoriesUsed;
   if (mems && mems.length > 0) {
     const pill = document.createElement('button');
@@ -1685,7 +1685,7 @@ export function createMsgFooter(msgElement) {
       if (parseFloat(detail.style.left) < 8) detail.style.left = '8px';
       detail.style.visibility = '';
       pill._openDetail = detail;
-      // Cerrar on outside click or Escape (pill click toggles, so it's inside).
+      // Close on outside click or Escape (pill click toggles, so it's inside).
       closeDetail = bindMenuDismiss(detail, () => { detail.remove(); pill._openDetail = null; }, (ev) => !detail.contains(ev.target) && ev.target !== pill);    });
 
     footer.appendChild(pill);
@@ -1696,7 +1696,7 @@ export function createMsgFooter(msgElement) {
 }
 
 /**
- * Crear a footer row for a user message with action buttons (same system as AI footer).
+ * Create a footer row for a user message with action buttons (same system as AI footer).
  */
 const _USER_ACTION_RECENTS_KEY = 'odysseus-user-actions-recent';
 
@@ -1718,15 +1718,15 @@ export function createUserMsgFooter(msgElement) {
   actions.className = 'msg-actions';
 
   const allActions = [
-    { id: 'edit', icon: '\u270E', title: 'Editar message', cls: 'msg-action-btn', handler(e) {
+    { id: 'edit', icon: '\u270E', title: 'Edit message', cls: 'msg-action-btn', handler(e) {
       e.stopPropagation();
       if (window.chatModule?.editUserMessage) window.chatModule.editUserMessage(msgElement);
     }},
-    { id: 'delete', icon: '\u2715', title: 'Eliminar message', cls: 'msg-action-btn msg-delete-btn', handler(e) {
+    { id: 'delete', icon: '\u2715', title: 'Delete message', cls: 'msg-action-btn msg-delete-btn', handler(e) {
       e.stopPropagation();
       if (window.chatModule?.deleteMessage) window.chatModule.deleteMessage(msgElement);
     }},
-    { id: 'copy', icon: COPY_ICON, title: 'Copiar message', cls: 'footer-copy-btn', html: true, handler(e) {
+    { id: 'copy', icon: COPY_ICON, title: 'Copy message', cls: 'footer-copy-btn', html: true, handler(e) {
       e.stopPropagation();
       const btn = e.currentTarget;
       uiModule.copyToClipboard(msgElement.querySelector('.body')?.textContent || '');
@@ -1891,14 +1891,14 @@ export function displayMetrics(messageElement, metrics) {
     popup.className = 'ctx-popup';
     popup.innerHTML = `
       <div style="font-weight:600;margin-bottom:6px;color:var(--fg);">Message Stats</div>
-      <div><span class="ctx-label">Modelo</span> ${model.split('/').pop()}</div>
+      <div><span class="ctx-label">Model</span> ${model.split('/').pop()}</div>
       <div><span class="ctx-label">Input</span> ${inputTokens.toLocaleString()} tokens${isReal ? '' : '~'}</div>
       <div><span class="ctx-label">Output</span> ${outputTokens.toLocaleString()} tokens${isReal ? '' : '~'}</div>
       <div><span class="ctx-label">Total</span> ${totalTok.toLocaleString()} tokens</div>
       <div><span class="ctx-label">Speed</span> ${speedStr}</div>
       <div><span class="ctx-label">Time</span> ${responseTime}s</div>
       ${prepTime != null ? `<div><span class="ctx-label">Prep</span> ${prepTime}s</div>` : ''}
-      ${modelWaitTime != null ? `<div><span class="ctx-label">Modelo wait</span> ${modelWaitTime}s</div>` : ''}
+      ${modelWaitTime != null ? `<div><span class="ctx-label">Model wait</span> ${modelWaitTime}s</div>` : ''}
       ${costRows}
       ${sessionCostStr}
       ${prepDetails ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:0.85em;opacity:0.8;">
@@ -1977,7 +1977,7 @@ export function displayMetrics(messageElement, metrics) {
           <span>${fmtNum(totalCtx)} total</span>
         </div>
         <div style="margin-top:8px;font-size:0.8rem;">
-          <div><span class="ctx-label">Modelo</span> ${modelShort}</div>
+          <div><span class="ctx-label">Model</span> ${modelShort}</div>
           <div><span class="ctx-label">Usage</span> <span style="color:${ctxColor};font-weight:600;">${ctxPct}%</span></div>
           <div><span class="ctx-label">Window</span> ${fmtNum(totalCtx)} tokens</div>
         </div>
@@ -1992,7 +1992,7 @@ export function displayMetrics(messageElement, metrics) {
           if (!sid) return;
           popup.remove();
 
-          // Agregar a spinner bubble at the bottom of chat
+          // Add a spinner bubble at the bottom of chat
           const chatBox = document.getElementById('chat-history');
           if (!chatBox) return;
           const compactMsg = document.createElement('div');
@@ -2205,7 +2205,7 @@ export function renderAskUserCard(payload, options) {
   otherInput.type = 'text';
   otherInput.className = 'styled-prompt-input ask-user-other-input';
   otherInput.placeholder = multi ? 'Other (added to selection)…' : 'Other… (type your own answer)';
-  otherInput.setAttribute('aria-label', multi ? 'Agregar a custom option' : 'Type a custom answer');
+  otherInput.setAttribute('aria-label', multi ? 'Add a custom option' : 'Type a custom answer');
   const otherSend = document.createElement('button');
   otherSend.type = 'button';
   otherSend.className = 'confirm-btn confirm-btn-primary ask-user-other-send';
@@ -2243,7 +2243,7 @@ export function renderAskUserCard(payload, options) {
 }
 
 /**
- * Agregar a message to the chat history.
+ * Add a message to the chat history.
  */
 export function addMessage(role, content, modelName, metadata) {
   try {
@@ -2286,13 +2286,13 @@ export function addMessage(role, content, modelName, metadata) {
           wrap.className = 'msg msg-ai' + (r > 0 ? ' msg-continuation' : '');
           const roleEl = document.createElement('div');
           roleEl.className = 'role';
-          const pair = replyModeloPair(modelName, metadata);
-          const contModelo = pair.actualModelo || pair.requestedModelo;
-          roleEl.textContent = modelRouteLabel(pair.requestedModelo, contModelo);
-          if (pair.requestedModelo && contModelo && !sameModeloName(pair.requestedModelo, contModelo)) {
-            roleEl.title = pair.requestedModelo + ' -> ' + contModelo;
+          const pair = replyModelPair(modelName, metadata);
+          const contModel = pair.actualModel || pair.requestedModel;
+          roleEl.textContent = modelRouteLabel(pair.requestedModel, contModel);
+          if (pair.requestedModel && contModel && !sameModelName(pair.requestedModel, contModel)) {
+            roleEl.title = pair.requestedModel + ' -> ' + contModel;
           }
-          applyModeloColor(roleEl, contModelo);
+          applyModelColor(roleEl, contModel);
           if (r === 0) roleEl.appendChild(roleTimestamp(metadata?.timestamp));
           wrap.appendChild(roleEl);
           const body = document.createElement('div');
@@ -2443,11 +2443,11 @@ export function addMessage(role, content, modelName, metadata) {
     r.className = 'role';
     const isSlash = metadata?.source === 'slash';
     const isCompacted = metadata?.compacted;
-    const replyModelos = replyModeloPair(modelName, metadata);
-    const resolvedModelo = replyModelos.actualModelo || replyModelos.requestedModelo;
-    var _roleText = role === 'user' ? 'You' : (isSlash || isCompacted) ? 'Odysseus' : modelRouteLabel(replyModelos.requestedModelo, resolvedModelo);
+    const replyModels = replyModelPair(modelName, metadata);
+    const resolvedModel = replyModels.actualModel || replyModels.requestedModel;
+    var _roleText = role === 'user' ? 'You' : (isSlash || isCompacted) ? 'Odysseus' : modelRouteLabel(replyModels.requestedModel, resolvedModel);
     if (role === 'assistant' && (metadata?.research || metadata?.research_clarification)) {
-      _roleText += ' (Investigación)';
+      _roleText += ' (Research)';
     }
     if (metadata?.group_model && role !== 'user') {
       _roleText = metadata.group_model;
@@ -2456,10 +2456,10 @@ export function addMessage(role, content, modelName, metadata) {
     }
     r.textContent = _roleText;
     if (role !== 'user') {
-      if (!isSlash && !isCompacted && replyModelos.requestedModelo && resolvedModelo && !sameModeloName(replyModelos.requestedModelo, resolvedModelo)) {
-        r.title = replyModelos.requestedModelo + ' -> ' + resolvedModelo;
+      if (!isSlash && !isCompacted && replyModels.requestedModel && resolvedModel && !sameModelName(replyModels.requestedModel, resolvedModel)) {
+        r.title = replyModels.requestedModel + ' -> ' + resolvedModel;
       }
-      if (!isSlash && !isCompacted) applyModeloColor(r, resolvedModelo);
+      if (!isSlash && !isCompacted) applyModelColor(r, resolvedModel);
       r.appendChild(roleTimestamp(metadata?.timestamp));
     }
 
@@ -2531,7 +2531,7 @@ export function addMessage(role, content, modelName, metadata) {
     // so the parsing-and-strip side-effect on `text` still happens.
     void _visionBlocks;
 
-    // Agregar "Open Visual Report" button for persisted research messages
+    // Add "Open Visual Report" button for persisted research messages
     if (role === 'assistant' && metadata?.research) {
       var _sid = window.sessionModule?.getCurrentSessionId?.();
       if (_sid) _appendReportButton(b, _sid);
@@ -2564,7 +2564,7 @@ export function addMessage(role, content, modelName, metadata) {
     wrap.appendChild(r);
     wrap.appendChild(b);
 
-    // Agregar stopped indicator + continue button for messages that were stopped by user
+    // Add stopped indicator + continue button for messages that were stopped by user
     if (role === 'assistant' && metadata?.stopped) {
       const stoppedIndicator = document.createElement('div');
       stoppedIndicator.className = 'stopped-indicator';
@@ -2572,7 +2572,7 @@ export function addMessage(role, content, modelName, metadata) {
       // Differentiate between "stopped mid-stream" (had content, can continue)
       // and "cancelled before any content" — the latter has no Continue affordance.
       stoppedLabel.textContent = metadata.cancelled
-        ? '[Cancelarled by user]'
+        ? '[Cancelled by user]'
         : '[Message interrupted]';
       stoppedIndicator.appendChild(stoppedLabel);
       // Continue button only makes sense when there's partial content to
@@ -2609,7 +2609,7 @@ export function addMessage(role, content, modelName, metadata) {
       b.appendChild(editedIndicator);
     }
 
-    // Restaurar variant navigation from saved metadata
+    // Restore variant navigation from saved metadata
     if (role === 'assistant' && metadata?.variants && metadata.variants.length > 1) {
       wrap.dataset.variants = JSON.stringify(metadata.variants);
       const idx = metadata.variantIndex ?? metadata.variants.length - 1;
@@ -2708,7 +2708,7 @@ export function addMessage(role, content, modelName, metadata) {
       wrap.appendChild(createMsgFooter(wrap));
       if (metadata) displayMetrics(wrap, metadata);
     } else {
-      // Agregar timestamp to user header (like AI messages)
+      // Add timestamp to user header (like AI messages)
       r.appendChild(roleTimestamp(metadata?.timestamp));
 
       wrap.appendChild(createUserMsgFooter(wrap));
@@ -2728,13 +2728,13 @@ export function addMessage(role, content, modelName, metadata) {
 }
 
 const chatRenderer = {
-  shortModelo,
-  sameModeloName,
+  shortModel,
+  sameModelName,
   modelRouteLabel,
-  replyModeloPair,
+  replyModelPair,
   modelColor,
-  applyModeloColor,
-  getModeloCost,
+  applyModelColor,
+  getModelCost,
   isCostTrackedEndpoint,
   isSubscriptionEndpoint,
   getImageCost,

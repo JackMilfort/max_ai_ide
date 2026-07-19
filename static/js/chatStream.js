@@ -68,8 +68,8 @@ export function handleUIControl(uiData) {
       if (tm && tm.THEMES && tm.applyColors && tm.save) {
         var themeName = uiData.theme_name;
         if (themeName === 'chatgpt') themeName = 'gpt';  // renamed preset
-        var customTemas = tm.getCustomTemas ? tm.getCustomTemas() : {};
-        var colors = tm.THEMES[themeName] || customTemas[themeName] || uiData.colors;
+        var customThemes = tm.getCustomThemes ? tm.getCustomThemes() : {};
+        var colors = tm.THEMES[themeName] || customThemes[themeName] || uiData.colors;
         if (colors) {
           tm.applyColors(colors);
           tm.save(themeName, colors);
@@ -102,7 +102,7 @@ export function handleUIControl(uiData) {
             if (bg.effectSize != null && tm2.applyBgEffectSize) { tm2.applyBgEffectSize(bg.effectSize); opts.bgEffectSize = bg.effectSize; }
             if (bg.frosted != null && tm2.applyFrostedGlass) { tm2.applyFrostedGlass(bg.frosted); opts.frosted = bg.frosted; }
           }
-          if (tm2.saveCustomTema) tm2.saveCustomTema(name, colors2, Object.keys(opts).length ? opts : undefined);
+          if (tm2.saveCustomTheme) tm2.saveCustomTheme(name, colors2, Object.keys(opts).length ? opts : undefined);
         }
       }
 
@@ -136,7 +136,7 @@ export function handleUIControl(uiData) {
           var fn = mod.adoptSession || (mod.default && mod.default.adoptSession);
           if (fn) fn(rsid);
         }).catch(function(){});
-        // The clickable "Open in Deep Investigación" link is now emitted by the
+        // The clickable "Open in Deep Research" link is now emitted by the
         // agent loop as a `#research-<id>` markdown anchor in the assistant's
         // response text — it renders as a regular clickable chat link AND
         // persists across refresh (saved with the message). No ephemeral
@@ -152,12 +152,12 @@ export function handleUIControl(uiData) {
         }).catch(function(){});
       } else if (panel === 'gallery') {
         import('./gallery.js').then(function(mod) {
-          var fn = mod.openGalería || (mod.default && mod.default.openGalería);
+          var fn = mod.openGallery || (mod.default && mod.default.openGallery);
           if (fn) fn();
         }).catch(function(){});
       } else if (panel === 'email') {
         import('./emailLibrary.js').then(function(mod) {
-          var fn = mod.openCorreoLibrary || (mod.default && mod.default.openCorreoLibrary);
+          var fn = mod.openEmailLibrary || (mod.default && mod.default.openEmailLibrary);
           if (fn) fn();
         }).catch(function(){});
       } else if (panel === 'sessions') {
@@ -172,7 +172,7 @@ export function handleUIControl(uiData) {
         }).catch(function(){});
       } else if (panel === 'notes') {
         import('./notes.js').then(function(mod) {
-          var fn = mod.openPanel || mod.openNotas || (mod.default && (mod.default.openPanel || mod.default.openNotas));
+          var fn = mod.openPanel || mod.openNotes || (mod.default && (mod.default.openPanel || mod.default.openNotes));
           if (fn) fn();
         }).catch(function(){});
       } else if (panel === 'memories' || panel === 'skills' || panel === 'settings') {
@@ -185,20 +185,20 @@ export function handleUIControl(uiData) {
 
     } else if (uiEvent === 'open_email_reply' || uiData.ui_event === 'open_email_reply') {
       try {
-        var activeCtx = documentModule && documentModule.getActiveCorreoComposerContext
-          ? documentModule.getActiveCorreoComposerContext()
+        var activeCtx = documentModule && documentModule.getActiveEmailComposerContext
+          ? documentModule.getActiveEmailComposerContext()
           : null;
         var sameActiveDraft = activeCtx
           && String(activeCtx.sourceUid || '') === String(uiData.uid || '')
           && String(activeCtx.sourceFolder || 'INBOX') === String(uiData.folder || 'INBOX');
         var existingDocId = sameActiveDraft && activeCtx.docId
           ? activeCtx.docId
-          : (documentModule && documentModule.findCorreoDocId
-            ? documentModule.findCorreoDocId(uiData.uid, uiData.folder || 'INBOX')
+          : (documentModule && documentModule.findEmailDocId
+            ? documentModule.findEmailDocId(uiData.uid, uiData.folder || 'INBOX')
             : null);
-        if (existingDocId && documentModule.replaceCorreoReplyBody) {
+        if (existingDocId && documentModule.replaceEmailReplyBody) {
           if (documentModule.loadDocument) documentModule.loadDocument(existingDocId);
-          documentModule.replaceCorreoReplyBody(existingDocId, uiData.body || '', { force: true });
+          documentModule.replaceEmailReplyBody(existingDocId, uiData.body || '', { force: true });
           if (uiModule && uiModule.showToast) uiModule.showToast('Wrote reply into the open email');
           return;
         }
@@ -268,13 +268,13 @@ export function insertStreamDoneToast(sessionId, query) {
 /**
  * Notify when research completes (browser notification).
  */
-export function notifyInvestigaciónComplete(sessionId, query) {
+export function notifyResearchComplete(sessionId, query) {
   var isHidden = document.hidden;
   var isOtherSession = sessionModule && sessionModule.getCurrentSessionId() !== sessionId;
   if (!isHidden && !isOtherSession) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  var body = query ? 'Investigación on "' + query.substring(0, 60) + '" is ready' : 'Your deep research has completed';
-  var notification = new Notification('Investigación Complete', {
+  var body = query ? 'Research on "' + query.substring(0, 60) + '" is ready' : 'Your deep research has completed';
+  var notification = new Notification('Research Complete', {
     body: body,
     tag: 'research-' + sessionId,
   });
@@ -292,7 +292,7 @@ const chatStream = {
   handleUIControl,
   notifyStreamComplete,
   insertStreamDoneToast,
-  notifyInvestigaciónComplete,
+  notifyResearchComplete,
 };
 
 export default chatStream;

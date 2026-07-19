@@ -4,14 +4,14 @@
  * Operates in-place on the supplied ImageData. For each opaque pixel,
  * compute the (approximate) distance to the nearest transparent pixel
  * OR canvas edge. Pixels within `width` of that boundary either get
- * faded (`hardEliminar=false`) or fully cleared (`hardEliminar=true`).
+ * faded (`hardDelete=false`) or fully cleared (`hardDelete=true`).
  *
  * @param {ImageData} imgData
  * @param {number} width        Feather radius in pixels.
- * @param {boolean} hardEliminar  If true, clear pixels inside the band
+ * @param {boolean} hardDelete  If true, clear pixels inside the band
  *                              instead of fading.
  */
-export function edgeFeather(imgData, width, hardEliminar) {
+export function edgeFeather(imgData, width, hardDelete) {
   const w = imgData.width;
   const h = imgData.height;
   const d = imgData.data;
@@ -59,7 +59,7 @@ export function edgeFeather(imgData, width, hardEliminar) {
     if (d[i * 4 + 3] === 0) continue;
     const edgeDist = dist[i];
     if (edgeDist < width) {
-      if (hardEliminar) {
+      if (hardDelete) {
         d[i * 4 + 3] = 0;
       } else {
         const fade = edgeDist / width;

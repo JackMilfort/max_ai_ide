@@ -1,10 +1,10 @@
 /**
- * Mover tool — drag a layer around the canvas, with optional snap-on-Ctrl
+ * Move tool — drag a layer around the canvas, with optional snap-on-Ctrl
  * to other layers' edges/centers and to canvas edges/center.
  *
  * Owns its own input handlers (begin/drag/end) and reads/writes the
  * shared `state` store directly. The factory takes a small dependency
- * bag for things that still live in galleryEditaror.js — `activeLayer`,
+ * bag for things that still live in galleryEditor.js — `activeLayer`,
  * `saveState`, `composite` — so this module doesn't have to know about
  * the orchestrator.
  *
@@ -19,7 +19,7 @@ import { state } from '../state.js';
 import { canvasCoords } from '../canvas-coords.js';
 import { computeSnap as computeSnapImpl } from '../snap.js';
 
-export function createMoverTool({ activeLayer, saveState, composite }) {
+export function createMoveTool({ activeLayer, saveState, composite }) {
   function computeSnap(layer, nx, ny) {
     return computeSnapImpl(layer, nx, ny, {
       zoom: state.zoom,

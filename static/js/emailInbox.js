@@ -1,21 +1,21 @@
 /**
- * emailInbox.js — Correo inbox list in sidebar.
+ * emailInbox.js — Email inbox list in sidebar.
  * Follows the session list pattern: list items, click to open as document, archive, etc.
  */
 
 import spinnerModule from './spinner.js';
 import sessionModule from './sessions.js';
-import { initCorreoLibrary, openCorreoLibrary, closeCorreoLibrary, isOpen as isLibOpen } from './emailLibrary.js';
+import { initEmailLibrary, openEmailLibrary, closeEmailLibrary, isOpen as isLibOpen } from './emailLibrary.js';
 import * as Modals from './modalManager.js';
 import { applyEdgeDock } from './modalSnap.js';
-import { buildReplyAllCc, extractCorreo } from './emailLibrary/replyRecipients.js';
-import { emailApiUrl, emailAccountQuery } from './emailCompartird.js';
+import { buildReplyAllCc, extractEmail } from './emailLibrary/replyRecipients.js';
+import { emailApiUrl, emailAccountQuery } from './emailShared.js';
 import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
 const API_BASE = window.location.origin;
 const _acct = () => emailAccountQuery('&');
 
-const _emailSetupHint = () => '<div style="margin-top:6px;opacity:0.72;font-size:11px;">Setup: <span style="color:var(--accent,var(--red));">Configuración &rsaquo; Integrations</span></div>';
+const _emailSetupHint = () => '<div style="margin-top:6px;opacity:0.72;font-size:11px;">Setup: <span style="color:var(--accent,var(--red));">Settings &rsaquo; Integrations</span></div>';
 
 // SVG icons matching sessions.js dropdown style
 const _replyIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
@@ -29,36 +29,36 @@ const _icon = (svg) => `<span class="dropdown-icon">${svg}</span>`;
 const _replySeparator = '---------- Previous message ----------';
 const _DONE_RESPONSE_TAGS = new Set(['urgent', 'reply-soon', 'action-needed']);
 
-function _splitCorreoAgregarresses(raw) {
+function _splitEmailAddresses(raw) {
   return (typeof raw === 'string' ? raw : '')
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
 }
 
-function _isMyCorreoAgregarress(addr, myAgregarresses) {
-  const email = extractCorreo(addr);
+function _isMyEmailAddress(addr, myAddresses) {
+  const email = extractEmail(addr);
   if (!email) return false;
-  return new Set((myAgregarresses || []).map(a => String(a || '').trim().toLowerCase()).filter(Boolean)).has(email);
+  return new Set((myAddresses || []).map(a => String(a || '').trim().toLowerCase()).filter(Boolean)).has(email);
 }
 
-function _withoutMyAgregarresses(raw, myAgregarresses) {
-  return _splitCorreoAgregarresses(raw).filter(addr => !_isMyCorreoAgregarress(addr, myAgregarresses));
+function _withoutMyAddresses(raw, myAddresses) {
+  return _splitEmailAddresses(raw).filter(addr => !_isMyEmailAddress(addr, myAddresses));
 }
 
-function _openCalendarioEventFromCorreo(uid) {
+function _openCalendarEventFromEmail(uid) {
   const target = String(uid || '').trim();
   if (!target) return;
   import('./calendar.js').then(mod => {
-    const open = mod.openCalendarioTo || (mod.default && mod.default.openCalendarioTo);
+    const open = mod.openCalendarTo || (mod.default && mod.default.openCalendarTo);
     if (open) open(target);
   }).catch(() => {});
 }
 
-function _openCorreoTagFilter(tag) {
+function _openEmailTagFilter(tag) {
   const normalized = String(tag || '').trim().toLowerCase().replace(/_/g, '-');
   if (!normalized || normalized === 'calendar') return;
-  try { openCorreoLibrary(); } catch (_) {}
+  try { openEmailLibrary(); } catch (_) {}
   setTimeout(() => {
     document.dispatchEvent(new CustomEvent('odysseus:email-filter-tag', { detail: { tag: normalized } }));
   }, 0);
@@ -87,7 +87,7 @@ function _emailTagGroupHtml(tags, em) {
   return `<span class="email-tags email-tags-collapsed">${visible[0]}${extra}<button type="button" class="email-tags-more" data-email-tags-more aria-expanded="false" title="Show all tags">+${visible.length - 1}<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg></button></span>`;
 }
 
-function _visibleCorreoTagsForRender(em) {
+function _visibleEmailTagsForRender(em) {
   const tags = Array.isArray(em?.tags) ? em.tags : [];
   if (!em?.is_answered) return tags;
   return tags.filter(t => !_DONE_RESPONSE_TAGS.has(String(t || '').trim().toLowerCase().replace(/_/g, '-')));
@@ -162,26 +162,26 @@ let _docModule = null;
 let _listSpinner = null;
 let _senderFilter = null;       // email address (lowercased) to filter by, or null
 let _senderFilterLabel = null;  // display label for the active filter chip
-let _showCorreoTags = localStorage.getItem('odysseus.email.showTags') !== '0';
+let _showEmailTags = localStorage.getItem('odysseus.email.showTags') !== '0';
 
 export function init(documentModule) {
   _docModule = documentModule;
   _bindEvents();
   document.addEventListener('odysseus:email-tags-toggle', (e) => {
-    _showCorreoTags = e.detail?.show !== false;
+    _showEmailTags = e.detail?.show !== false;
     _renderList();
   });
   // Init the library popup with a callback to open emails
-  initCorreoLibrary({
+  initEmailLibrary({
     documentModule,
-    onCorreoClick: async (opts) => {
+    onEmailClick: async (opts) => {
       // Reply / AI Reply / Compose open a draft in the doc editor.
       //  - Desktop: dock the email to the LEFT so it stays visible beside the
       //    reply draft (which opens on the right) — read-while-you-reply.
       //  - Mobile: there's no room for a split, so minimize the email modal;
       //    the draft comes to the front and the inbox stays a tap away as a
       //    minimized chip.
-      // Never call closeCorreoLibrary() here — that destroys state.
+      // Never call closeEmailLibrary() here — that destroys state.
       try {
         if (Modals.isRegistered('email-lib-modal')) {
           const emailModal = document.getElementById('email-lib-modal');
@@ -198,11 +198,11 @@ export function init(documentModule) {
       } catch (_) {}
       if (opts.compose) { _composeNew(); return; }
       if (opts.email) {
-        await _openCorreo(opts.email, null, opts.emailData, opts.mode || 'reply', opts.noteHint || '');
+        await _openEmail(opts.email, null, opts.emailData, opts.mode || 'reply', opts.noteHint || '');
       }
     },
   });
-  _watchDocOpenToReDockCorreo();
+  _watchDocOpenToReDockEmail();
 }
 
 export async function openReplyDraft(uid, folder = 'INBOX', mode = 'reply', prefilledBody = '') {
@@ -210,13 +210,13 @@ export async function openReplyDraft(uid, folder = 'INBOX', mode = 'reply', pref
   const previousFolder = _currentFolder;
   _currentFolder = folder || 'INBOX';
   try {
-    await _openCorreo({ uid: String(uid), subject: '' }, null, null, mode || 'reply', '', prefilledBody || '');
+    await _openEmail({ uid: String(uid), subject: '' }, null, null, mode || 'reply', '', prefilledBody || '');
   } finally {
     _currentFolder = previousFolder || _currentFolder;
   }
 }
 
-function _bringCorreoReplyDraftToFrontOnMobile() {
+function _bringEmailReplyDraftToFrontOnMobile() {
   if (window.innerWidth > 768) return;
   document.body.classList.remove('email-front', 'email-doc-split-active');
   document.documentElement.style.removeProperty('--email-doc-split-left-x');
@@ -239,7 +239,7 @@ function _bringCorreoReplyDraftToFrontOnMobile() {
 // width math lives in modalSnap.js (`_anchorLeftDock` shrinks the email when
 // the doc is rendered to the right).
 let _docOpenObs = null;
-function _watchDocOpenToReDockCorreo() {
+function _watchDocOpenToReDockEmail() {
   if (_docOpenObs) return;
   if (typeof MutationObserver === 'undefined') return;
   let last = document.body.classList.contains('doc-view');
@@ -277,7 +277,7 @@ function _bindEvents() {
     header.style.cursor = 'pointer';
     header.addEventListener('click', (e) => {
       if (e.target.closest('#email-compose-btn')) return;
-      openCorreoLibrary();
+      openEmailLibrary();
       markInboxAsSeen();
     });
   }
@@ -308,7 +308,7 @@ function _maybeOpenFromHash() {
   if (!m) return;
   const folder = decodeURIComponent(m[1]);
   const uid = m[2];
-  try { openCorreoLibrary({ folder, uid }); } catch (e) { console.error(e); }
+  try { openEmailLibrary({ folder, uid }); } catch (e) { console.error(e); }
   // Clear the hash so reloads don't reopen
   try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
 }
@@ -387,7 +387,7 @@ export function markInboxAsSeen() {
   } catch (e) {}
 }
 
-export async function loadCorreos(append = false) {
+export async function loadEmails(append = false) {
   if (_loading) return;
   _loading = true;
 
@@ -473,8 +473,8 @@ export function folderDisplayName(folder) {
   const raw = String(folder || '');
   const f = raw.toLowerCase();
   if (f === 'inbox') return 'INBOX';
-  if (f.includes('all mail')) return 'Archivar / All Mail';
-  if (f.includes('archive')) return 'Archivar';
+  if (f.includes('all mail')) return 'Archive / All Mail';
+  if (f.includes('archive')) return 'Archive';
   if (f.includes('spam')) return 'Spam';
   if (f.includes('junk')) return 'Junk';
   if (f.includes('trash') || f.includes('bin') || f.includes('deleted')) return 'Trash';
@@ -533,7 +533,7 @@ function _renderList() {
   }
 
   for (const em of _emails) {
-    list.appendChild(_createCorreoItem(em));
+    list.appendChild(_createEmailItem(em));
   }
 
   const loadMore = document.getElementById('email-load-more');
@@ -546,17 +546,17 @@ function _setSenderFilter(addr, label) {
   _senderFilter = addr;
   _senderFilterLabel = label || addr;
   _offset = 0;
-  loadCorreos(false);
+  loadEmails(false);
 }
 
 function _clearSenderFilter() {
   _senderFilter = null;
   _senderFilterLabel = null;
   _offset = 0;
-  loadCorreos(false);
+  loadEmails(false);
 }
 
-function _createCorreoItem(em) {
+function _createEmailItem(em) {
   const item = document.createElement('div');
   item.className = 'list-item email-item' + (em.is_spam_verdict ? ' email-item-spam' : '');
   item.setAttribute('role', 'option');
@@ -609,19 +609,19 @@ function _createCorreoItem(em) {
     ? `<span class="email-unread-dot-inline" title="${_esc(_unreadTitle)}" style="display:inline-flex;align-items:center;flex-shrink:0;margin-left:4px;color:${_unreadColor}"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></span>`
     : '';
 
-  const tags = _showCorreoTags ? _visibleCorreoTagsForRender(em) : [];
+  const tags = _showEmailTags ? _visibleEmailTagsForRender(em) : [];
   const tagPills = _emailTagGroupHtml(tags, em);
 
-  const spamTag = _showCorreoTags && em.is_spam_verdict
+  const spamTag = _showEmailTags && em.is_spam_verdict
     ? `<span class="email-tag email-tag-spam" title="AI flagged as spam — click ✓ to unflag">spam <button class="email-spam-unflag" data-uid="${em.uid}" title="Not spam">\u2713</button></span>`
     : '';
 
-  const senderAgregarr = (em.from_address || '').toLowerCase();
+  const senderAddr = (em.from_address || '').toLowerCase();
   item.innerHTML = `
     <span class="email-avatar" style="background:${color}">${initial}</span>
     <div class="email-item-content">
       <div class="email-item-top">
-        <span class="email-sender email-sender-clickable" style="color:${color}" data-from-addr="${_esc(senderAgregarr)}" data-from-name="${_esc(senderName)}" title="Show all emails from ${_esc(senderName)}">${_esc(senderName)}</span>
+        <span class="email-sender email-sender-clickable" style="color:${color}" data-from-addr="${_esc(senderAddr)}" data-from-name="${_esc(senderName)}" title="Show all emails from ${_esc(senderName)}">${_esc(senderName)}</span>
         <span class="email-date">${_esc(dateStr)}</span>
       </div>
       <div class="email-subject">${_esc(em.subject)}${unreadIcon}${attachIcon}${tagPills}${spamTag}</div>
@@ -634,14 +634,14 @@ function _createCorreoItem(em) {
     btn.addEventListener('click', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      _openCalendarioEventFromCorreo(btn.dataset.calendarEventUid);
+      _openCalendarEventFromEmail(btn.dataset.calendarEventUid);
     });
   });
   item.querySelectorAll('[data-email-filter-tag]').forEach(btn => {
     btn.addEventListener('click', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      _openCorreoTagFilter(btn.dataset.emailFilterTag);
+      _openEmailTagFilter(btn.dataset.emailFilterTag);
     });
   });
   item.querySelectorAll('[data-email-tags-more]').forEach(btn => {
@@ -657,7 +657,7 @@ function _createCorreoItem(em) {
   if (senderEl) {
     senderEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      const addr = senderEl.dataset.fromAgregarr || '';
+      const addr = senderEl.dataset.fromAddr || '';
       const name = senderEl.dataset.fromName || addr;
       if (addr) _setSenderFilter(addr, name);
     });
@@ -683,7 +683,7 @@ function _createCorreoItem(em) {
   // Click to open — do NOT close sidebar
   item.addEventListener('click', (e) => {
     if (item.dataset.swipeBlock === '1') return;
-    _openCorreo(em, item);
+    _openEmail(em, item);
   });
 
   // Swipe left to archive (mobile). Mirrors sidebar-layout.js swipe pattern.
@@ -729,7 +729,7 @@ function _createCorreoItem(em) {
         item.style.transform = 'translateX(-100%)';
         item.style.opacity = '0';
         setTimeout(() => {
-          _archiveCorreo(em);
+          _archiveEmail(em);
           delete item.dataset.swipeBlock;
         }, 200);
       } else {
@@ -750,7 +750,7 @@ function _createCorreoItem(em) {
   return item;
 }
 
-async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', noteHint = '', prefilledBody = '') {
+async function _openEmail(em, itemEl, preloadedData = null, mode = 'reply', noteHint = '', prefilledBody = '') {
   const aiReplyMode = mode === 'ai-reply-fast' ? 'fast' : (mode === 'ai-reply-full' ? 'full' : '');
   const wantsAiReply = mode === 'ai-reply' || !!aiReplyMode;
   // Body pre-fill from the agent's open_email_reply tool call takes the
@@ -795,10 +795,10 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
           import('./ui.js').then(m => m.showToast && m.showToast('Drafting AI reply', { duration: 3000, leadingIcon: 'spinner' })).catch(() => {});
         }, 450);
         try {
-          let currentModelo = '';
+          let currentModel = '';
           let currentSessionId = '';
           try {
-            currentModelo = sessionModule?.getCurrentModelo() || '';
+            currentModel = sessionModule?.getCurrentModel() || '';
             currentSessionId = sessionModule?.getCurrentSessionId() || '';
           } catch (_) {}
           const res = await fetch(`${API_BASE}/api/email/ai-reply`, {
@@ -808,7 +808,7 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
               to: data.from_address,
               subject: `Re: ${data.subject}`,
               original_body: data.body,
-              model: currentModelo,
+              model: currentModel,
               session_id: currentSessionId,
               message_id: data.message_id || '',
               uid: String(em.uid || ''),
@@ -842,35 +842,35 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
     em.is_read = true;
     if (itemEl) itemEl.classList.remove('email-unread');
 
-    // Agregarresses to exclude from Reply All. Prefer the full set of configured
+    // Addresses to exclude from Reply All. Prefer the full set of configured
     // accounts (so a multi-account user's other mailboxes are excluded too),
     // falling back to the single active address. Empty ⇒ no exclusion.
-    const myAgregarresses = (Array.isArray(window._myCorreoAgregarresses) && window._myCorreoAgregarresses.length)
-      ? window._myCorreoAgregarresses
-      : (window._myCorreoAgregarress ? [window._myCorreoAgregarress] : []);
+    const myAddresses = (Array.isArray(window._myEmailAddresses) && window._myEmailAddresses.length)
+      ? window._myEmailAddresses
+      : (window._myEmailAddress ? [window._myEmailAddress] : []);
 
-    const fromIsMe = _isMyCorreoAgregarress(data.from_address, myAgregarresses);
-    const originalToWithoutMe = _withoutMyAgregarresses(data.to, myAgregarresses);
-    const originalCcWithoutMe = _withoutMyAgregarresses(data.cc, myAgregarresses);
+    const fromIsMe = _isMyEmailAddress(data.from_address, myAddresses);
+    const originalToWithoutMe = _withoutMyAddresses(data.to, myAddresses);
+    const originalCcWithoutMe = _withoutMyAddresses(data.cc, myAddresses);
 
-    let toAgregarress = fromIsMe
+    let toAddress = fromIsMe
       ? (originalToWithoutMe.join(', ') || originalCcWithoutMe[0] || data.from_address)
       : data.from_address;
-    let ccAgregarresses = '';
+    let ccAddresses = '';
     let subjectPrefix = 'Re: ';
 
     if (mode === 'reply-all') {
       if (fromIsMe) {
         // Replying from Sent should go back to the people I originally wrote
         // to, not to myself. Keep original Cc recipients on Cc.
-        toAgregarress = originalToWithoutMe.join(', ') || originalCcWithoutMe[0] || data.from_address;
-        ccAgregarresses = originalCcWithoutMe.filter(addr => !originalToWithoutMe.some(t => extractCorreo(t) === extractCorreo(addr))).join(', ');
+        toAddress = originalToWithoutMe.join(', ') || originalCcWithoutMe[0] || data.from_address;
+        ccAddresses = originalCcWithoutMe.filter(addr => !originalToWithoutMe.some(t => extractEmail(t) === extractEmail(addr))).join(', ');
       } else {
         // Build reply-all: TO = original sender, CC = everyone else (To + Cc minus me)
-        ccAgregarresses = buildReplyAllCc(data, myAgregarresses);
+        ccAddresses = buildReplyAllCc(data, myAddresses);
       }
     } else if (mode === 'forward') {
-      toAgregarress = '';
+      toAddress = '';
       subjectPrefix = 'Fwd: ';
     }
 
@@ -880,8 +880,8 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
     let _baseSubject = (data.subject || '').trim();
     if (subjectPrefix === 'Re: ' && /^re\s*:/i.test(_baseSubject)) subjectPrefix = '';
     else if (subjectPrefix === 'Fwd: ' && /^fwd?\s*:/i.test(_baseSubject)) subjectPrefix = '';
-    let content = `To: ${toAgregarress}\nSubject: ${subjectPrefix}${_baseSubject}`;
-    if (ccAgregarresses) content += `\nCc: ${ccAgregarresses}`;
+    let content = `To: ${toAddress}\nSubject: ${subjectPrefix}${_baseSubject}`;
+    if (ccAddresses) content += `\nCc: ${ccAddresses}`;
     if (mode !== 'forward' && data.message_id) content += `\nIn-Reply-To: ${data.message_id}`;
     if (mode !== 'forward' && data.message_id) content += `\nReferences: ${data.references ? data.references + ' ' + data.message_id : data.message_id}`;
     content += `\nX-Source-UID: ${em.uid}`;
@@ -952,19 +952,19 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
       // already has open. Otherwise mobile users see the source email while the
       // agent silently creates a second draft elsewhere.
       const reuseExisting = mode !== 'forward';
-      const existingDocId = (reuseExisting && _docModule.findCorreoDocId)
-        ? _docModule.findCorreoDocId(em.uid, _currentFolder)
+      const existingDocId = (reuseExisting && _docModule.findEmailDocId)
+        ? _docModule.findEmailDocId(em.uid, _currentFolder)
         : null;
       if (existingDocId) {
         if (!_docModule.isPanelOpen()) _docModule.openPanel();
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
         await _docModule.loadDocument(existingDocId);
-        if (aiSuggestedBody && typeof _docModule.replaceCorreoReplyBody === 'function') {
-          await _docModule.replaceCorreoReplyBody(existingDocId, aiSuggestedBody, { force: true });
+        if (aiSuggestedBody && typeof _docModule.replaceEmailReplyBody === 'function') {
+          await _docModule.replaceEmailReplyBody(existingDocId, aiSuggestedBody, { force: true });
         }
-        _bringCorreoReplyDraftToFrontOnMobile();
+        _bringEmailReplyDraftToFrontOnMobile();
       } else {
-        const activeSid = await _createCorreoChat(data);
+        const activeSid = await _createEmailChat(data);
         if (!activeSid) {
           console.error('reply: could not obtain a session_id');
           import('./ui.js').then(m => m.showError && m.showError('Could not start a reply chat.')).catch(() => {});
@@ -1005,7 +1005,7 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
           } else {
             await _docModule.loadDocument(doc.id);
           }
-          _bringCorreoReplyDraftToFrontOnMobile();
+          _bringEmailReplyDraftToFrontOnMobile();
         }
       }
     }
@@ -1025,17 +1025,17 @@ async function _openCorreo(em, itemEl, preloadedData = null, mode = 'reply', not
   }
 }
 
-function _showCorreoMenu(em, anchor, itemEl) {
+function _showEmailMenu(em, anchor, itemEl) {
   document.querySelectorAll('.email-dropdown').forEach(dismissOrRemove);
 
   const dropdown = document.createElement('div');
   dropdown.className = 'dropdown email-dropdown show';
 
   const actions = [
-    { label: 'Open', icon: _replyIcon, action: () => _openCorreo(em, itemEl) },
+    { label: 'Open', icon: _replyIcon, action: () => _openEmail(em, itemEl) },
     { label: 'Remind to reply', icon: _bellIcon, submenu: 'remind' },
-    { label: 'Archivar', icon: _archiveIcon, action: () => _archiveCorreo(em) },
-    { label: 'Eliminar', icon: _deleteIcon, danger: true, action: () => _deleteCorreo(em) },
+    { label: 'Archive', icon: _archiveIcon, action: () => _archiveEmail(em) },
+    { label: 'Delete', icon: _deleteIcon, danger: true, action: () => _deleteEmail(em) },
   ];
 
   for (const a of actions) {
@@ -1174,7 +1174,7 @@ async function _createReplyReminder(em, dueDate) {
   }
 }
 
-async function _archiveCorreo(em) {
+async function _archiveEmail(em) {
   try {
     await fetch(`${API_BASE}/api/email/archive/${em.uid}?folder=${encodeURIComponent(_currentFolder)}${_acct()}`, { method: 'POST' });
     _emails = _emails.filter(e => e.uid !== em.uid);
@@ -1184,13 +1184,13 @@ async function _archiveCorreo(em) {
   }
 }
 
-async function _deleteCorreo(em) {
+async function _deleteEmail(em) {
   const subject = em.subject || '(no subject)';
-  const { styledConfirmar } = await import('./ui.js');
-  const ok = await styledConfirmar(`Eliminar "${subject}"?`, { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true });
+  const { styledConfirm } = await import('./ui.js');
+  const ok = await styledConfirm(`Delete "${subject}"?`, { confirmText: 'Delete', cancelText: 'Cancel', danger: true });
   if (!ok) return;
   const row = document.querySelector(`.email-item[data-uid="${CSS.escape(String(em.uid))}"]`);
-  const busy = _showCorreoEliminarOverlay(row);
+  const busy = _showEmailDeleteOverlay(row);
   await busy?.ready;
   try {
     await fetch(`${API_BASE}/api/email/delete/${em.uid}?folder=${encodeURIComponent(_currentFolder)}${_acct()}`, { method: 'DELETE' });
@@ -1203,7 +1203,7 @@ async function _deleteCorreo(em) {
   }
 }
 
-function _showCorreoEliminarOverlay(target) {
+function _showEmailDeleteOverlay(target) {
   if (!target) return null;
   const wp = spinnerModule.createWhirlpool(16);
   const overlay = document.createElement('div');
@@ -1255,9 +1255,9 @@ async function _toggleDone(em, itemEl) {
   }
 }
 
-async function _createCorreoChat(emailData) {
-  const subject = String(emailData?.subject || 'New Correo').trim() || 'New Correo';
-  const title = subject === 'New Correo' ? 'New Correo' : `Correo: ${subject.slice(0, 60)}`;
+async function _createEmailChat(emailData) {
+  const subject = String(emailData?.subject || 'New Email').trim() || 'New Email';
+  const title = subject === 'New Email' ? 'New Email' : `Email: ${subject.slice(0, 60)}`;
   try {
     const currentSid = sessionModule.getCurrentSessionId?.() || '';
     const current = sessionModule.getSessions?.().find(s => s.id === currentSid);
@@ -1267,7 +1267,7 @@ async function _createCorreoChat(emailData) {
       && !current.has_images
       && Number(current.message_count || 0) === 0
       && current.folder !== 'Assistant'
-      && current.folder !== 'Tareas';
+      && current.folder !== 'Tasks';
     if (currentIsBlank) {
       const meta = document.getElementById('current-meta');
       if (meta) meta.textContent = title;
@@ -1319,7 +1319,7 @@ async function _composeNew() {
   // (doc shows for a frame, then slides up again). Mount once, at injectFreshDoc,
   // after the session + doc exist.
   try {
-    const sid = await _createCorreoChat({ subject: 'New Correo' });
+    const sid = await _createEmailChat({ subject: 'New Email' });
     if (!sid) {
       console.error('compose: could not obtain a session_id');
       import('./ui.js').then(m => m.showError && m.showError('Could not start a new email (no session).')).catch(() => {});
@@ -1330,7 +1330,7 @@ async function _composeNew() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: sid,
-        title: 'New Correo',
+        title: 'New Email',
         content: 'To: \nSubject: \n---\n',
         language: 'email',
       }),

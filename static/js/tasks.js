@@ -1,5 +1,5 @@
 /**
- * Tareas Module — scheduled recurring LLM prompts.
+ * Tasks Module — scheduled recurring LLM prompts.
  */
 
 import uiModule from './ui.js';
@@ -7,7 +7,7 @@ import markdownModule from './markdown.js';
 import * as spinnerModule from './spinner.js';
 import { makeWindowDraggable } from './windowDrag.js';
 import { topPortalZ } from './toolWindowZOrder.js';
-import { sortModeloIds } from './modelSort.js';
+import { sortModelIds } from './modelSort.js';
 import { ordinalSuffix } from './util/ordinal.js';
 import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
@@ -31,7 +31,7 @@ function _setTaskFailurePending(active) {
 
 // ---- API ----
 
-async function _fetchTareas() {
+async function _fetchTasks() {
   try {
     const res = await fetch(`${API_BASE}/api/tasks`, { credentials: 'same-origin' });
     const data = await res.json();
@@ -57,7 +57,7 @@ async function _runFirstOpenOnboarding() {
       body: JSON.stringify({ enabled: false }),
     });
   } catch (e) {
-    console.warn('Tareas onboarding failed:', e);
+    console.warn('Tasks onboarding failed:', e);
   }
 }
 
@@ -187,21 +187,21 @@ async function _fetchActions() {
   return _builtinActions;
 }
 
-let _urgentCorreoConfiguración = null;
-async function _fetchUrgentCorreoConfiguración() {
-  if (_urgentCorreoConfiguración) return _urgentCorreoConfiguración;
+let _urgentEmailSettings = null;
+async function _fetchUrgentEmailSettings() {
+  if (_urgentEmailSettings) return _urgentEmailSettings;
   try {
     const res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
-    _urgentCorreoConfiguración = await res.json();
+    _urgentEmailSettings = await res.json();
   } catch (e) {
-    _urgentCorreoConfiguración = { urgent_email_prompt: '' };
+    _urgentEmailSettings = { urgent_email_prompt: '' };
   }
-  return _urgentCorreoConfiguración;
+  return _urgentEmailSettings;
 }
 
-async function _saveUrgentCorreoConfiguración(prompt) {
-  _urgentCorreoConfiguración = {
-    ...(_urgentCorreoConfiguración || {}),
+async function _saveUrgentEmailSettings(prompt) {
+  _urgentEmailSettings = {
+    ...(_urgentEmailSettings || {}),
     urgent_email_prompt: prompt || '',
   };
   await fetch('/api/auth/settings', {
@@ -223,7 +223,7 @@ const _EMAIL_ACCOUNT_ACTIONS = new Set([
 ]);
 
 let _emailAccounts = null;
-async function _fetchCorreoAccountsForTareas() {
+async function _fetchEmailAccountsForTasks() {
   if (_emailAccounts) return _emailAccounts;
   try {
     const res = await fetch(`${API_BASE}/api/email/accounts`, { credentials: 'same-origin' });
@@ -254,7 +254,7 @@ function _taskPromptConfig(prompt) {
   }
 }
 
-function _parseTaskCorreoOutputTarget(output) {
+function _parseTaskEmailOutputTarget(output) {
   const raw = String(output || '').trim();
   if (!raw) return { enabled: false, to: '', accountId: '' };
   if (raw === 'email') return { enabled: true, to: '', accountId: '' };
@@ -275,16 +275,16 @@ function _parseTaskCorreoOutputTarget(output) {
   };
 }
 
-function _buildTaskCorreoOutputTarget(to, accountId) {
+function _buildTaskEmailOutputTarget(to, accountId) {
   const cleanTo = String(to || '').trim();
   const cleanAccount = String(accountId || '').trim();
   const base = `email:${cleanTo || 'self'}`;
   return cleanAccount ? `${base}|account=${cleanAccount}` : (cleanTo ? base : 'email');
 }
 
-async function _renderCorreoActionOptions(action, existing, extra) {
+async function _renderEmailActionOptions(action, existing, extra) {
   if (!_EMAIL_ACCOUNT_ACTIONS.has(action)) return;
-  const accounts = (await _fetchCorreoAccountsForTareas()).filter(a => a && a.enabled !== false);
+  const accounts = (await _fetchEmailAccountsForTasks()).filter(a => a && a.enabled !== false);
   const cfg = _taskPromptConfig(existing?.prompt || '');
   const current = String(cfg.account_id || cfg.email_account_id || '');
   const options = [
@@ -297,7 +297,7 @@ async function _renderCorreoActionOptions(action, existing, extra) {
     }),
   ].join('');
   extra.insertAdjacentHTML('afterbegin', `
-    <label class="task-form-label">Correo account</label>
+    <label class="task-form-label">Email account</label>
     <select id="task-form-email-account" class="task-form-input">${options}</select>
   `);
 }
@@ -411,15 +411,15 @@ function _statusDot(status) {
 const _TASK_ICONS = {
   // Chats
   tidy_sessions:       '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-  // Documentos
+  // Documents
   tidy_documents:      '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
-  // Memoria (brain)
+  // Memory (brain)
   consolidate_memory:  '<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/>',
-  // Investigación (magnifying glass)
+  // Research (magnifying glass)
   tidy_research:       '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-  // Calendario
+  // Calendar
   tidy_calendar:       '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-  // Correo
+  // Email
   summarize_emails:    '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
   draft_email_replies: '<polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
   email_auto_translate:'<path d="M5 8h9"/><path d="M9 4v4"/><path d="M4 13c2.2-.2 4.2-1.1 5.5-2.8"/><path d="M10.5 13c-1.1-.6-2-1.5-2.7-2.8"/><path d="M14 20l4-9 4 9"/><path d="M15.4 17h5.2"/>',
@@ -586,43 +586,43 @@ function _getDatePickerValue(containerId) {
 const _CATEGORY_MAP = {
   // action -> category
   tidy_sessions:        'Chats',
-  tidy_documents:       'Documentos',
-  consolidate_memory:   'Memoria',
-  tidy_research:        'Investigación',
-  tidy_calendar:        'Calendario',
-  classify_events:      'Calendario',
-  ping_events:          'Calendario',
-  extract_email_events: 'Calendario',
-  summarize_emails:           'Correo',
-  draft_email_replies:        'Correo',
-  email_auto_translate:       'Correo',
-  learn_sender_signatures:    'Correo',
-  check_email_urgency:        'Correo',
+  tidy_documents:       'Documents',
+  consolidate_memory:   'Memory',
+  tidy_research:        'Research',
+  tidy_calendar:        'Calendar',
+  classify_events:      'Calendar',
+  ping_events:          'Calendar',
+  extract_email_events: 'Calendar',
+  summarize_emails:           'Email',
+  draft_email_replies:        'Email',
+  email_auto_translate:       'Email',
+  learn_sender_signatures:    'Email',
+  check_email_urgency:        'Email',
   daily_brief:                'Assistant',
   test_skills:                'Skills',
   audit_skills:               'Skills',
   ssh_command:          'System',
   run_script:           'System',
   run_local:            'System',
-  cookbook_serve:       'Recetas',
+  cookbook_serve:       'Cookbook',
 };
-// Recetas serves listed FIRST so a just-saved schedule shows at the
+// Cookbook serves listed FIRST so a just-saved schedule shows at the
 // top instead of scrolling off the bottom of the list. The remaining
 // order is preserved for backwards-compatibility with users who've
 // learned where things are.
-const _CATEGORY_ORDER = ['Recetas', 'Other', 'Calendario', 'Correo', 'Chats', 'Documentos', 'Memoria', 'Investigación', 'Skills', 'Assistant', 'System'];
+const _CATEGORY_ORDER = ['Cookbook', 'Other', 'Calendar', 'Email', 'Chats', 'Documents', 'Memory', 'Research', 'Skills', 'Assistant', 'System'];
 const _CATEGORY_ICONS = {
-  Calendario:  '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-  Correo:     '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  Calendar:  '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  Email:     '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
   Chats:     '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-  Documentos: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
-  Memoria:    '<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/>',
-  Investigación:  '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  Documents: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  Memory:    '<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/>',
+  Research:  '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   Skills:    '<path d="M9 11l3 3L22 4"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z"/>',
   Assistant: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 18a5 5 0 0 1 10 0"/>',
   System:    '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
-  // Recetas icon — matches the recipe-book glyph used on the sidebar.
-  Recetas:  '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  // Cookbook icon — matches the recipe-book glyph used on the sidebar.
+  Cookbook:  '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
   Other:     '<circle cx="12" cy="12" r="3"/>',
 };
 
@@ -642,11 +642,11 @@ function _taskEnterSelect() {
   _taskSelectMode = true; _taskSelected.clear();
   document.getElementById('tasks-bulk-bar')?.classList.remove('hidden');
   const _sb = document.getElementById('tasks-select-btn');
-  if (_sb) { _sb.classList.add('active'); _sb.textContent = 'Cancelar'; }
-  _taskActualizarBulkCount();
+  if (_sb) { _sb.classList.add('active'); _sb.textContent = 'Cancel'; }
+  _taskUpdateBulkCount();
   _renderList();
 }
-function _taskSalirSelect() {
+function _taskExitSelect() {
   _taskSelectMode = false; _taskSelected.clear();
   document.getElementById('tasks-bulk-bar')?.classList.add('hidden');
   const _sb = document.getElementById('tasks-select-btn');
@@ -658,28 +658,28 @@ function _taskToggleSelectAll() {
   const sa = document.getElementById('tasks-select-all');
   if (!sa) return;
   if (sa.checked) _tasks.forEach(t => _taskSelected.add(t.id)); else _taskSelected.clear();
-  _taskActualizarBulkCount();
+  _taskUpdateBulkCount();
   _renderList();
 }
-function _taskActualizarBulkCount() {
+function _taskUpdateBulkCount() {
   const c = document.getElementById('tasks-selected-count');
   if (c) c.textContent = `${_taskSelected.size} Selected`;
   const del = document.getElementById('tasks-bulk-delete');
   if (del) del.disabled = _taskSelected.size === 0;
 }
-async function _taskBulkEliminar() {
+async function _taskBulkDelete() {
   const ids = [..._taskSelected];
   if (!ids.length) return;
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar(`Eliminar ${ids.length} task${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { confirmText: 'Eliminar', danger: true })
-    : confirm(`Eliminar ${ids.length} task(s)?`);
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm(`Delete ${ids.length} task${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { confirmText: 'Delete', danger: true })
+    : confirm(`Delete ${ids.length} task(s)?`);
   if (!ok) return;
   const results = await Promise.allSettled(ids.map(id => _deleteTask(id)));
   const deletedIds = ids.filter((_, i) => results[i].status === 'fulfilled');
   await _animateTaskRemoval(deletedIds);
-  if (uiModule) uiModule.showToast(`Eliminard ${deletedIds.length} task${deletedIds.length > 1 ? 's' : ''}`);
-  await _fetchTareas();
-  _taskSalirSelect();  // clears selection + re-renders the fresh list
+  if (uiModule) uiModule.showToast(`Deleted ${deletedIds.length} task${deletedIds.length > 1 ? 's' : ''}`);
+  await _fetchTasks();
+  _taskExitSelect();  // clears selection + re-renders the fresh list
 }
 
 // Category filter chips (library-style tags) — solo-select: click one to
@@ -739,7 +739,7 @@ function _renderList() {
     if (!_tasksFetched) {
       list.appendChild(spinnerModule.createLoadingRow('Loading…'));
     } else {
-      list.innerHTML = '<div style="opacity:0.4;font-size:12px;text-align:center;padding:24px 0;">No tasks yet. Crear one to get started.</div>';
+      list.innerHTML = '<div style="opacity:0.4;font-size:12px;text-align:center;padding:24px 0;">No tasks yet. Create one to get started.</div>';
     }
     return;
   }
@@ -748,7 +748,7 @@ function _renderList() {
 
   // Filter by the active category tag + search query, then flatten into one
   // list (the tag chips replace the old per-category collapsible headers).
-  const q = _taskBuscar.trim().toLowerCase();
+  const q = _taskSearch.trim().toLowerCase();
   const visible = _tasks.filter(t => {
     if (_taskFilter && _categoryFor(t) !== _taskFilter) return false;
     if (q && !(`${t.name} ${t.prompt || ''} ${t.action || ''}`.toLowerCase().includes(q))) return false;
@@ -804,9 +804,9 @@ function _renderList() {
       e.stopPropagation();
       const items = [];
       // Run now stays in the kebab too for users coming from muscle-memory /
-      // mobile long-press. The expanded card also shows it next to Editar.
+      // mobile long-press. The expanded card also shows it next to Edit.
       if (task.status !== 'completed') items.push({ label: 'Run now', icon: '<polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', action: () => _doRunNow(task.id) });
-      items.push({ label: 'Editar', icon: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>', action: () => _showForm(task) });
+      items.push({ label: 'Edit', icon: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>', action: () => _showForm(task) });
       if (task.status === 'active') items.push({ label: 'Pause', icon: '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>', action: () => _doPause(task.id) });
       else if (task.status === 'paused') items.push({ label: 'Resume', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', action: () => _doResume(task.id) });
       items.push({ label: 'History', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', action: () => _showRunHistory(task.id, task.name) });
@@ -816,7 +816,7 @@ function _renderList() {
       if (_taskClearCacheLabel(task)) {
         items.push({ label: 'Clear cache', icon: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/>', action: () => _doClearTaskCache(task.id, _taskClearCacheLabel(task)) });
       }
-      items.push({ label: 'Eliminar', icon: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>', action: () => _doEliminar(task.id), danger: true });
+      items.push({ label: 'Delete', icon: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>', action: () => _doDelete(task.id), danger: true });
       _showTaskDropdown(menuBtn, items);
     });
     actionsWrap.appendChild(menuBtn);
@@ -866,8 +866,8 @@ function _renderList() {
     }
     const editBtn = document.createElement('button');
     editBtn.className = 'memory-toolbar-btn task-detail-edit-btn';
-    editBtn.title = 'Editar task';
-    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar';
+    editBtn.title = 'Edit task';
+    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit';
     editBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       _showForm(task);
@@ -890,7 +890,7 @@ function _renderList() {
       const prev = result.length > 200 ? result.slice(0, 200) + '…' : result;
       const lr = document.createElement('div');
       lr.style.cssText = `font-size:11px;margin-bottom:6px;padding:4px 8px;border-left:2px solid ${color};background:color-mix(in srgb, ${color} 8%, transparent);border-radius:2px;line-height:1.4;cursor:pointer;`;
-      lr.innerHTML = `<span style="font-weight:600;color:${color};">${isErr ? '✗' : '✓'}</span> <span style="opacity:0.9;">${_esc(prev) || (isErr ? 'Failed (no detail)' : 'Éxito (no output)')}</span>`;
+      lr.innerHTML = `<span style="font-weight:600;color:${color};">${isErr ? '✗' : '✓'}</span> <span style="opacity:0.9;">${_esc(prev) || (isErr ? 'Failed (no detail)' : 'Success (no output)')}</span>`;
       lr.title = 'Open full history';
       lr.addEventListener('click', (e) => { e.stopPropagation(); _showRunHistory(task.id, task.name); });
       detail.appendChild(lr);
@@ -922,7 +922,7 @@ function _renderList() {
       cb.addEventListener('change', () => {
         if (cb.checked) _taskSelected.add(task.id); else _taskSelected.delete(task.id);
         card.classList.toggle('selected', cb.checked);
-        _taskActualizarBulkCount();
+        _taskUpdateBulkCount();
         const sa = document.getElementById('tasks-select-all');
         if (sa) sa.checked = _tasks.length > 0 && _tasks.every(t => _taskSelected.has(t.id));
       });
@@ -1062,8 +1062,8 @@ function _showTaskDropdown(anchor, items) {
 const _TASK_PRESETS = [
   { label: 'Prompt on schedule',    desc: 'Run a prompt daily, weekly, etc.',             taskType: 'llm',      triggerType: 'schedule' },
   { label: 'Prompt on event',       desc: 'Trigger every N sessions or messages',         taskType: 'llm',      triggerType: 'event' },
-  { label: 'Investigación on schedule',  desc: 'Run deep research on a topic',                 taskType: 'research', triggerType: 'schedule' },
-  { label: 'Investigación on event',     desc: 'Run deep research after app events',           taskType: 'research', triggerType: 'event' },
+  { label: 'Research on schedule',  desc: 'Run deep research on a topic',                 taskType: 'research', triggerType: 'schedule' },
+  { label: 'Research on event',     desc: 'Run deep research after app events',           taskType: 'research', triggerType: 'event' },
   { label: 'Action on schedule',    desc: 'Run tidy/cleanup on a timer',                  taskType: 'action',   triggerType: 'schedule' },
   { label: 'Action on event',       desc: 'Run tidy/cleanup every N sessions or messages', taskType: 'action', triggerType: 'event' },
   { label: 'Webhook triggered',     desc: 'Trigger via external HTTP call',               taskType: 'llm',      triggerType: 'webhook' },
@@ -1086,7 +1086,7 @@ function _showPresetPicker() {
   if (!body) return;
 
   let html = '<div class="admin-card" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">';
-  html += '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;"><h2 style="margin:0;padding:0;line-height:1;">Agregar Task</h2></div>';
+  html += '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;"><h2 style="margin:0;padding:0;line-height:1;">Add Task</h2></div>';
   html += '<p class="memory-desc" style="position:relative;top:4px;">Describe a task for the AI to draft, or pick a type below to set one up manually.</p>';
   // flex-wrap + min-width:0 on the input lets the row collapse cleanly
   // on narrow modal widths instead of pushing the AI button past the
@@ -1140,9 +1140,9 @@ function _showForm(existing, initTaskType, initTriggerType) {
   body.innerHTML = `
     <div class="admin-card" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
-        <h2 style="margin:0;padding:0;line-height:1;">${existing?.id ? 'Editar Task' : 'New Task'}</h2>
+        <h2 style="margin:0;padding:0;line-height:1;">${existing?.id ? 'Edit Task' : 'New Task'}</h2>
       </div>
-      <p class="memory-desc">${existing?.id ? 'Actualizar this task’s schedule, prompt, and output.' : 'Configure a prompt, research, or action to run automatically.'}</p>
+      <p class="memory-desc">${existing?.id ? 'Update this task’s schedule, prompt, and output.' : 'Configure a prompt, research, or action to run automatically.'}</p>
     <div class="task-form" style="flex:1;overflow-y:auto;min-height:0;">
       <label class="task-form-label">Name</label>
       <input type="text" id="task-form-name" class="task-form-input" value="${_esc(existing?.name || '')}" placeholder="${existing ? '' : 'Auto-generated if blank'}" />
@@ -1150,7 +1150,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
       <label class="task-form-label">Type</label>
       <div class="task-form-toggle" id="task-form-type-toggle">
         <button class="task-toggle-btn ${curTaskType === 'llm' ? 'active' : ''}" data-val="llm" style="position:relative;top:-4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Prompt</button>
-        <button class="task-toggle-btn ${curTaskType === 'research' ? 'active' : ''}" data-val="research" style="position:relative;top:-4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Investigación</button>
+        <button class="task-toggle-btn ${curTaskType === 'research' ? 'active' : ''}" data-val="research" style="position:relative;top:-4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Research</button>
         <button class="task-toggle-btn ${curTaskType === 'action' ? 'active' : ''}" data-val="action" style="position:relative;top:-4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Action</button>
       </div>
 
@@ -1171,7 +1171,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
       </select>
       <div id="task-form-output-extra"></div>
 
-      <label class="task-form-label">Modelo <span style="opacity:0.5;font-weight:normal;font-size:10px;">(optional — overrides session default)</span></label>
+      <label class="task-form-label">Model <span style="opacity:0.5;font-weight:normal;font-size:10px;">(optional — overrides session default)</span></label>
       <select id="task-form-model" class="task-form-input">
         <option value="">Use session default</option>
       </select>
@@ -1191,8 +1191,8 @@ function _showForm(existing, initTaskType, initTriggerType) {
       </label>
 
       <div class="task-form-actions">
-        <button id="task-form-cancel" class="memory-toolbar-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
-        <button id="task-form-save" class="memory-toolbar-btn active"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>${existing?.id ? 'Guardar' : 'Crear'}</button>
+        <button id="task-form-cancel" class="memory-toolbar-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancel</button>
+        <button id="task-form-save" class="memory-toolbar-btn active"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>${existing?.id ? 'Save' : 'Create'}</button>
       </div>
     </div>
     </div>
@@ -1219,7 +1219,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
       const _personaOptsHtml = _personaOpts.map(([v, label]) =>
         `<option value="${v}" ${v === _curPersona ? 'selected' : ''}>${label}</option>`).join('');
       typeOpts.innerHTML = `
-        <label class="task-form-label">${taskType === 'research' ? 'Investigación question' : 'Prompt'}</label>
+        <label class="task-form-label">${taskType === 'research' ? 'Research question' : 'Prompt'}</label>
         <textarea id="task-form-prompt" class="task-form-input task-form-textarea" rows="4" placeholder="${placeholder}">${existing?.prompt || ''}</textarea>
 
         <label class="task-form-label">Persona <span style="opacity:0.5;font-weight:normal;font-size:10px;">(optional — biases the output voice)</span></label>
@@ -1243,14 +1243,14 @@ function _showForm(existing, initTaskType, initTriggerType) {
           return;
         }
         extra.innerHTML = '';
-        await _renderCorreoActionOptions(action, existing, extra);
+        await _renderEmailActionOptions(action, existing, extra);
         if (action === 'check_email_urgency') {
           extra.insertAdjacentHTML('beforeend', `
-            <label class="task-form-label">Correo triage rules</label>
+            <label class="task-form-label">Email triage rules</label>
             <textarea id="task-form-urgent-email-prompt" class="task-form-input task-form-textarea" rows="4" placeholder="What should count as urgent? e.g. deadlines, blockers, people waiting outside."></textarea>
             <div class="memory-desc" style="font-size:11px;margin-top:4px;">Pause/resume and schedule are controlled by this task. It tags work, personal, urgent, action-needed, finance, legal, travel, newsletter, marketing, spam, and related mail categories. Urgent/reply-soon emails use your reminder settings.</div>
           `);
-          const settings = await _fetchUrgentCorreoConfiguración();
+          const settings = await _fetchUrgentEmailSettings();
           const promptEl = document.getElementById('task-form-urgent-email-prompt');
           if (promptEl && !promptEl.dataset.loaded) {
             promptEl.value = settings.urgent_email_prompt || '';
@@ -1416,7 +1416,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
           <label class="task-form-label">Webhook URL</label>
           <div style="display:flex;gap:4px;align-items:center;">
             <input type="text" class="task-form-input" value="${url}" readonly style="flex:1;font-size:11px;opacity:0.8;" id="task-form-webhook-url" />
-            <button class="task-btn" id="task-form-webhook-copy" style="white-space:nowrap;">Copiar</button>
+            <button class="task-btn" id="task-form-webhook-copy" style="white-space:nowrap;">Copy</button>
           </div>
           <div style="font-size:10px;opacity:0.4;margin-top:4px;">POST this URL from any external service to trigger the task. No auth needed.</div>
         `;
@@ -1448,10 +1448,10 @@ function _showForm(existing, initTaskType, initTriggerType) {
     const currentAccountId = document.getElementById('task-form-output-email-account')?.value;
     extra.innerHTML = '';
     if (outputSel.value !== 'email') return;
-    const parsed = _parseTaskCorreoOutputTarget(existing?.output_target || '');
+    const parsed = _parseTaskEmailOutputTarget(existing?.output_target || '');
     if (currentTo != null) parsed.to = currentTo;
     if (currentAccountId != null) parsed.accountId = currentAccountId;
-    const accounts = (await _fetchCorreoAccountsForTareas()).filter(a => a && a.enabled !== false);
+    const accounts = (await _fetchEmailAccountsForTasks()).filter(a => a && a.enabled !== false);
     const options = [
       `<option value="" ${parsed.accountId ? '' : 'selected'}>Default sending account</option>`,
       ...accounts.map(a => {
@@ -1480,25 +1480,25 @@ function _showForm(existing, initTaskType, initTriggerType) {
     const outputSel = document.getElementById('task-form-output');
     if (!outputSel || targets.length <= 1) return;
     outputSel.innerHTML = '';
-    const existingCorreoOutput = _parseTaskCorreoOutputTarget(existing?.output_target || '');
+    const existingEmailOutput = _parseTaskEmailOutputTarget(existing?.output_target || '');
     let matchedOutput = false;
     for (const t of targets) {
       const opt = document.createElement('option');
       opt.value = t.value;
       opt.textContent = t.label;
-      if (existingCorreoOutput.enabled && t.value === 'email') {
+      if (existingEmailOutput.enabled && t.value === 'email') {
         opt.selected = true;
         matchedOutput = true;
-      } else if (!existingCorreoOutput.enabled && existing?.output_target === t.value) {
+      } else if (!existingEmailOutput.enabled && existing?.output_target === t.value) {
         opt.selected = true;
         matchedOutput = true;
       }
       outputSel.appendChild(opt);
     }
-    if (existing?.output_target && !matchedOutput && !existingCorreoOutput.enabled) {
+    if (existing?.output_target && !matchedOutput && !existingEmailOutput.enabled) {
       const opt = document.createElement('option');
       opt.value = existing.output_target;
-      opt.textContent = existing.output_target.includes('@') ? `Correo: ${existing.output_target}` : existing.output_target;
+      opt.textContent = existing.output_target.includes('@') ? `Email: ${existing.output_target}` : existing.output_target;
       opt.selected = true;
       outputSel.appendChild(opt);
     }
@@ -1522,7 +1522,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
         if (it.offline || !it.models || it.models.length === 0) continue;
         const group = document.createElement('optgroup');
         group.label = it.endpoint_name || it.host || 'endpoint';
-        const all = sortModeloIds([...(it.models || []), ...(it.models_extra || [])]);
+        const all = sortModelIds([...(it.models || []), ...(it.models_extra || [])]);
         for (const m of all) {
           const opt = document.createElement('option');
           opt.value = `${it.url}::${m}`;
@@ -1547,8 +1547,8 @@ function _showForm(existing, initTaskType, initTriggerType) {
   // Populate chain dropdown
   const chainSel = document.getElementById('task-form-chain');
   if (chainSel) {
-    const otherTareas = _tasks.filter(t => !existing || t.id !== existing.id);
-    for (const t of otherTareas) {
+    const otherTasks = _tasks.filter(t => !existing || t.id !== existing.id);
+    for (const t of otherTasks) {
       const opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = t.name;
@@ -1557,14 +1557,14 @@ function _showForm(existing, initTaskType, initTriggerType) {
     }
   }
 
-  // Cancelar — return to the Tareas tab (keeps the active-tab highlight in sync)
+  // Cancel — return to the Tasks tab (keeps the active-tab highlight in sync)
   document.getElementById('task-form-cancel').addEventListener('click', () => {
     _switchTab('tasks');
   });
 
-  // Esc on the form goes back to the Agregar tab's preset picker (not the Tareas
-  // tab — Cancelar handles that). Capture-phase + stopImmediatePropagation so
-  // app.js's generic modal-dismiss doesn't close the whole Tareas window first.
+  // Esc on the form goes back to the Add tab's preset picker (not the Tasks
+  // tab — Cancel handles that). Capture-phase + stopImmediatePropagation so
+  // app.js's generic modal-dismiss doesn't close the whole Tasks window first.
   if (window._tasksFormEsc) document.removeEventListener('keydown', window._tasksFormEsc, true);
   window._tasksFormEsc = (e) => {
     if (e.key !== 'Escape') return;
@@ -1575,7 +1575,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
       return;
     }
     const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditarable)) {
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
       t.blur();
       return;
     }
@@ -1585,7 +1585,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
   };
   document.addEventListener('keydown', window._tasksFormEsc, true);
 
-  // Guardar
+  // Save
   document.getElementById('task-form-save').addEventListener('click', async () => {
     const nameEl = document.getElementById('task-form-name');
     const outputSelValue = document.getElementById('task-form-output')?.value || 'session';
@@ -1593,7 +1593,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
     if (outputSelValue === 'email') {
       const to = document.getElementById('task-form-output-email-to')?.value || '';
       const accountId = document.getElementById('task-form-output-email-account')?.value || '';
-      outputTarget = _buildTaskCorreoOutputTarget(to, accountId);
+      outputTarget = _buildTaskEmailOutputTarget(to, accountId);
     }
 
     const payload = {
@@ -1603,7 +1603,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
     };
     if (nameEl) payload.name = nameEl.value.trim() || undefined;
 
-    // Modelo / endpoint override. Blank = inherit session default. Otherwise
+    // Model / endpoint override. Blank = inherit session default. Otherwise
     // value is `endpoint_url::model_id`.
     const modelVal = document.getElementById('task-form-model')?.value || '';
     if (modelVal) {
@@ -1652,7 +1652,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
       if (action === 'check_email_urgency') {
         const urgentPrompt = document.getElementById('task-form-urgent-email-prompt')?.value || '';
         try {
-          await _saveUrgentCorreoConfiguración(urgentPrompt);
+          await _saveUrgentEmailSettings(urgentPrompt);
         } catch (e) {
           if (uiModule) uiModule.showError('Failed to save urgency rules');
           return;
@@ -1699,7 +1699,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
     // webhook: no extra fields needed, token is auto-generated server-side
 
     try {
-      // Editar only when we have a real existing task (has an id). A draft
+      // Edit only when we have a real existing task (has an id). A draft
       // object passed for AI pre-fill has no id → create via POST.
       if (existing && existing.id) {
         await _updateTask(existing.id, payload);
@@ -1708,7 +1708,7 @@ function _showForm(existing, initTaskType, initTriggerType) {
         await _createTask(payload);
         if (uiModule) uiModule.showToast('Task created');
       }
-      await _fetchTareas();
+      await _fetchTasks();
       _switchTab('tasks');
     } catch (e) {
       if (uiModule) uiModule.showError(e.message);
@@ -1781,7 +1781,7 @@ async function _doPause(id) {
   try {
     await _pauseTask(id);
     if (uiModule) uiModule.showToast('Task paused');
-    await _fetchTareas();
+    await _fetchTasks();
     _renderMainView();
   } catch (e) { if (uiModule) uiModule.showError(e.message); }
 }
@@ -1790,7 +1790,7 @@ async function _doResume(id) {
   try {
     await _resumeTask(id);
     if (uiModule) uiModule.showToast('Task resumed');
-    await _fetchTareas();
+    await _fetchTasks();
     _renderMainView();
   } catch (e) { if (uiModule) uiModule.showError(e.message); }
 }
@@ -1815,37 +1815,37 @@ async function _doRunNow(id, force = false) {
   }
 }
 
-async function _doEliminar(id) {
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar('Eliminar this task and all its run history?', { confirmText: 'Eliminar', danger: true })
-    : confirm('Eliminar this task and all its run history?');
+async function _doDelete(id) {
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm('Delete this task and all its run history?', { confirmText: 'Delete', danger: true })
+    : confirm('Delete this task and all its run history?');
   if (!ok) return;
   try {
     await _deleteTask(id);
     await _animateTaskRemoval([id]);
     if (uiModule) uiModule.showToast('Task deleted');
-    await _fetchTareas();
+    await _fetchTasks();
     _renderMainView();
   } catch (e) { if (uiModule) uiModule.showError(e.message); }
 }
 
 async function _doRevert(id) {
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar('Revert this built-in task to its default schedule and settings?', { confirmText: 'Revert' })
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm('Revert this built-in task to its default schedule and settings?', { confirmText: 'Revert' })
     : confirm('Revert this built-in task to its default?');
   if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/api/tasks/${id}/revert`, { method: 'POST', credentials: 'same-origin' });
     if (!res.ok) throw new Error('Failed to revert task');
     if (uiModule) uiModule.showToast('Reverted to default');
-    await _fetchTareas();
+    await _fetchTasks();
     _renderMainView();
   } catch (e) { if (uiModule) uiModule.showError(e.message); }
 }
 
 async function _doClearTaskCache(id, label = 'cache') {
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar(`Clear cached ${label} for this task?`, { confirmText: 'Clear' })
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm(`Clear cached ${label} for this task?`, { confirmText: 'Clear' })
     : confirm(`Clear cached ${label} for this task?`);
   if (!ok) return;
   try {
@@ -1872,8 +1872,8 @@ async function _doToggleAll() {
   }
   const verb = hasActive ? 'Pause' : 'Resume';
   let confirmed = true;
-  if (uiModule?.styledConfirmar) {
-    confirmed = await uiModule.styledConfirmar(
+  if (uiModule?.styledConfirm) {
+    confirmed = await uiModule.styledConfirm(
       `${verb} all ${targets.length} ${hasActive ? 'active' : 'paused'} task(s)?`,
       { confirmText: verb + ' all' }
     );
@@ -1895,7 +1895,7 @@ async function _doToggleAll() {
     if (fails.length === 0) uiModule.showToast(`${verb}d all ${ok} task(s)`);
     else uiModule.showError(`${verb}d ${ok}/${targets.length} — failed: ${fails.slice(0, 3).join(', ')}`);
   }
-  await _fetchTareas();
+  await _fetchTasks();
   _renderMainView();
 }
 
@@ -2091,7 +2091,7 @@ async function _renderActivityView() {
       return {
         // Surface the actual task_type ('llm' | 'research' | 'action') so the
         // chat-worthy check in _renderActivityEntry can decide between "Open
-        // in chat" (llm/research) and "Copiar log" (action). Was hardcoded
+        // in chat" (llm/research) and "Copy log" (action). Was hardcoded
         // 'task', which never matched and made Open-in-chat dead code.
         kind: r.task_type || 'llm',
         taskName: r.task_name || (r.task_type === 'action' ? (r.action || 'Action') : 'Task'),
@@ -2132,7 +2132,7 @@ function _stackActivityEntries(entries) {
   };
   const normalizeResult = (entry) => {
     const text = (entry.result || '').trim();
-    if (/^Correo\b/i.test(entry.taskName || '')) {
+    if (/^Email\b/i.test(entry.taskName || '')) {
       if (/^skipped\s*[—-]/i.test(text) || /\bNo recent emails\b/i.test(text)) {
         return text.replace(/\d+/g, '#');
       }
@@ -2148,7 +2148,7 @@ function _stackActivityEntries(entries) {
       entry.status || '',
       entry.output_target || '',
       normalizeResult(entry),
-      /^Correo\b/i.test(entry.taskName || '') ? hourBucket(entry.ts) : '',
+      /^Email\b/i.test(entry.taskName || '') ? hourBucket(entry.ts) : '',
     ].join('\u0001');
     const existing = byKey.get(key);
     if (
@@ -2280,7 +2280,7 @@ function _wireActivityRows(list) {
       try {
         uiModule.copyToClipboard(txt);
         uiModule.showToast('Log copied');
-      } catch (_) { uiModule.showError('Copiar failed'); }
+      } catch (_) { uiModule.showError('Copy failed'); }
     });
     row.querySelector('.task-log-clear-cache')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2325,15 +2325,15 @@ async function _openResultInChat(entry) {
     if (!url) {
       // Skip embedding/tts/whisper/moderation/image models — they can't chat,
       // and an endpoint may list one first (e.g. text-embedding-ada-002).
-      const _isChatModelo = (m) => {
+      const _isChatModel = (m) => {
         const l = (m || '').toLowerCase();
         return !!l && !['text-embedding', 'embedding', 'tts-', 'whisper', 'text-moderation', 'moderation-', 'dall-e', 'rerank'].some(p => l.includes(p));
       };
-      const online = items.find(it => !it.offline && (it.models || []).some(_isChatModelo))
+      const online = items.find(it => !it.offline && (it.models || []).some(_isChatModel))
         || items.find(it => !it.offline && (it.models || []).length);
       if (online) {
         url = online.url;
-        model = (online.models || []).find(_isChatModelo) || (online.models || [])[0];
+        model = (online.models || []).find(_isChatModel) || (online.models || [])[0];
         epId = online.endpoint_id || '';
       }
     }
@@ -2360,7 +2360,7 @@ async function _openResultInChat(entry) {
       ] }),
     });
 
-    closeTareas();
+    closeTasks();
     if (window.sessionModule) {
       if (window.sessionModule.loadSessions) await window.sessionModule.loadSessions();
       if (window.sessionModule.selectSession) window.sessionModule.selectSession(sid);
@@ -2494,9 +2494,9 @@ function _renderActivityEntry(entry) {
   const hasResult = !!(entry.result && entry.result.trim() && entry.status !== 'running' && entry.status !== 'queued');
   const hasRunningProgress = !!(entry.result && entry.result.trim() && !_runningPlaceholder && (entry.status === 'running' || entry.status === 'queued'));
   // "Open in chat" only makes sense for runs whose result is a real assistant
-  // message (Prompt / Investigación tasks). Action/event runs are just log lines
+  // message (Prompt / Research tasks). Action/event runs are just log lines
   // (e.g. "No recent emails", "Tidied N memories") — for those, replace the
-  // button with "Copiar log" so you can grab the text without spawning a chat
+  // button with "Copy log" so you can grab the text without spawning a chat
   // with nothing useful in it.
   const _isChatWorthy = entry.kind === 'llm' || entry.kind === 'research';
   let actionBtn = '';
@@ -2512,9 +2512,9 @@ function _renderActivityEntry(entry) {
        </button>`;
     }
   } else if (hasResult) {
-    actionBtn = `<button class="task-log-copy" type="button" title="Copiar this log entry">
+    actionBtn = `<button class="task-log-copy" type="button" title="Copy this log entry">
          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-         Copiar log
+         Copy log
        </button>`;
   }
   const clearLabel = _taskClearCacheLabel(entry);
@@ -2595,8 +2595,8 @@ function _escHtml(s) {
 
 // ---- Main view ----
 
-// Tareas list view state — search query + active category tag + select mode.
-let _taskBuscar = '';
+// Tasks list view state — search query + active category tag + select mode.
+let _taskSearch = '';
 let _taskFilter = null;
 let _taskSort = 'recent';
 let _taskSelectMode = false;
@@ -2656,7 +2656,7 @@ function _renderMainView() {
   body.innerHTML = `
     <div class="admin-card" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;top:-2px;">
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
-        <h2 style="margin:0;padding:0;line-height:1;position:relative;top:-4px;">Ongoing Tareas <span id="tasks-head-count" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal"></span></h2>
+        <h2 style="margin:0;padding:0;line-height:1;position:relative;top:-4px;">Ongoing Tasks <span id="tasks-head-count" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal"></span></h2>
         <button class="memory-toolbar-btn" id="tasks-pause-all-btn" title="Pause all active tasks" style="margin-left:auto;">Pause all</button>
       </div>
       <p class="memory-desc" style="position:relative;top:-4px;">Scheduled prompts and actions that run automatically. Results appear in a dedicated session.</p>
@@ -2669,13 +2669,13 @@ function _renderMainView() {
           </select>
           <button class="memory-toolbar-btn" id="tasks-select-btn" title="Select tasks" style="position:relative;top:-7px;">Select</button>
         </div>
-        <input type="text" id="tasks-search" placeholder="Buscar tasks…" class="memory-search-input" value="${_esc(_taskBuscar)}" style="position:relative;top:-4px;" />
+        <input type="text" id="tasks-search" placeholder="Search tasks…" class="memory-search-input" value="${_esc(_taskSearch)}" style="position:relative;top:-4px;" />
       </div>
       <div id="tasks-bulk-bar" class="memory-bulk-bar${_taskSelectMode ? '' : ' hidden'}" style="position:relative;top:-4px;">
         <label class="memory-bulk-check-all" style="position:relative;top:0px;"><input type="checkbox" id="tasks-select-all" /> All</label>
         <span id="tasks-selected-count">0 Selected</span>
-        <button id="tasks-bulk-delete" class="memory-toolbar-btn danger" style="position:relative;top:-2px;" disabled><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Eliminar</button>
-        <button id="tasks-bulk-cancel" class="memory-toolbar-btn" title="Cancelar (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button id="tasks-bulk-delete" class="memory-toolbar-btn danger" style="position:relative;top:-2px;" disabled><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Delete</button>
+        <button id="tasks-bulk-cancel" class="memory-toolbar-btn" title="Cancel (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div id="tasks-filter-chips" class="tasks-activity-filters" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;position:relative;top:-4px;"></div>
       <div id="tasks-list" class="memory-list" style="flex:1;gap:4px;position:relative;top:-4px;"></div>
@@ -2683,7 +2683,7 @@ function _renderMainView() {
   `;
 
   const searchEl = document.getElementById('tasks-search');
-  if (searchEl) searchEl.addEventListener('input', () => { _taskBuscar = searchEl.value; _renderList(); });
+  if (searchEl) searchEl.addEventListener('input', () => { _taskSearch = searchEl.value; _renderList(); });
 
   const sortEl = document.getElementById('tasks-sort');
   if (sortEl) { sortEl.value = _taskSort; sortEl.addEventListener('change', () => { _taskSort = sortEl.value; _renderList(); }); }
@@ -2691,12 +2691,12 @@ function _renderMainView() {
   const selectBtn = document.getElementById('tasks-select-btn');
   if (selectBtn) {
     selectBtn.classList.toggle('active', _taskSelectMode);
-    selectBtn.addEventListener('click', () => _taskSelectMode ? _taskSalirSelect() : _taskEnterSelect());
+    selectBtn.addEventListener('click', () => _taskSelectMode ? _taskExitSelect() : _taskEnterSelect());
   }
   document.getElementById('tasks-pause-all-btn')?.addEventListener('click', () => _doToggleAll());
   document.getElementById('tasks-select-all')?.addEventListener('change', _taskToggleSelectAll);
-  document.getElementById('tasks-bulk-cancel')?.addEventListener('click', _taskSalirSelect);
-  document.getElementById('tasks-bulk-delete')?.addEventListener('click', _taskBulkEliminar);
+  document.getElementById('tasks-bulk-cancel')?.addEventListener('click', _taskExitSelect);
+  document.getElementById('tasks-bulk-delete')?.addEventListener('click', _taskBulkDelete);
 
   _renderList();
   _syncPauseAllButton();
@@ -2711,7 +2711,7 @@ function _renderMainView() {
 
 // ---- Modal ----
 
-export function openTareas(focusId, opts) {
+export function openTasks(focusId, opts) {
   startNotificationPolling();
   const o = opts || {};
   const openActivityForFailure = _taskFailurePending && !focusId && o.filter === undefined;
@@ -2738,14 +2738,14 @@ export function openTareas(focusId, opts) {
   modal.innerHTML = `
     <div class="modal-content tasks-modal-content">
       <div class="modal-header">
-        <h4 style="position:relative;top:-2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L2 6"/><path d="M22 6l-3-3"/></svg>Tareas</h4>
+        <h4 style="position:relative;top:-2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3L2 6"/><path d="M22 6l-3-3"/></svg>Tasks</h4>
         <span style="flex:1"></span>
         <button class="close-btn" id="tasks-close">✖</button>
       </div>
       <div class="memory-tabs tasks-tabs" role="tablist">
         <button class="memory-tab tasks-tab active" data-tab="tasks" role="tab" aria-selected="true">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Tareas <span id="tasks-tab-count" class="memory-count" style="font-size:0.8em;opacity:0.6;font-weight:normal;margin-left:4px">0</span>
+          Tasks <span id="tasks-tab-count" class="memory-count" style="font-size:0.8em;opacity:0.6;font-weight:normal;margin-left:4px">0</span>
         </button>
         <button class="memory-tab tasks-tab" data-tab="activity" role="tab" aria-selected="false">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -2753,7 +2753,7 @@ export function openTareas(focusId, opts) {
         </button>
         <button class="memory-tab tasks-tab" data-tab="new" role="tab" aria-selected="false">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          Agregar
+          Add
         </button>
       </div>
       <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;overflow:hidden;"></div>
@@ -2790,12 +2790,12 @@ export function openTareas(focusId, opts) {
   }
 
   // Events
-  document.getElementById('tasks-close').addEventListener('click', closeTareas);
+  document.getElementById('tasks-close').addEventListener('click', closeTasks);
   // "Pause all" + "Select" live in the main-view sub-header now (wired in _renderMainView).
 
   modal.addEventListener('click', (e) => {
     if (uiModule.isTouchInsideModal()) return;
-    if (e.target === modal) closeTareas();
+    if (e.target === modal) closeTasks();
   });
 
   _escHandler = (e) => {
@@ -2805,9 +2805,9 @@ export function openTareas(focusId, opts) {
         _renderMainView();
         return;
       }
-      // If we're on the "Agregar" tab inside the new-task form (preset already
+      // If we're on the "Add" tab inside the new-task form (preset already
       // picked), step back to the preset picker instead of closing the modal.
-      // Detect by: Agregar tab active + the form's name input is mounted.
+      // Detect by: Add tab active + the form's name input is mounted.
       const _modal = document.getElementById('tasks-modal');
       const _addActive = _modal?.querySelector('.tasks-tab.active[data-tab="new"]');
       const _formMounted = _modal?.querySelector('#task-form-name');
@@ -2815,7 +2815,7 @@ export function openTareas(focusId, opts) {
         _showPresetPicker();
         return;
       }
-      closeTareas();
+      closeTasks();
     }
   };
   document.addEventListener('keydown', _escHandler);
@@ -2826,7 +2826,7 @@ export function openTareas(focusId, opts) {
   // was visible as a "flicker" right after opening.
   _activeTab = 'tasks';
   _switchTab(openActivityForFailure ? 'activity' : 'tasks');
-  _fetchTareas().then(() => {
+  _fetchTasks().then(() => {
     // Re-render so the list swaps the Loading row for real cards.
     _renderList();
     _syncPauseAllButton();
@@ -2856,7 +2856,7 @@ function _focusTask(taskId) {
   }, 150);
 }
 
-export function closeTareas() {
+export function closeTasks() {
   if (!_open) return;
   _open = false;
   _viewingRuns = null;
@@ -2887,7 +2887,7 @@ export function closeTareas() {
   }
 }
 
-export function isTareasOpen() { return _open; }
+export function isTasksOpen() { return _open; }
 
 // ---- Task run notifications polling ----
 
@@ -2901,7 +2901,7 @@ async function _pollTaskNotifications() {
     const notes = data.notifications || [];
     for (const n of notes) {
       const ok = n.status === 'success';
-      // Tareas with output_target='notification' carry the result text in `body`
+      // Tasks with output_target='notification' carry the result text in `body`
       // — show it as a real browser Notification (richer than a toast). Falls
       // back to a toast when permission is denied or unavailable.
       if (ok && n.body) {
@@ -2944,6 +2944,6 @@ function stopNotificationPolling() {
   }
 }
 
-const tasksModule = { openTareas, closeTareas, isTareasOpen, startNotificationPolling, stopNotificationPolling };
+const tasksModule = { openTasks, closeTasks, isTasksOpen, startNotificationPolling, stopNotificationPolling };
 export default tasksModule;
 window.tasksModule = tasksModule;

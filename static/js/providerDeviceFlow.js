@@ -1,4 +1,4 @@
-// Compartird DOM-free provider device-flow runner.
+// Shared DOM-free provider device-flow runner.
 
 export const PROVIDER_DEVICE_FLOWS = {
   copilot: {
@@ -21,7 +21,7 @@ export const PROVIDER_DEVICE_FLOWS = {
 
 function _formData() {
   if (typeof FormData !== 'undefined') return new FormData();
-  return new URLBuscarParams();
+  return new URLSearchParams();
 }
 
 async function _jsonOrEmpty(response) {

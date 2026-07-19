@@ -1,5 +1,5 @@
 /**
- * Editaror keyboard shortcuts — bound to `document` so shortcuts work
+ * Editor keyboard shortcuts — bound to `document` so shortcuts work
  * without first clicking into the canvas. Gated by `state.editorOpen`
  * so they don't leak into chat input when the editor is closed.
  *
@@ -21,7 +21,7 @@
  *   Tool keys (V, B, E, L, …) → toolbar click
  *   [ / ]          shrink / grow brush size proportionally
  *   D, C, M (when lasso has 3+ points) → delete / copy / convert mask
- *   Eliminar / Backspace (wand or lasso) → delete pixels
+ *   Delete / Backspace (wand or lasso) → delete pixels
  *
  * @param {{
  *   toolbar:                HTMLDivElement,
@@ -38,10 +38,10 @@
  *   addEmptyLayer:          () => void,
  *   brushSizeSync:          (source: HTMLInputElement | null) => void,
  *   invertSelection:        () => boolean,
- *   wandEliminarSelection:    () => void,
- *   wandCopiarToNewLayer:     () => void,
- *   lassoEliminarSelection:   () => void,
- *   lassoCopiarToLayer:       () => void,
+ *   wandDeleteSelection:    () => void,
+ *   wandCopyToNewLayer:     () => void,
+ *   lassoDeleteSelection:   () => void,
+ *   lassoCopyToLayer:       () => void,
  *   lassoToMask:            () => void,
  *   buildLassoMask:         (w: number, h: number, offX: number, offY: number, feather: number, grow: number) => HTMLCanvasElement,
  *   drawLassoOverlay:       () => void,
@@ -59,8 +59,8 @@ export function wireKeyboardShortcuts(deps) {
     toggleShortcuts, confirmTransform, cancelTransform, startTransform,
     resizeCustomPrompt, addEmptyLayer, brushSizeSync,
     invertSelection,
-    wandEliminarSelection, wandCopiarToNewLayer,
-    lassoEliminarSelection, lassoCopiarToLayer, lassoToMask,
+    wandDeleteSelection, wandCopyToNewLayer,
+    lassoDeleteSelection, lassoCopyToLayer, lassoToMask,
     buildLassoMask, drawLassoOverlay,
     activeLayer, uiModule,
   } = deps;
@@ -104,7 +104,7 @@ export function wireKeyboardShortcuts(deps) {
           composite();
         }
       }
-      // Guardar shortcuts — match the hints shown in the Guardar dropdown.
+      // Save shortcuts — match the hints shown in the Save dropdown.
       if ((e.key === 's' || e.key === 'S') && !e.altKey) {
         e.preventDefault();
         document.getElementById(e.shiftKey ? 'ge-export-gallery' : 'ge-save')?.click();
@@ -126,15 +126,15 @@ export function wireKeyboardShortcuts(deps) {
         e.stopPropagation();
         addEmptyLayer();
       }
-      // Wand selection: Eliminar = erase pixels. Ctrl+X = cut to
+      // Wand selection: Delete = erase pixels. Ctrl+X = cut to
       // clipboard + new layer + erase. Ctrl+C = copy.
       // (Legacy `&& !_wandActive` clause referenced an undeclared
       // variable — removed; the wand is selection-only and has no
       // "active drag" state.)
       if (state.wandMask) {
-        if (e.key === 'Eliminar' || e.key === 'Backspace') {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
           e.preventDefault();
-          wandEliminarSelection();
+          wandDeleteSelection();
           return;
         }
         if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'c')) {
@@ -160,8 +160,8 @@ export function wireKeyboardShortcuts(deps) {
           }, 'image/png');
           if (isCut) {
             // Cut also moves the selection to a new layer + erases source.
-            wandCopiarToNewLayer();
-            wandEliminarSelection();
+            wandCopyToNewLayer();
+            wandDeleteSelection();
           }
           return;
         }
@@ -204,7 +204,7 @@ export function wireKeyboardShortcuts(deps) {
         if (e.key === 'x') {
           const savedPts = [...state.lassoPoints];
           state.lassoPoints = savedPts;
-          lassoEliminarSelection();
+          lassoDeleteSelection();
         } else {
           state.lassoPoints = [];
           composite();
@@ -223,7 +223,7 @@ export function wireKeyboardShortcuts(deps) {
             if (blob && navigator.clipboard?.write) {
               navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
                 .then(() => uiModule.showToast('Layer copied to clipboard'))
-                .catch(() => uiModule.showToast('Copiar failed (clipboard permission denied?)'));
+                .catch(() => uiModule.showToast('Copy failed (clipboard permission denied?)'));
             }
           }, 'image/png');
           return;
@@ -262,9 +262,9 @@ export function wireKeyboardShortcuts(deps) {
     }
     // Lasso shortcuts (when selection exists).
     if (state.lassoPoints.length >= 3) {
-      if (e.key === 'Eliminar' || e.key === 'Backspace') { e.preventDefault(); lassoEliminarSelection(); }
-      if (e.key === 'd') { e.preventDefault(); lassoEliminarSelection(); }
-      if (e.key === 'c') { e.preventDefault(); lassoCopiarToLayer(); }
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); lassoDeleteSelection(); }
+      if (e.key === 'd') { e.preventDefault(); lassoDeleteSelection(); }
+      if (e.key === 'c') { e.preventDefault(); lassoCopyToLayer(); }
       if (e.key === 'm') { e.preventDefault(); lassoToMask(); }
     }
   });

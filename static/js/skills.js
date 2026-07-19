@@ -1,4 +1,4 @@
-// skills.js — Skills tab in the Memoria modal.
+// skills.js — Skills tab in the Memory modal.
 //
 // Skills are SKILL.md files (frontmatter + body) under data/skills/.
 // This UI supports: list, search, view (read SKILL.md), edit (replace
@@ -141,7 +141,7 @@ function _focusSkillRow(name) {
   }, 200);
 }
 
-// Open the Memoria modal → Skills tab → focus a specific skill row.
+// Open the Memory modal → Skills tab → focus a specific skill row.
 // Used by the chat anchor-link delegate ([name](#skill-<name>)).
 export function openSkill(name) {
   _pendingFocusSkill = name || null;
@@ -210,7 +210,7 @@ function _statusPill(sk) {
 function _sourcePill(sk) {
   if (sk.source !== 'teacher-escalation') return '';
   const teacher = sk.teacher_model || 'teacher';
-  return `<span class="memory-cat-badge" title="Creard by teacher escalation: ${esc(teacher)}" style="background:color-mix(in srgb, var(--color-warning, #f0ad4e) 22%, transparent);">teacher-created</span>`;
+  return `<span class="memory-cat-badge" title="Created by teacher escalation: ${esc(teacher)}" style="background:color-mix(in srgb, var(--color-warning, #f0ad4e) 22%, transparent);">teacher-created</span>`;
 }
 
 function _modelShortName(model) {
@@ -298,7 +298,7 @@ function _duplicateMeta(list) {
   return meta;
 }
 
-function _auditModeloPills(sk) {
+function _auditModelPills(sk) {
   const worker = sk.audit_worker_model || '';
   const teacher = sk.audit_teacher_model || '';
   let html = '';
@@ -377,7 +377,7 @@ function _confColor(conf) {
   return `hsl(${Math.round(hue)}, 70%, 42%)`;
 }
 
-// Compartird action icons (collapsed kebab menu + expanded footer use the same).
+// Shared action icons (collapsed kebab menu + expanded footer use the same).
 const _ICON = {
   del:   '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
   edit:  '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
@@ -391,7 +391,7 @@ function _svg(paths, { fill = 'none', size = 13 } = {}) {
 }
 
 // Kebab dropdown for a collapsed skill card — same actions + icons as the
-// expanded footer (Publish/Unpublish · Editar · Eliminar).
+// expanded footer (Publish/Unpublish · Edit · Delete).
 function _openSkillMenu(btn, card, sk, name, isPublished) {
   document.querySelectorAll('.skill-kebab-menu').forEach(dismissOrRemove);
   const menu = document.createElement('div');
@@ -419,21 +419,21 @@ function _openSkillMenu(btn, card, sk, name, isPublished) {
   });
   menu.appendChild(selItem);
 
-  mk(_ICON.edit, 'Editar', {}, async () => {
+  mk(_ICON.edit, 'Edit', {}, async () => {
     if (!card.classList.contains('doclib-card-expanded')) await _expandSkillCard(card, name);
-    _toggleSkillEditar(card, name);
+    _toggleSkillEdit(card, name);
   });
   mk(_ICON.test, 'Test', {}, () => _testSkill(card, name));
   // Audit kicks off the bulk audit-all loop (test → judge → fix → retry → demote).
   mk(_ICON.test, 'Audit', {}, () => _auditAllSkills());
-  mk(_ICON.del, 'Eliminar', { danger: true }, () => _deleteSkill(name, card));
+  mk(_ICON.del, 'Delete', { danger: true }, () => _deleteSkill(name, card));
 
-  // Mobile-only Cancelar — mirrors the email/documents/brain popup pattern.
+  // Mobile-only Cancel — mirrors the email/documents/brain popup pattern.
   // CSS hides `.dropdown-cancel-mobile` on desktop where outside-click
   // already dismisses cleanly.
   const cancelItem = document.createElement('button');
   cancelItem.className = 'skill-kebab-item dropdown-cancel-mobile';
-  cancelItem.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>Cancelar</span>';
+  cancelItem.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>Cancel</span>';
   cancelItem.addEventListener('click', (e) => { e.stopPropagation(); close(); });
   menu.appendChild(cancelItem);
 
@@ -490,30 +490,30 @@ function _buildBuiltinCards() {
 
     const preview = document.createElement('div');
     preview.className = 'doclib-card-preview skill-card-preview';
-    // Advertencia banner — editing a built-in changes how the assistant uses a native tool.
+    // Warning banner — editing a built-in changes how the assistant uses a native tool.
     const warn = document.createElement('div');
     warn.className = 'skill-builtin-warn';
-    warn.innerHTML = '⚠ This is a built-in capability. Editaring changes how the assistant is instructed to use this native tool — it can break or alter core behaviour. Use Revert to restore the shipped default.';
+    warn.innerHTML = '⚠ This is a built-in capability. Editing changes how the assistant is instructed to use this native tool — it can break or alter core behaviour. Use Revert to restore the shipped default.';
     preview.appendChild(warn);
     const pre = document.createElement('pre');
     pre.className = 'skill-md-pre';
     pre.textContent = '';  // filled on expand
     preview.appendChild(pre);
 
-    // Footer: Revert (left, only meaningful when overridden) · Editar/Guardar (right).
+    // Footer: Revert (left, only meaningful when overridden) · Edit/Save (right).
     const actions = document.createElement('div');
     actions.className = 'doclib-card-expanded-actions';
 
     const revertBtn = document.createElement('button');
     revertBtn.className = 'doclib-card-text-btn doclib-card-action-btn doclib-card-text-btn-danger';
     revertBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Revert';
-    revertBtn.title = 'Restaurar the original shipped instructions';
+    revertBtn.title = 'Restore the original shipped instructions';
     revertBtn.addEventListener('click', (e) => { e.stopPropagation(); _revertBuiltin(b.name); });
 
     const editBtn = document.createElement('button');
     editBtn.className = 'doclib-card-text-btn doclib-card-action-btn';
-    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar';
-    editBtn.addEventListener('click', (e) => { e.stopPropagation(); _toggleBuiltinEditar(card, b.name); });
+    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit';
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); _toggleBuiltinEdit(card, b.name); });
 
     const rightGroup = document.createElement('div');
     rightGroup.className = 'doclib-action-group';
@@ -529,7 +529,7 @@ function _buildBuiltinCards() {
 
     card.addEventListener('click', (e) => {
       if (e.target.closest('button, input, textarea')) return;
-      // Editaring in progress → don't collapse on an outside-the-textarea click.
+      // Editing in progress → don't collapse on an outside-the-textarea click.
       if (card.querySelector('.skill-md-editor')) return;
       _expandBuiltinCard(card, b.name);
     });
@@ -563,10 +563,10 @@ async function _expandBuiltinCard(card, name) {
   }
 }
 
-function _toggleBuiltinEditar(card, name) {
+function _toggleBuiltinEdit(card, name) {
   const preview = card.querySelector('.skill-card-preview');
   if (!preview) return;
-  if (preview.querySelector('.skill-md-editor')) { _saveBuiltinEditar(card, name); return; }
+  if (preview.querySelector('.skill-md-editor')) { _saveBuiltinEdit(card, name); return; }
   const pre = preview.querySelector('.skill-md-pre');
   const ta = document.createElement('textarea');
   ta.className = 'skill-md-editor';
@@ -576,11 +576,11 @@ function _toggleBuiltinEditar(card, name) {
   if (pre) pre.style.display = 'none';
   preview.insertBefore(ta, preview.querySelector('.doclib-card-expanded-actions'));
   ta.focus();
-  const editBtn = [...preview.querySelectorAll('.doclib-card-action-btn')].find(b => /Editar|Guardar/.test(b.textContent));
-  if (editBtn) editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar';
+  const editBtn = [...preview.querySelectorAll('.doclib-card-action-btn')].find(b => /Edit|Save/.test(b.textContent));
+  if (editBtn) editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save';
 }
 
-async function _saveBuiltinEditar(card, name) {
+async function _saveBuiltinEdit(card, name) {
   const ta = card.querySelector('.skill-md-editor');
   if (!ta) return;
   try {
@@ -593,11 +593,11 @@ async function _saveBuiltinEditar(card, name) {
     uiModule.showToast('Built-in capability updated');
     builtinSkills = [];  // force reload of built-in list (refreshes "edited" badge)
     await loadSkills();
-  } catch (e) { uiModule.showError('Guardar failed: ' + e.message); }
+  } catch (e) { uiModule.showError('Save failed: ' + e.message); }
 }
 
 async function _revertBuiltin(name) {
-  if (!(await uiModule.styledConfirmar(`Revert "${name}" to its original built-in instructions?`, { confirmText: 'Revert', danger: true }))) return;
+  if (!(await uiModule.styledConfirm(`Revert "${name}" to its original built-in instructions?`, { confirmText: 'Revert', danger: true }))) return;
   try {
     const res = await fetch(`${API}/api/skills/builtin/${encodeURIComponent(name)}`, { method: 'DELETE' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -649,7 +649,7 @@ function renderSkillsList() {
   if (selectBtn) selectBtn.disabled = false;
 
   // Library-style cards: a compact bar that expands in-place to show the
-  // SKILL.md, with a footer (Eliminar left; Editar / Run / Approve right).
+  // SKILL.md, with a footer (Delete left; Edit / Run / Approve right).
   // Reuses the proven .doclib-card / .doclib-card-preview /
   // .doclib-card-expanded-actions markup so the desktop+mobile expand +
   // footer behaviour matches the document/chat library exactly.
@@ -704,7 +704,7 @@ function renderSkillsList() {
       <div class="skill-card-right">
         ${_statusPill(sk)}
         ${_sourcePill(sk)}
-        ${_auditModeloPills(sk)}
+        ${_auditModelPills(sk)}
         ${_necessityPill(sk)}
         ${_duplicatePriorityPill(sk)}
         <span class="skill-stats">${_auditMarks(sk)}<span class="skill-conf" style="color:${confColor};">${conf}%</span> · ${uses}u</span>
@@ -735,19 +735,19 @@ function renderSkillsList() {
 
     const delBtn = document.createElement('button');
     delBtn.className = 'doclib-card-text-btn doclib-card-action-btn doclib-card-text-btn-danger';
-    delBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Eliminar';
+    delBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete';
     delBtn.addEventListener('click', (e) => { e.stopPropagation(); _deleteSkill(name, card); });
 
     const editBtn = document.createElement('button');
     editBtn.className = 'doclib-card-text-btn doclib-card-action-btn';
-    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar';
-    editBtn.addEventListener('click', (e) => { e.stopPropagation(); _toggleSkillEditar(card, name); });
+    editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit';
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); _toggleSkillEdit(card, name); });
 
     const pubBtn = document.createElement('button');
     pubBtn.className = 'doclib-card-text-btn doclib-card-action-btn';
     if (isPublished) {
       pubBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>Unpublish';
-      pubBtn.title = 'Mover back to draft';
+      pubBtn.title = 'Move back to draft';
       pubBtn.addEventListener('click', (e) => { e.stopPropagation(); _setSkillStatus(name, 'draft'); });
     } else {
       pubBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Publish';
@@ -805,7 +805,7 @@ function renderSkillsList() {
       if (e.target.closest('button, input, textarea')) return;
       // While editing, a click on the card body (outside the textarea) must
       // NOT collapse the card — that silently discards unsaved edits. Only
-      // Guardar/Cancelar exit edit mode.
+      // Save/Cancel exit edit mode.
       if (card.querySelector('.skill-md-editor')) return;
       if (_selectMode) {
         const cb = card.querySelector('.skill-select-cb');
@@ -822,7 +822,7 @@ function renderSkillsList() {
       const kebab = header.querySelector('.skill-kebab-btn');
       let hold = null;
       let start = null;
-      const _lpCancelar = () => { if (hold) { clearTimeout(hold); hold = null; } start = null; };
+      const _lpCancel = () => { if (hold) { clearTimeout(hold); hold = null; } start = null; };
       card.addEventListener('pointerdown', (e) => {
         if (e.target.closest('.skill-kebab-btn, .skill-select-cb, button, input, textarea')) return;
         start = { x: e.clientX, y: e.clientY };
@@ -836,10 +836,10 @@ function renderSkillsList() {
       });
       card.addEventListener('pointermove', (e) => {
         if (!start) return;
-        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) _lpCancelar();
+        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) _lpCancel();
       });
-      card.addEventListener('pointerup', _lpCancelar);
-      card.addEventListener('pointercancel', _lpCancelar);
+      card.addEventListener('pointerup', _lpCancel);
+      card.addEventListener('pointercancel', _lpCancel);
     }
 
     cards.push(card);
@@ -1032,14 +1032,14 @@ async function _expandSkillCard(card, name) {
 }
 
 // Swap the read-only <pre> for an editable <textarea> (and back). The
-// Editar button toggles; a Guardar button commits via the markdown endpoint.
-function _toggleSkillEditar(card, name) {
+// Edit button toggles; a Save button commits via the markdown endpoint.
+function _toggleSkillEdit(card, name) {
   const preview = card.querySelector('.skill-card-preview');
   if (!preview) return;
   const existing = preview.querySelector('.skill-md-editor');
   if (existing) {
-    // Already editing — treat Editar as Guardar.
-    _saveSkillEditar(card, name);
+    // Already editing — treat Edit as Save.
+    _saveSkillEdit(card, name);
     return;
   }
   const pre = preview.querySelector('.skill-md-pre');
@@ -1051,12 +1051,12 @@ function _toggleSkillEditar(card, name) {
   if (pre) pre.style.display = 'none';
   preview.insertBefore(ta, preview.querySelector('.doclib-card-expanded-actions'));
   ta.focus();
-  // Flip the Editar button label to "Guardar".
-  const editBtn = [...preview.querySelectorAll('.doclib-card-action-btn')].find(b => /Editar|Guardar/.test(b.textContent));
-  if (editBtn) editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar';
+  // Flip the Edit button label to "Save".
+  const editBtn = [...preview.querySelectorAll('.doclib-card-action-btn')].find(b => /Edit|Save/.test(b.textContent));
+  if (editBtn) editBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save';
 }
 
-async function _saveSkillEditar(card, name) {
+async function _saveSkillEdit(card, name) {
   const preview = card.querySelector('.skill-card-preview');
   const ta = preview?.querySelector('.skill-md-editor');
   if (!ta) return;
@@ -1069,15 +1069,15 @@ async function _saveSkillEditar(card, name) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     // Refresh the cached markdown so the preload/expand show the new text.
     _mdCache.set(name, ta.value);
-    uiModule.showToast('Guardard');
+    uiModule.showToast('Saved');
     await loadSkills();  // re-render (frontmatter changes like name/status may have changed)
   } catch (e) {
-    uiModule.showError('Guardar failed: ' + e.message);
+    uiModule.showError('Save failed: ' + e.message);
   }
 }
 
 async function _deleteSkill(name, card = null) {
-  if (!(await uiModule.styledConfirmar(`Eliminar skill "${name}"? This removes the SKILL.md.`, { confirmText: 'Eliminar', danger: true }))) return;
+  if (!(await uiModule.styledConfirm(`Delete skill "${name}"? This removes the SKILL.md.`, { confirmText: 'Delete', danger: true }))) return;
   // Locate the card if the caller didn't hand one over, so we can collapse it
   // away gracefully (same fade+shrink as the document library) instead of
   // re-rendering the whole list.
@@ -1097,7 +1097,7 @@ async function _deleteSkill(name, card = null) {
     }
     await loadSkills();
     uiModule.showToast('Skill deleted');
-  } catch (e) { uiModule.showError('Eliminar failed: ' + e.message); }
+  } catch (e) { uiModule.showError('Delete failed: ' + e.message); }
 }
 
 async function _setSkillStatus(name, status) {
@@ -1109,7 +1109,7 @@ async function _setSkillStatus(name, status) {
     });
     await loadSkills();
     uiModule.showToast(status === 'published' ? 'Skill approved' : 'Skill moved to draft');
-  } catch (e) { uiModule.showError('Actualizar failed: ' + e.message); }
+  } catch (e) { uiModule.showError('Update failed: ' + e.message); }
 }
 
 // ---- Test a skill (sandbox agent run + AI eval) ----
@@ -1126,7 +1126,7 @@ function _renderTestLog(logEl, verdictEl, job, card, name) {
   logEl.innerHTML = '';
   const add = (txt, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = txt; logEl.appendChild(d); };
   for (const ev of (job.log || [])) {
-    if (ev.type === 'skill_test_start') { add('Task: ' + ev.task, 'skill-test-task'); add('Modelo: ' + ev.model, 'skill-test-meta'); }
+    if (ev.type === 'skill_test_start') { add('Task: ' + ev.task, 'skill-test-task'); add('Model: ' + ev.model, 'skill-test-meta'); }
     else if (ev.type === 'agent_step') add('— round ' + ev.round + ' —', 'skill-test-round');
     else if (ev.type === 'tool_start') add('▸ ' + ev.tool + '  ' + String(ev.command || '').slice(0, 200), 'skill-test-tool');
     else if (ev.type === 'tool_output') add(String(ev.output || '').slice(0, 500), 'skill-test-out');
@@ -1160,7 +1160,7 @@ async function _testSkill(card, name, force = false) {
     let model = '', endpoint_url = '';
     try {
       const sm = window.sessionModule;
-      model = (sm && sm.getCurrentModelo && sm.getCurrentModelo()) || '';
+      model = (sm && sm.getCurrentModel && sm.getCurrentModel()) || '';
       endpoint_url = (sm && sm.getCurrentEndpointUrl && sm.getCurrentEndpointUrl()) || '';
     } catch (_) {}
     try {
@@ -1182,7 +1182,7 @@ async function _testSkill(card, name, force = false) {
       // only stop once the card itself is gone from the DOM.
       if (!document.body.contains(card)) { clearInterval(card._testPoll); card._testPoll = null; _setCardRunning(card, false); return; }
       const s = await _fetchTestStatus(name);
-      // Actualizar the expanded log only while it's still on screen.
+      // Update the expanded log only while it's still on screen.
       if (document.body.contains(logEl)) _renderTestLog(logEl, verdictEl, s, card, name);
       if (s.status !== 'running') {
         clearInterval(card._testPoll); card._testPoll = null;
@@ -1321,9 +1321,9 @@ function _renderTestVerdict(el, v, card, name) {
       '<button class="doclib-card-text-btn doclib-card-action-btn ' + approveCls + '" data-act="approve" title="' + approveTitle + '">' + approveLabel + '</button>' +
       '<div class="doclib-action-group"><div class="doclib-action-btn-row">' +
         '<button class="doclib-card-text-btn doclib-card-action-btn" data-act="retry" title="Run the test again">Retry</button>' +
-        '<button class="doclib-card-text-btn doclib-card-action-btn" data-act="copy" title="Copiar the run output + verdict">Copiar</button>' +
-        '<button class="doclib-card-text-btn doclib-card-action-btn" data-act="edit">Editar</button>' +
-        '<button class="doclib-card-text-btn doclib-card-action-btn doclib-card-text-btn-danger" data-act="del"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Eliminar</button>' +
+        '<button class="doclib-card-text-btn doclib-card-action-btn" data-act="copy" title="Copy the run output + verdict">Copy</button>' +
+        '<button class="doclib-card-text-btn doclib-card-action-btn" data-act="edit">Edit</button>' +
+        '<button class="doclib-card-text-btn doclib-card-action-btn doclib-card-text-btn-danger" data-act="del"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Delete</button>' +
       '</div></div>' +
     '</div>';
   _applyVerdictToHeader(card, verdict);
@@ -1343,7 +1343,7 @@ function _renderTestVerdict(el, v, card, name) {
     }
   });
   el.querySelector('[data-act="del"]')?.addEventListener('click', (e) => { e.stopPropagation(); _deleteSkill(name, card); });
-  el.querySelector('[data-act="edit"]')?.addEventListener('click', (e) => { e.stopPropagation(); _toggleSkillEditar(card, name); });
+  el.querySelector('[data-act="edit"]')?.addEventListener('click', (e) => { e.stopPropagation(); _toggleSkillEdit(card, name); });
   el.querySelector('[data-act="retry"]')?.addEventListener('click', (e) => { e.stopPropagation(); _testSkill(card, name, true); });
   el.querySelector('[data-act="copy"]')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1351,7 +1351,7 @@ function _renderTestVerdict(el, v, card, name) {
     const issuesTxt = issues.length ? '\nIssues:\n- ' + issues.join('\n- ') : '';
     const text = (logEl ? logEl.innerText.trim() + '\n\n' : '') +
       '=== Eval: ' + label + (conf ? ' (' + conf + ')' : '') + ' ===\n' + ((v && v.summary) || '') + issuesTxt;
-    // Compartird helper falls back to execCommand on plain HTTP (navigator.clipboard
+    // Shared helper falls back to execCommand on plain HTTP (navigator.clipboard
     // is unavailable in non-secure contexts, which is why the raw call failed).
     uiModule.copyToClipboard(text);
   });
@@ -1380,7 +1380,7 @@ function _confirmAuditSkills(label) {
             '</label>' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button id="skills-audit-confirm-cancel" class="confirm-btn confirm-btn-secondary">Cancelar</button>' +
+            '<button id="skills-audit-confirm-cancel" class="confirm-btn confirm-btn-secondary">Cancel</button>' +
             '<button id="skills-audit-confirm-ok" class="confirm-btn confirm-btn-primary">Audit</button>' +
           '</div>' +
         '</div>';
@@ -1400,14 +1400,14 @@ function _confirmAuditSkills(label) {
       overlay.classList.add('hidden');
       overlay.style.display = 'none';
       okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancelar);
+      cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       resolve(result);
     }
     function onOk() { cleanup({ ok: true, skipAudited: !!skip.checked }); }
-    function onCancelar() { cleanup({ ok: false, skipAudited: false }); }
-    function onBackdrop(e) { if (e.target === overlay) onCancelar(); }
+    function onCancel() { cleanup({ ok: false, skipAudited: false }); }
+    function onBackdrop(e) { if (e.target === overlay) onCancel(); }
     function onKey(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -1417,7 +1417,7 @@ function _confirmAuditSkills(label) {
     }
 
     okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancelar);
+    cancelBtn.addEventListener('click', onCancel);
     overlay.addEventListener('click', onBackdrop);
     document.addEventListener('keydown', onKey);
     okBtn.focus();
@@ -1511,7 +1511,7 @@ function _applySkillStateToHeader(card, state, fallbackVerdict) {
     right.querySelectorAll('.skill-model-pill, .skill-necessity-pill').forEach(n => n.remove());
     const stats = right.querySelector('.skill-stats');
     const wrap = document.createElement('span');
-    wrap.innerHTML = _auditModeloPills(state) + _necessityPill(state);
+    wrap.innerHTML = _auditModelPills(state) + _necessityPill(state);
     [...wrap.children].forEach(p => {
       if (stats) right.insertBefore(p, stats);
       else right.appendChild(p);
@@ -1574,8 +1574,8 @@ function _renderAuditPanel(panel, st) {
         '<span class="skills-audit-title">' + head + '</span>' +
       '</span>' +
       (running
-        ? '<button class="memory-toolbar-btn" data-act="audit-cancel">Cancelar</button>'
-        : '<button class="memory-toolbar-btn" data-act="audit-close">Cerrar</button>') +
+        ? '<button class="memory-toolbar-btn" data-act="audit-cancel">Cancel</button>'
+        : '<button class="memory-toolbar-btn" data-act="audit-close">Close</button>') +
     '</div>' +
     '<div class="skills-audit-bar"><div class="skills-audit-fill" style="width:' + pct + '%"></div></div>' +
     (summary ? '<div class="skills-audit-summary">' + esc(summary) + (st.teacher ? ' · teacher: ' + esc(st.teacher) : '') + '</div>' : '') +
@@ -1593,7 +1593,7 @@ function _renderAuditPanel(panel, st) {
   if (cancel) cancel.addEventListener('click', async (e) => {
     e.stopPropagation();
     cancel.disabled = true;
-    cancel.textContent = 'Cancelarling...';
+    cancel.textContent = 'Cancelling...';
     try {
       await fetch(`${API}/api/skills/audit-all/cancel`, { method: 'POST', credentials: 'same-origin' });
       const s = await _fetchAuditStatus();
@@ -1601,7 +1601,7 @@ function _renderAuditPanel(panel, st) {
       _highlightAuditCard(null);
     } catch {
       cancel.disabled = false;
-      cancel.textContent = 'Cancelar';
+      cancel.textContent = 'Cancel';
     }
   });
   const close = panel.querySelector('[data-act="audit-close"]');
@@ -1621,7 +1621,7 @@ function _enterSelectMode() {
   const bar = document.getElementById('skills-bulk-bar');
   const btn = document.getElementById('skills-select-btn');
   if (bar) bar.classList.remove('hidden');
-  if (btn) { btn.classList.add('active'); btn.innerHTML = _SKILLS_SELECT_BTN_X_SVG + 'Cancelar'; }
+  if (btn) { btn.classList.add('active'); btn.innerHTML = _SKILLS_SELECT_BTN_X_SVG + 'Cancel'; }
   _updateBulkBar();
   renderSkillsList();
 }
@@ -1651,7 +1651,7 @@ function _updateBulkBar() {
     const count = _selectedNonPassingSkills().length;
     delNonPassingBtn.disabled = count === 0;
     delNonPassingBtn.title = count
-      ? `Eliminar ${count} selected non-passing ${count === 1 ? 'skill' : 'skills'}`
+      ? `Delete ${count} selected non-passing ${count === 1 ? 'skill' : 'skills'}`
       : 'No selected non-passing skills';
   }
   // Approve is only meaningful when at least one selected skill is still a draft.
@@ -1672,12 +1672,12 @@ function _toggleSelectAll() {
   renderSkillsList();
 }
 
-async function _bulkEliminar() {
+async function _bulkDelete() {
   if (!_selectedNames.size) return;
   const n = _selectedNames.size;
-  const ok = await uiModule.styledConfirmar(
-    `Eliminar ${n} ${n === 1 ? 'skill' : 'skills'}? This removes their SKILL.md files.`,
-    { confirmText: 'Eliminar', danger: true }
+  const ok = await uiModule.styledConfirm(
+    `Delete ${n} ${n === 1 ? 'skill' : 'skills'}? This removes their SKILL.md files.`,
+    { confirmText: 'Delete', danger: true }
   );
   if (!ok) return;
   let deleted = 0;
@@ -1698,7 +1698,7 @@ async function _bulkEliminar() {
   if (deletedNames.length) await new Promise(resolve => setTimeout(resolve, 320));
   _exitSelectMode();
   await loadSkills();
-  uiModule.showToast(`Eliminard ${deleted}`);
+  uiModule.showToast(`Deleted ${deleted}`);
 }
 
 async function _loadSkillApprovalThreshold() {
@@ -1725,7 +1725,7 @@ function _selectedNonPassingSkills() {
   });
 }
 
-async function _bulkEliminarNonPassing() {
+async function _bulkDeleteNonPassing() {
   const targets = _selectedNonPassingSkills();
   if (!targets.length) {
     uiModule.showToast('No selected non-passing skills');
@@ -1733,9 +1733,9 @@ async function _bulkEliminarNonPassing() {
   }
   const thresholdPct = Math.round(_skillApprovalThreshold * 100);
   const names = targets.map(sk => sk.name || sk.id).filter(Boolean);
-  const ok = await uiModule.styledConfirmar(
-    `Eliminar ${names.length} selected non-passing ${names.length === 1 ? 'skill' : 'skills'}? This removes duplicates, generic/irrelevant skills, failed audits, and anything below ${thresholdPct}%.`,
-    { confirmText: 'Eliminar non passing', danger: true }
+  const ok = await uiModule.styledConfirm(
+    `Delete ${names.length} selected non-passing ${names.length === 1 ? 'skill' : 'skills'}? This removes duplicates, generic/irrelevant skills, failed audits, and anything below ${thresholdPct}%.`,
+    { confirmText: 'Delete non passing', danger: true }
   );
   if (!ok) return;
   let deleted = 0;
@@ -1757,7 +1757,7 @@ async function _bulkEliminarNonPassing() {
   if (deletedNames.length) await new Promise(resolve => setTimeout(resolve, 320));
   _exitSelectMode();
   await loadSkills();
-  uiModule.showToast(`Eliminard ${deleted} non-passing`);
+  uiModule.showToast(`Deleted ${deleted} non-passing`);
 }
 
 async function _bulkApprove() {
@@ -1811,12 +1811,12 @@ async function _showSkillSource(name) {
       <div class="modal-header">
         <h4>SKILL.md — <code>${esc(name)}</code></h4>
         <span style="flex:1"></span>
-        <button class="memory-toolbar-btn" id="skill-save-btn">Guardar</button>
+        <button class="memory-toolbar-btn" id="skill-save-btn">Save</button>
         <button class="close-btn" id="skill-md-close">✖</button>
       </div>
       <div class="modal-body" style="display:flex;flex-direction:column;gap:8px">
         <textarea id="skill-md-textarea" spellcheck="false" style="flex:1;min-height:50vh;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);box-sizing:border-box"></textarea>
-        <p class="memory-desc" style="margin:0">Editar the frontmatter and body directly. Guardar replaces the file via PUT /api/skills/{name}.</p>
+        <p class="memory-desc" style="margin:0">Edit the frontmatter and body directly. Save replaces the file via PUT /api/skills/{name}.</p>
       </div>
     </div>
   `;
@@ -1838,11 +1838,11 @@ async function _showSkillSource(name) {
         body: JSON.stringify({ markdown: ta.value }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      uiModule.showToast('Guardard');
+      uiModule.showToast('Saved');
       wrap.remove();
       await loadSkills();
     } catch (e) {
-      uiModule.showError('Guardar failed: ' + e.message);
+      uiModule.showError('Save failed: ' + e.message);
     }
   });
 }
@@ -1952,8 +1952,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('skills-select-all')?.addEventListener('change', _toggleSelectAll);
   document.getElementById('skills-bulk-cancel')?.addEventListener('click', _exitSelectMode);
   document.getElementById('skills-bulk-audit')?.addEventListener('click', _bulkAudit);
-  document.getElementById('skills-bulk-delete')?.addEventListener('click', _bulkEliminar);
-  document.getElementById('skills-bulk-delete-nonpassing')?.addEventListener('click', _bulkEliminarNonPassing);
+  document.getElementById('skills-bulk-delete')?.addEventListener('click', _bulkDelete);
+  document.getElementById('skills-bulk-delete-nonpassing')?.addEventListener('click', _bulkDeleteNonPassing);
   document.getElementById('skills-bulk-publish')?.addEventListener('click', _bulkApprove);
   document.getElementById('new-skill-title')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addSkill();

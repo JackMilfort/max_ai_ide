@@ -1,5 +1,5 @@
 /**
- * Notas Module — Google Keep-style notes and todos.
+ * Notes Module — Google Keep-style notes and todos.
  * Renders as a sidebar panel (like document editor), not a modal.
  */
 
@@ -26,7 +26,7 @@ let _activeFilter = null; // null | 'default' | 'reminders' | 'no-reminders'
 let _reminderChipNext = 'reminders';
 let _searchQuery = '';
 let _viewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('odysseus-notes-view')) || 'list'; // 'list' or 'grid'
-let _showingArchivard = false;
+let _showingArchived = false;
 let _selectMode = false;
 let _reminderTimer = null;
 // Tracks the global keydown listener so closePanel can remove it
@@ -49,11 +49,11 @@ const REMINDER_ACTIVE_HIGHLIGHT_KEY = 'odysseus-notes-reminder-active-highlight'
 const REMINDER_DISMISSED_AT_KEY = 'odysseus-notes-reminder-dismissed-at';
 const NOTES_FIRST_OPEN_HINT_KEY = 'odysseus-notes-first-open-hint-v1';
 
-function _forceCerrarNotasPanel() {
+function _forceCloseNotesPanel() {
   _open = false;
   _editingId = null;
-  try { _commitOpenInPlaceEditaror(); } catch {}
-  try { _closeMobileFullscreenEditar({ save: true }); } catch {}
+  try { _commitOpenInPlaceEditor(); } catch {}
+  try { _closeMobileFullscreenEdit({ save: true }); } catch {}
   try { _clearViewedReminderGlows(); } catch {}
   if (_notesKeydownHandler) {
     document.removeEventListener('keydown', _notesKeydownHandler);
@@ -75,7 +75,7 @@ function _forceCerrarNotasPanel() {
   try { window._restoreSidebarIfRouteCollapsed?.(); } catch {}
 }
 
-function _showNotasFirstOpenHint(pane) {
+function _showNotesFirstOpenHint(pane) {
   if (!pane || typeof localStorage === 'undefined') return;
   try {
     if (localStorage.getItem(NOTES_FIRST_OPEN_HINT_KEY)) return;
@@ -89,7 +89,7 @@ function _showNotasFirstOpenHint(pane) {
   hint.id = 'notes-first-open-hint';
   hint.className = 'tour-hint';
   hint.innerHTML = `
-    <div class="tour-hint-text"><b>Notas</b> is your basic todo list, and also where reminders are managed.</div>
+    <div class="tour-hint-text"><b>Notes</b> is your basic todo list, and also where reminders are managed.</div>
     <button type="button" class="tour-hint-dismiss">OK</button>
   `;
   document.body.appendChild(hint);
@@ -139,7 +139,7 @@ function _notesFullscreenSafeRect() {
   reserve(rail);
 
   // The fixed hamburger can remain visible even when the rail/sidebar is
-  // collapsed. Reserve its strip too so fullscreen Notas does not sit beneath it.
+  // collapsed. Reserve its strip too so fullscreen Notes does not sit beneath it.
   const hamburger = document.getElementById('hamburger-btn');
   if (hamburger && getComputedStyle(hamburger).display !== 'none') {
     const rect = hamburger.getBoundingClientRect();
@@ -153,7 +153,7 @@ function _notesFullscreenSafeRect() {
   return { left, top: 0, width: right - left, height: vh };
 }
 
-function _wireNotasWindow(pane) {
+function _wireNotesWindow(pane) {
   if (!pane || pane.dataset.windowDragWired === '1') return;
   const header = pane.querySelector('.notes-pane-header');
   if (!header) return;
@@ -172,13 +172,13 @@ function _wireNotasWindow(pane) {
         rect: _notesFullscreenSafeRect(),
       });
     },
-    onSalirFullscreen: () => {
-      _restoreNotasSidebarDock(pane);
+    onExitFullscreen: () => {
+      _restoreNotesSidebarDock(pane);
     },
   });
 }
 
-function _clearNotasSnapStyles(pane) {
+function _clearNotesSnapStyles(pane) {
   if (!pane) return;
   const hadLeft = pane.classList.contains('modal-left-docked');
   const hadRight = pane.classList.contains('modal-right-docked');
@@ -195,19 +195,19 @@ function _clearNotasSnapStyles(pane) {
   delete pane._dockSuspended;
 }
 
-function _restoreNotasSidebarDock(pane) {
+function _restoreNotesSidebarDock(pane) {
   if (!pane || window.innerWidth <= 768) return;
-  _clearNotasSnapStyles(pane);
+  _clearNotesSnapStyles(pane);
   if (!pane.isConnected) return;
   applyEdgeDock(pane, 'right');
 }
 
-// Notas is not a `.modal`; its backdrop is the top-level stacking surface.
+// Notes is not a `.modal`; its backdrop is the top-level stacking surface.
 function _topToolWindowZ(exclude = null) {
   return topToolWindowZ({ exclude });
 }
 
-function _bringNotasToFront(pane = document.getElementById('notes-pane')) {
+function _bringNotesToFront(pane = document.getElementById('notes-pane')) {
   if (!pane) return;
   const backdrop = document.getElementById('notes-pane-backdrop') || pane.parentElement;
   const z = _topToolWindowZ(backdrop) + 1;
@@ -365,7 +365,7 @@ function _pickCustomBgImage() {
         const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: fd, credentials: 'same-origin' });
         const data = await res.json();
         const fileId = data.files?.[0]?.id;
-        if (!fileId) throw new Error('Subir failed');
+        if (!fileId) throw new Error('Upload failed');
         finish(`${API_BASE}/api/upload/${fileId}`);
       } catch { finish(null); }
     });
@@ -402,24 +402,24 @@ function _popAndRunUndo() {
   return !!entry;
 }
 
-function _undoArchivar(note, prevIdx) {
+function _undoArchive(note, prevIdx) {
   // Re-insert at original position and clear archived flag on the server.
   const safeIdx = Math.min(Math.max(prevIdx, 0), _notes.length);
   _notes.splice(safeIdx, 0, { ...note, archived: false });
-  _renderNotas();
+  _renderNotes();
   _patchNote(note.id, { archived: false }).catch(() => {
     // Roll back local insertion if the server refuses
     const i = _notes.findIndex(n => n.id === note.id);
     if (i >= 0) _notes.splice(i, 1);
-    _renderNotas();
+    _renderNotes();
     uiModule.showError('Undo failed');
   });
 }
 
-async function _fetchNotas() {
+async function _fetchNotes() {
   _loading = true;
   try {
-    const url = `${API_BASE}/api/notes${_showingArchivard ? '?archived=true' : ''}`;
+    const url = `${API_BASE}/api/notes${_showingArchived ? '?archived=true' : ''}`;
     const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) { _notes = []; return; }
     const data = await res.json();
@@ -504,7 +504,7 @@ function _uid() { return Math.random().toString(36).slice(2, 10); }
 // Mobile swipe-to-dismiss for the notes sheet. Mirrors the document panel
 // gesture (finger-following, velocity-based dismiss, rubber-band, snap-back)
 // so both sheets feel identical; dismisses via the notes closePanel('down').
-function _wireNotasSwipeDismiss(el, pane) {
+function _wireNotesSwipeDismiss(el, pane) {
   if (!el || !pane) return;
   const DISMISS_THRESHOLD = 50, VELOCITY_THRESHOLD = 0.3, RUBBER = 0.35;
   let startY = 0, startX = 0, lastY = 0, lastT = 0, velocity = 0;
@@ -1103,10 +1103,10 @@ export async function refreshDueBadge(opts = {}) {
   // force a refresh so the background reminder loop sees it immediately.
   if (opts.force || _notes.length === 0) {
     try {
-      const wasArchivard = _showingArchivard;
-      _showingArchivard = false;
-      await _fetchNotas();
-      _showingArchivard = wasArchivard;
+      const wasArchived = _showingArchived;
+      _showingArchived = false;
+      await _fetchNotes();
+      _showingArchived = wasArchived;
     } catch {}
   }
   _updateRailBadge();
@@ -1116,7 +1116,7 @@ export async function refreshDueBadge(opts = {}) {
 
 export function openPanel() {
   if (_open) {
-    _bringNotasToFront();
+    _bringNotesToFront();
     return;
   }
   _open = true;
@@ -1142,24 +1142,24 @@ export function openPanel() {
   // edit / archive / etc.), tap opens a fullscreen edit overlay,
   // long-press enters drag-to-reorder mode. See _bindCardEvents +
   // .notes-mobile-mode CSS rules.
-  if (_isNotasMobileMode()) document.body.classList.add('notes-mobile-mode');
+  if (_isNotesMobileMode()) document.body.classList.add('notes-mobile-mode');
 
   // Toggle button state
   const btn = document.getElementById('tool-notes-btn');
   if (btn) btn.classList.add('active');
 
-  // Crear panel
+  // Create panel
   const pane = document.createElement('div');
   pane.id = 'notes-pane';
   pane.className = 'notes-pane';
   pane.innerHTML = `
     <div class="notes-mobile-grabber" id="notes-mobile-grabber" aria-hidden="true"></div>
     <div class="notes-pane-header">
-      <h4 class="notes-pane-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.5px;margin-right:6px"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 17.5 15.5 10l2.5 2.5L10.5 20H8z"/></svg>Notas</h4>
+      <h4 class="notes-pane-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.5px;margin-right:6px"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 17.5 15.5 10l2.5 2.5L10.5 20H8z"/></svg>Notes</h4>
       <span style="flex:1"></span>
       <button id="notes-archive-toggle" class="doc-action-icon-btn notes-header-text-btn" title="View archive" style="opacity:0.8;gap:5px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>
-        <span class="notes-header-btn-label">Archivar</span>
+        <span class="notes-header-btn-label">Archive</span>
       </button>
       <button id="notes-view-toggle" class="doc-action-icon-btn notes-header-text-btn" title="Toggle view" style="opacity:0.8;gap:5px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -1168,7 +1168,7 @@ export function openPanel() {
       <button id="notes-minimize-btn" class="modal-minimize-btn" title="Minimize" aria-label="Minimize notes" style="position:relative;left:2px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="18" x2="18" y2="18"/></svg></button>
     </div>
     <div class="notes-search-bar">
-      <input type="text" id="notes-search" class="memory-search-input" placeholder="Buscar notes…" autocomplete="off" />
+      <input type="text" id="notes-search" class="memory-search-input" placeholder="Search notes…" autocomplete="off" />
       <button id="notes-select-btn" class="notes-select-trigger" type="button">Select</button>
     </div>
     <div id="notes-bulk-bar" class="memory-bulk-bar hidden">
@@ -1176,10 +1176,10 @@ export function openPanel() {
       <span id="notes-selected-count">0 Selected</span>
       <span style="flex:1"></span>
       <button id="notes-bulk-archive" class="memory-toolbar-btn" disabled>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>Archivar
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg>Archive
       </button>
       <button id="notes-bulk-delete" class="memory-toolbar-btn danger" disabled>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>Eliminar
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>Delete
       </button>
     </div>
     <div class="notes-pane-body"></div>
@@ -1200,8 +1200,8 @@ export function openPanel() {
     pane.style.transformOrigin = 'bottom center';
   }
 
-  // Mount on body so Notas can behave like the other draggable windows. On
-  // desktop it is immediately docked to the right by _restoreNotasSidebarDock.
+  // Mount on body so Notes can behave like the other draggable windows. On
+  // desktop it is immediately docked to the right by _restoreNotesSidebarDock.
   const backdrop = document.createElement('div');
   backdrop.className = 'notes-pane-backdrop';
   backdrop.id = 'notes-pane-backdrop';
@@ -1210,21 +1210,21 @@ export function openPanel() {
   });
   backdrop.appendChild(pane);
   document.body.appendChild(backdrop);
-  _wireNotasWindow(pane);
-  _restoreNotasSidebarDock(pane);
-  _bringNotasToFront(pane);
+  _wireNotesWindow(pane);
+  _restoreNotesSidebarDock(pane);
+  _bringNotesToFront(pane);
 
   // Events
-  // (Cerrar chevron removed — swipe down on mobile, tool-rail toggle on desktop.)
+  // (Close chevron removed — swipe down on mobile, tool-rail toggle on desktop.)
 
   // Mobile: swipe the grab handle / header down to dismiss (minimise to chip).
   // Mirrors the document sheet gesture — finger-following, velocity-based
   // dismiss, rubber-band on up-drag, spring snap-back.
-  _wireNotasSwipeDismiss(pane.querySelector('.notes-mobile-grabber'), pane);
-  _wireNotasSwipeDismiss(pane.querySelector('.notes-pane-header'), pane);
+  _wireNotesSwipeDismiss(pane.querySelector('.notes-mobile-grabber'), pane);
+  _wireNotesSwipeDismiss(pane.querySelector('.notes-pane-header'), pane);
 
-  pane.addEventListener('pointerdown', () => _bringNotasToFront(pane), true);
-  pane.addEventListener('focusin', () => _bringNotasToFront(pane), true);
+  pane.addEventListener('pointerdown', () => _bringNotesToFront(pane), true);
+  pane.addEventListener('focusin', () => _bringNotesToFront(pane), true);
 
   const minBtn = document.getElementById('notes-minimize-btn');
   if (minBtn) minBtn.addEventListener('click', (e) => {
@@ -1232,35 +1232,35 @@ export function openPanel() {
     e.stopPropagation();
     closePanel('down');
   });
-  // Buscar
+  // Search
   const searchEl = document.getElementById('notes-search');
   if (searchEl) {
     searchEl.addEventListener('input', () => {
       _searchQuery = searchEl.value.trim().toLowerCase();
-      _renderNotas();
+      _renderNotes();
     });
   }
 
   // View toggle
   const archiveBtn = document.getElementById('notes-archive-toggle');
   if (archiveBtn) {
-    const ARCHIVE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg><span class="notes-header-btn-label">Archivar</span>';
-    const CLOSE_ICON   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg><span class="notes-header-btn-label">Archivar</span>';
-    const syncArchivarBtn = () => {
-      archiveBtn.classList.toggle('active', _showingArchivard);
-      archiveBtn.title = _showingArchivard ? 'Salir archive' : 'View archive';
-      archiveBtn.style.opacity = _showingArchivard ? '1' : '0.8';
+    const ARCHIVE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg><span class="notes-header-btn-label">Archive</span>';
+    const CLOSE_ICON   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg><span class="notes-header-btn-label">Archive</span>';
+    const syncArchiveBtn = () => {
+      archiveBtn.classList.toggle('active', _showingArchived);
+      archiveBtn.title = _showingArchived ? 'Exit archive' : 'View archive';
+      archiveBtn.style.opacity = _showingArchived ? '1' : '0.8';
       // Swap to an X while in archive view so it doubles as a close-back-
       // to-active-notes toggle.
-      archiveBtn.innerHTML = _showingArchivard ? CLOSE_ICON : ARCHIVE_ICON;
+      archiveBtn.innerHTML = _showingArchived ? CLOSE_ICON : ARCHIVE_ICON;
       // Tint the whole pane so it's obvious you're not in the active list.
-      pane.classList.toggle('notes-pane-archive', _showingArchivard);
+      pane.classList.toggle('notes-pane-archive', _showingArchived);
     };
-    syncArchivarBtn();
+    syncArchiveBtn();
     archiveBtn.addEventListener('click', async () => {
-      _showingArchivard = !_showingArchivard;
+      _showingArchived = !_showingArchived;
       _selectedIds.clear();
-      syncArchivarBtn();
+      syncArchiveBtn();
       // Brief fade so the body content swap doesn't snap — the bg-tint
       // change is already eased by CSS transitions on .notes-pane*.
       const _bodyEl = document.querySelector('#notes-pane .notes-pane-body');
@@ -1268,8 +1268,8 @@ export function openPanel() {
         _bodyEl.style.transition = 'opacity 0.18s ease';
         _bodyEl.style.opacity = '0.25';
       }
-      await _fetchNotas();
-      _renderNotas();
+      await _fetchNotes();
+      _renderNotes();
       if (_bodyEl) {
         requestAnimationFrame(() => {
           _bodyEl.style.opacity = '';
@@ -1300,7 +1300,7 @@ export function openPanel() {
   document.getElementById('notes-select-btn').addEventListener('click', () => {
     if (_selectMode) _exitSelectMode(); else _enterSelectMode();
   });
-  // Esc cancels select mode. Notas uses a toggle "Select" button rather
+  // Esc cancels select mode. Notes uses a toggle "Select" button rather
   // than a *-bulk-cancel button, so the global Esc-cancel handler in
   // keyboard-shortcuts.js can't reach it — handle it here. Capture phase
   // + stopPropagation so Esc cancels select instead of closing the panel.
@@ -1318,7 +1318,7 @@ export function openPanel() {
   document.getElementById('notes-select-all').addEventListener('change', (e) => {
     if (e.target.checked) _notes.forEach(n => _selectedIds.add(n.id));
     else _selectedIds.clear();
-    _renderNotas();
+    _renderNotes();
     _updateBulkBar();
   });
   document.getElementById('notes-bulk-archive').addEventListener('click', async () => {
@@ -1326,22 +1326,22 @@ export function openPanel() {
     if (!ids.length) return;
     await Promise.all(ids.map(id => _patchNote(id, { archived: true }).catch(() => {})));
     _exitSelectMode();
-    await _fetchNotas();
-    _renderNotas();
-    uiModule.showToast(`Archivard ${ids.length}`);
+    await _fetchNotes();
+    _renderNotes();
+    uiModule.showToast(`Archived ${ids.length}`);
   });
   document.getElementById('notes-bulk-delete').addEventListener('click', async () => {
     const ids = [..._selectedIds];
     if (!ids.length) return;
-    if (uiModule && uiModule.styledConfirmar) {
-      const ok = await uiModule.styledConfirmar(`Eliminar ${ids.length} note${ids.length === 1 ? '' : 's'}?`, { confirmText: 'Eliminar', danger: true });
+    if (uiModule && uiModule.styledConfirm) {
+      const ok = await uiModule.styledConfirm(`Delete ${ids.length} note${ids.length === 1 ? '' : 's'}?`, { confirmText: 'Delete', danger: true });
       if (!ok) return;
     }
     await Promise.all(ids.map(id => _deleteNoteApi(id).catch(() => {})));
     _exitSelectMode();
-    await _fetchNotas();
-    _renderNotas();
-    uiModule.showToast(`Eliminard ${ids.length}`);
+    await _fetchNotes();
+    _renderNotes();
+    uiModule.showToast(`Deleted ${ids.length}`);
   });
   // Escape: exit select mode first (if active), otherwise close the panel.
   // Skip when the user is editing a form field — those have their own
@@ -1356,7 +1356,7 @@ export function openPanel() {
   _notesKeydownHandler = (e) => {
     if (!_open) return;
     const t = e.target;
-    const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditarable);
+    const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
     // Ctrl/Cmd+Z anywhere in the panel — undo the last note action. Skip when
     // typing in a field so the browser's normal text-undo still works.
     if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
@@ -1386,12 +1386,12 @@ export function openPanel() {
     if (e.key !== 'Escape') return;
     if (inField) return;
     if (_selectMode) { _exitSelectMode(); return; }
-    if (_showingArchivard) {
+    if (_showingArchived) {
       // Mirror the archive toggle button: flip back to active notes.
       document.getElementById('notes-archive-toggle')?.click();
       return;
     }
-    _forceCerrarNotasPanel();
+    _forceCloseNotesPanel();
   };
   document.addEventListener('keydown', _notesKeydownHandler);
 
@@ -1400,11 +1400,11 @@ export function openPanel() {
   // Defer the highlight flush to the next frame so it runs *after* the cards
   // are committed to the DOM (and any FLIP animations have settled), giving
   // the querySelector lookups inside something to find.
-  _fetchNotas().then(() => {
-    _renderNotas();
+  _fetchNotes().then(() => {
+    _renderNotes();
     requestAnimationFrame(() => _flushPendingHighlights());
     _startReminderLoop();
-    _showNotasFirstOpenHint(pane);
+    _showNotesFirstOpenHint(pane);
   });
 }
 
@@ -1413,7 +1413,7 @@ function _renderLoadingSkeleton() {
   if (!body) return;
   body.innerHTML = '';
   _renderLabelsInto(body);
-  _renderQuickAgregar(body);
+  _renderQuickAdd(body);
   const skel = document.createElement('div');
   skel.className = 'notes-skeleton';
   skel.innerHTML = `
@@ -1431,8 +1431,8 @@ function _enterSelectMode() {
   const bar = document.getElementById('notes-bulk-bar');
   const btn = document.getElementById('notes-select-btn');
   if (bar) bar.classList.remove('hidden');
-  if (btn) { btn.classList.add('active'); btn.textContent = 'Cancelar'; }
-  _renderNotas();
+  if (btn) { btn.classList.add('active'); btn.textContent = 'Cancel'; }
+  _renderNotes();
   _updateBulkBar();
 }
 
@@ -1445,7 +1445,7 @@ function _exitSelectMode() {
   if (bar) bar.classList.add('hidden');
   if (btn) { btn.classList.remove('active'); btn.textContent = 'Select'; }
   if (all) all.checked = false;
-  _renderNotas();
+  _renderNotes();
 }
 
 function _updateBulkBar() {
@@ -1487,13 +1487,13 @@ async function _clearPastReminders() {
     uiModule.showToast?.('No past reminders to clear');
     return;
   }
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar(`Eliminar ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`, { confirmText: 'Eliminar', danger: true })
-    : confirm(`Eliminar ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`);
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm(`Delete ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`, { confirmText: 'Delete', danger: true })
+    : confirm(`Delete ${targets.length} past reminder${targets.length === 1 ? '' : 's'}?`);
   if (!ok) return;
   await Promise.all(targets.map(n => _deleteNoteApi(n.id).catch(() => {})));
-  await _fetchNotas();
-  _renderNotas();
+  await _fetchNotes();
+  _renderNotes();
   uiModule.showToast?.(`Cleared ${targets.length} past reminder${targets.length === 1 ? '' : 's'}`);
 }
 
@@ -1535,7 +1535,7 @@ function _renderLabels(root = document) {
   html += `<button class="${reminderCls}" data-action="reminders" title="${isReminderOn ? 'Showing only reminders — click to show all' : isReminderOff ? 'Hiding reminders — click to show only reminders' : 'Click to filter reminders'}">${reminderIcon}Reminders <span class="notes-label-chip-count">${reminderCount}</span></button>`;
   const showingReminders = _activeFilter === 'reminders';
   if (showingReminders && pastReminderCount > 0) {
-    html += `<button class="notes-label-chip notes-label-clear-past" data-action="clear-past-reminders" title="Eliminar reminders whose time has passed"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Clear past <span class="notes-label-chip-count">${pastReminderCount}</span></button>`;
+    html += `<button class="notes-label-chip notes-label-clear-past" data-action="clear-past-reminders" title="Delete reminders whose time has passed"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Clear past <span class="notes-label-chip-count">${pastReminderCount}</span></button>`;
   }
   for (const lbl of sortedLabels) {
     html += `<button class="notes-label-chip${_activeLabel === lbl ? ' active' : ''}" data-label="${_esc(lbl)}">#${_esc(lbl)}</button>`;
@@ -1571,7 +1571,7 @@ function _renderLabels(root = document) {
         _activeFilter = null;
         _activeLabel = chip.dataset.label || null;
       }
-      _renderNotas();
+      _renderNotes();
     });
   });
 }
@@ -1587,13 +1587,13 @@ function _renderLabelsInto(_body) {
   _renderLabels(_body);
 }
 
-function _ensureNotasChipRegistered() {
+function _ensureNotesChipRegistered() {
   if (Modals.isRegistered('notes-panel')) return;
   Modals.register('notes-panel', {
     railBtnId: 'rail-notes',
     sidebarBtnId: 'tool-notes-btn',
     restoreFn: () => { openPanel(); },
-    closeFn: () => { _forceCerrarNotasPanel(); },
+    closeFn: () => { _forceCloseNotesPanel(); },
   });
 }
 
@@ -1607,7 +1607,7 @@ export function closePanel(direction) {
   _clearViewedReminderGlows();
   const _minimize = direction === 'down';
   if (_minimize) {
-    _ensureNotasChipRegistered();
+    _ensureNotesChipRegistered();
   } else if (Modals.isRegistered('notes-panel')) {
     Modals.unregister('notes-panel');
   }
@@ -1633,8 +1633,8 @@ export function closePanel(direction) {
   // Closing the panel should PRESERVE in-progress edits, not drop them.
   // Commit any open in-place editor, and close the mobile fullscreen
   // overlay with save=true so the note is persisted.
-  try { _commitOpenInPlaceEditaror(); } catch {}
-  _closeMobileFullscreenEditar({ save: true });
+  try { _commitOpenInPlaceEditor(); } catch {}
+  _closeMobileFullscreenEdit({ save: true });
   // /notes route may have collapsed the wide sidebar to a rail; restore.
   try { window._restoreSidebarIfRouteCollapsed?.(); } catch (_) {}
 
@@ -1709,7 +1709,7 @@ function _animateReflow(prevPositions) {
   });
 }
 
-function _renderNotas() {
+function _renderNotes() {
   _updateRailBadge();
   const body = document.querySelector('#notes-pane .notes-pane-body');
   if (!body) return;
@@ -1746,8 +1746,8 @@ function _renderNotas() {
       const db = new Date(b.due_date || 0).getTime();
       return da - db;
     }
-    // Archivard view: newest archived first (ignore manual sort_order).
-    if (_showingArchivard) {
+    // Archived view: newest archived first (ignore manual sort_order).
+    if (_showingArchived) {
       return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
     }
     if (a.pinned && !b.pinned) return -1;
@@ -1771,7 +1771,7 @@ function _renderNotas() {
   if (_activeFilter === 'today') {
     body.innerHTML = '';
     _renderLabelsInto(body);
-    _renderQuickAgregar(body);
+    _renderQuickAdd(body);
     if (sorted.length === 0) {
       body.insertAdjacentHTML('beforeend', `<div class="notes-empty">All caught up — no pending goal steps right now.</div>`);
     } else {
@@ -1835,10 +1835,10 @@ function _renderNotas() {
           <button class="note-checkbox-agent${agentDoneClass}" data-note-id="${_attrEsc(note.id)}" data-idx="${i}"${agentSessionAttr} data-agent-title="${_attrEsc(agentMenuTitle)}" title="${_attrEsc(agentTitle)}">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
           </button>
-          <button class="note-checkbox-edit" data-note-id="${note.id}" data-idx="${i}" title="Editar item">
+          <button class="note-checkbox-edit" data-note-id="${note.id}" data-idx="${i}" title="Edit item">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button class="note-checkbox-rm" data-note-id="${note.id}" data-idx="${i}" title="Eliminar item">
+          <button class="note-checkbox-rm" data-note-id="${note.id}" data-idx="${i}" title="Delete item">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>`;
@@ -1873,14 +1873,14 @@ function _renderNotas() {
           Goal${_goalProgress(note)}
         </span>`
       : '';
-    html += `<div class="note-card${note.pinned ? ' note-card-pinned' : ''}${cc}${sel}${goalClass}${reminderGlowClass}${_selectMode ? ' note-card-selectmode' : ''}" draggable="${(_selectMode || _isNotasMobileMode()) ? 'false' : 'true'}" data-note-id="${note.id}"${cardStyle}>
+    html += `<div class="note-card${note.pinned ? ' note-card-pinned' : ''}${cc}${sel}${goalClass}${reminderGlowClass}${_selectMode ? ' note-card-selectmode' : ''}" draggable="${(_selectMode || _isNotesMobileMode()) ? 'false' : 'true'}" data-note-id="${note.id}"${cardStyle}>
       ${_selectMode ? `<input type="checkbox" class="memory-select-cb note-card-cb" data-note-id="${note.id}" ${_selectedIds.has(note.id) ? 'checked' : ''} />` : ''}
       ${goalPill}
       <button class="note-card-pin${note.pinned ? ' active' : ''}" data-note-id="${note.id}" title="${note.pinned ? 'Unpin' : 'Pin'}">
         <svg width="16" height="16" viewBox="0 0 24 28" fill="${note.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${note.pinned ? ' style="color:var(--accent,var(--red));"' : ''}><g transform="rotate(${note.pinned ? 0 : 45} 12 14)" style="transition:transform 0.2s ease;"><line x1="12" y1="17" x2="12" y2="27"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></g></svg>
       </button>
-      ${_showingArchivard
-        ? `<button class="note-card-corner-trash" data-note-id="${note.id}" title="Eliminar forever" aria-label="Eliminar forever">
+      ${_showingArchived
+        ? `<button class="note-card-corner-trash" data-note-id="${note.id}" title="Delete forever" aria-label="Delete forever">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
           <button class="note-card-corner-unarchive" data-note-id="${note.id}" title="Unarchive" aria-label="Unarchive note">
@@ -1889,7 +1889,7 @@ function _renderNotas() {
         : `<button class="note-card-done" data-note-id="${note.id}" title="Mark done" aria-label="Mark done">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
-          ${_hasItems(note) ? `<button class="note-card-copy note-card-copy-corner" data-note-id="${note.id}" title="Copiar all items" aria-label="Copiar all items">
+          ${_hasItems(note) ? `<button class="note-card-copy note-card-copy-corner" data-note-id="${note.id}" title="Copy all items" aria-label="Copy all items">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>` : ''}`}
       <div class="note-card-header">
@@ -1898,27 +1898,27 @@ function _renderNotas() {
       </div>
       ${_safeImgSrc(note.image_url) ? `<img class="note-card-image" src="${_esc(_safeImgSrc(note.image_url))}" alt="" draggable="false" />` : ''}
       ${contentHtml}
-      ${_hasItems(note) ? `<div class="note-cl-quickadd"><input type="text" class="note-cl-quickadd-input" placeholder="+ Agregar item" data-note-id="${note.id}" /></div>` : ''}
+      ${_hasItems(note) ? `<div class="note-cl-quickadd"><input type="text" class="note-cl-quickadd-input" placeholder="+ Add item" data-note-id="${note.id}" /></div>` : ''}
       ${reminderTagHtml}
       ${noteTags.length ? `<div class="note-card-label">${noteTags.map(t => `<button type="button" class="note-card-label-chip" data-note-label-filter="${_esc(t)}" title="Filter #${_esc(t)}">#${_esc(t)}</button>`).join(' ')}</div>` : ''}
       <div class="note-card-actions">
         <div class="note-card-colors">${colorDots}</div>
         <span style="flex:1"></span>
-        ${_showingArchivard ? `
-        <button class="note-card-action note-card-delete" data-note-id="${note.id}" title="Eliminar permanently">
+        ${_showingArchived ? `
+        <button class="note-card-action note-card-delete" data-note-id="${note.id}" title="Delete permanently">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
         <button class="note-card-action note-card-unarchive" data-note-id="${note.id}" title="Unarchive">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>
         </button>` : `
         ${_hasItems(note) ? `
-        <button class="note-card-action note-card-copy" data-note-id="${note.id}" title="Copiar all items">
+        <button class="note-card-action note-card-copy" data-note-id="${note.id}" title="Copy all items">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>` : ''}
-        <button class="note-card-action note-card-archive" data-note-id="${note.id}" title="Guardar (archive)">
+        <button class="note-card-action note-card-archive" data-note-id="${note.id}" title="Save (archive)">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         </button>
-        <button class="note-card-action note-card-delete" data-note-id="${note.id}" title="Eliminar">
+        <button class="note-card-action note-card-delete" data-note-id="${note.id}" title="Delete">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <button class="note-card-action note-card-corner-menu" data-note-id="${note.id}" title="More" aria-label="More actions">
@@ -1942,7 +1942,7 @@ function _renderNotas() {
   } else {
     body.innerHTML = '';
     _renderLabelsInto(body);
-    _renderQuickAgregar(body);
+    _renderQuickAdd(body);
     if (sorted.length === 0) {
       body.insertAdjacentHTML('beforeend', '<div class="notes-empty-msg">No notes yet <span style="vertical-align:-3px;margin-left:4px;">' + uiModule.emptyStateIcon('smiley') + '</span></div>');
     } else {
@@ -1968,7 +1968,7 @@ function _applyMasonry(body) {
   const pane = body.closest('.notes-pane');
   const isGrid = pane?.classList.contains('notes-view-grid');
   const isMobileGrid = isGrid && window.matchMedia('(max-width: 768px)').matches;
-  // Tear down any prior observer (defensive — _renderNotas wipes body.innerHTML).
+  // Tear down any prior observer (defensive — _renderNotes wipes body.innerHTML).
   if (_masonryObserver) { try { _masonryObserver.disconnect(); } catch {} _masonryObserver = null; }
   if (!isGrid) {
     // Clear any leftover inline spans so list view lays out normally.
@@ -1978,15 +1978,15 @@ function _applyMasonry(body) {
   const ROW_PX = 4;
   const spanForHeight = (h) => Math.max(1, Math.ceil(h / ROW_PX));
   const recomputeFullRows = () => {
-    const quickAgregar = body.querySelector('.notes-quick-add');
+    const quickAdd = body.querySelector('.notes-quick-add');
     const labelsBar = body.querySelector('.notes-labels-bar');
     if (labelsBar && getComputedStyle(labelsBar).display !== 'none') {
       const shave = isMobileGrid ? 4 : 0;
       labelsBar.style.gridRowEnd = `span ${Math.max(1, spanForHeight(labelsBar.scrollHeight) - shave)}`;
     }
-    if (quickAgregar) {
+    if (quickAdd) {
       const shave = isMobileGrid ? 4 : 0;
-      quickAgregar.style.gridRowEnd = `span ${Math.max(1, spanForHeight(quickAgregar.scrollHeight + 10) - shave)}`;
+      quickAdd.style.gridRowEnd = `span ${Math.max(1, spanForHeight(quickAdd.scrollHeight + 10) - shave)}`;
     }
     body.querySelectorAll('.note-form').forEach(form => {
       form.style.gridColumn = '1 / -1';
@@ -2042,7 +2042,7 @@ function _wireTodayView(body) {
         await _patchNote(id, { items: note.items });
         // Re-render so the next pending step bubbles up (or the row drops
         // out entirely if the goal is fully done now).
-        _renderNotas();
+        _renderNotes();
         // Confetti when ALL items just turned done.
         if (note.items.every(it => it.done)) {
           const r = (row || dot).getBoundingClientRect();
@@ -2061,13 +2061,13 @@ function _wireTodayView(body) {
       // _editNote needs to find a .note-card in the DOM to replace with
       // the editor form.
       _activeFilter = null;
-      _renderNotas();
+      _renderNotes();
       _editNote(id);
     });
   });
 }
 
-function _renderQuickAgregar(body) {
+function _renderQuickAdd(body) {
   const wrap = document.createElement('div');
   wrap.className = 'notes-quick-add';
   // 2-pill Note/Todo toggle mirrors the full form's type-seg (minus Draw —
@@ -2082,7 +2082,7 @@ function _renderQuickAgregar(body) {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </button>
     </div>
-    <input type="text" class="notes-quick-input" placeholder="Agregar a to-do…" />
+    <input type="text" class="notes-quick-input" placeholder="Add a to-do…" />
     <button class="notes-quick-icon" data-action="photo" title="Attach photo">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     </button>
@@ -2102,7 +2102,7 @@ function _renderQuickAgregar(body) {
       p.classList.toggle('active', on);
       p.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    input.placeholder = t === 'note' ? 'Agregar a note…' : 'Agregar a to-do…';
+    input.placeholder = t === 'note' ? 'Add a note…' : 'Add a to-do…';
   };
   seg.querySelectorAll('.notes-quick-type-pill').forEach(p => {
     p.addEventListener('click', (e) => {
@@ -2131,7 +2131,7 @@ function _renderQuickAgregar(body) {
     const titleEl = form.querySelector('.note-form-title');
     if (titleEl) {
       titleEl.focus();
-      // Mover caret to end
+      // Move caret to end
       titleEl.setSelectionRange(titleEl.value.length, titleEl.value.length);
     }
   };
@@ -2149,7 +2149,7 @@ function _renderQuickAgregar(body) {
 }
 
 function _bindCardEvents(body) {
-  const tapToEditarOrSelect = (cardEl) => {
+  const tapToEditOrSelect = (cardEl) => {
     const id = cardEl.dataset.noteId;
     if (_selectMode) {
       const cb = cardEl.querySelector('.note-card-cb');
@@ -2157,18 +2157,18 @@ function _bindCardEvents(body) {
         cb.checked = !cb.checked;
         cb.dispatchEvent(new Event('change'));
       }
-    } else if (_isNotasMobileMode()) {
+    } else if (_isNotesMobileMode()) {
       // Mobile: open the per-note fullscreen edit overlay instead of the
       // in-place form. Tiles on mobile are read-only previews.
-      _openMobileFullscreenEditar(id, cardEl);
+      _openMobileFullscreenEdit(id, cardEl);
     } else {
       _editNote(id);
     }
   };
   // Mobile: long-press anywhere on a note card → enter drag-to-reorder mode.
-  // Cancelarled by movement (so it doesn't interfere with vertical scrolling)
+  // Cancelled by movement (so it doesn't interfere with vertical scrolling)
   // or by lifting the finger before the timer fires.
-  if (_isNotasMobileMode()) {
+  if (_isNotesMobileMode()) {
     body.querySelectorAll('.note-card').forEach(card => _bindLongPressDrag(card));
   }
   body.querySelectorAll('.note-card.note-card-reminder-fired-sticky').forEach(card => {
@@ -2176,18 +2176,18 @@ function _bindCardEvents(body) {
   });
   // Click title — edit, or toggle select in select mode
   body.querySelectorAll('.note-card-title[data-action="edit"]').forEach(el => {
-    el.addEventListener('click', (e) => { e.stopPropagation(); tapToEditarOrSelect(el.closest('.note-card')); });
+    el.addEventListener('click', (e) => { e.stopPropagation(); tapToEditOrSelect(el.closest('.note-card')); });
   });
   // Click content — edit, or toggle select in select mode
   body.querySelectorAll('.note-content-preview').forEach(el => {
-    el.addEventListener('click', (e) => { e.stopPropagation(); tapToEditarOrSelect(el.closest('.note-card')); });
+    el.addEventListener('click', (e) => { e.stopPropagation(); tapToEditOrSelect(el.closest('.note-card')); });
   });
   // Click empty area of checklist preview (not on checkbox/X) — edit
   body.querySelectorAll('.note-checklist-preview').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.closest('.note-checkbox, .note-checkbox-rm, .note-checkbox-agent, .note-cl-quickadd, input')) return;
       e.stopPropagation();
-      tapToEditarOrSelect(el.closest('.note-card'));
+      tapToEditOrSelect(el.closest('.note-card'));
     });
   });
   // Clicking todo item text now toggles its checkbox — let the click bubble
@@ -2201,7 +2201,7 @@ function _bindCardEvents(body) {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.note-card-cb')) return; // checkbox handles itself
         e.stopPropagation();
-        tapToEditarOrSelect(card);
+        tapToEditOrSelect(card);
       });
     });
   }
@@ -2210,13 +2210,13 @@ function _bindCardEvents(body) {
   // agent tag, links) opens the fullscreen editor. Previously only the
   // title / content preview triggered edit, so padding + empty gutters were
   // dead zones that felt broken on mobile.
-  if (_isNotasMobileMode() && !_selectMode) {
+  if (_isNotesMobileMode() && !_selectMode) {
     const _INTERACTIVE = 'button, a, input, label, .note-card-color-dot, .note-checkbox, .note-checkbox-rm, .note-checkbox-agent, .note-cl-quickadd, .note-agent-tag, .note-card-pin, .note-card-corner-trash, .note-card-corner-menu, .note-card-corner-unarchive, .note-card-edit-corner, .note-card-reminder, .note-card-cb';
     body.querySelectorAll('.note-card').forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest(_INTERACTIVE)) return;
         e.stopPropagation();
-        tapToEditarOrSelect(card);
+        tapToEditOrSelect(card);
       });
     });
   }
@@ -2249,11 +2249,11 @@ function _bindCardEvents(body) {
         note.sort_order = minPinned - 1;
         patch.sort_order = note.sort_order;
       }
-      _renderNotas();
+      _renderNotes();
       _patchNote(id, patch).catch(() => {
         note.pinned = prevPinned;
         note.sort_order = prevSortOrder;
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to pin');
       });
     });
@@ -2294,10 +2294,10 @@ function _bindCardEvents(body) {
       if (id) _editNote(id);
     });
   });
-  // Copiar corner — bottom-right, just left of the Done check. Compartird with
+  // Copy corner — bottom-right, just left of the Done check. Shared with
    // the Ctrl/Cmd+C shortcut wired further down so both code paths run the
    // same serializer + feedback flash.
-  // ⋯ corner menu — Copiar + Agent (solve-this-todo).
+  // ⋯ corner menu — Copy + Agent (solve-this-todo).
   body.querySelectorAll('.note-card-corner-menu').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2317,7 +2317,7 @@ function _bindCardEvents(body) {
         _activeFilter = null;
         _activeLabel = label;
       }
-      _renderNotas();
+      _renderNotes();
     });
   });
   // Done (✓) at bottom-right — only visible on hover for active notes.
@@ -2334,16 +2334,16 @@ function _bindCardEvents(body) {
         spawnConfetti(r.left + r.width / 2, r.top + r.height / 2, 80);
       }
       const removed = _notes.splice(idx, 1)[0];
-      const undo = () => _undoArchivar(removed, idx);
+      const undo = () => _undoArchive(removed, idx);
       _pushUndo({ label: 'archive', run: undo });
       const _undoIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9"/></svg>';
       const finish = () => {
-        _renderNotas();
+        _renderNotes();
         _patchNote(id, { archived: true }).then(() => {
-          uiModule.showToast('Archivard', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
+          uiModule.showToast('Archived', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
         }).catch(() => {
           _notes.splice(idx, 0, removed);
-          _renderNotas();
+          _renderNotes();
           uiModule.showError('Failed to archive');
         });
       };
@@ -2366,10 +2366,10 @@ function _bindCardEvents(body) {
       const idx = _notes.findIndex(n => n.id === id);
       if (idx < 0) return;
       const removed = _notes.splice(idx, 1)[0];
-      _renderNotas();
+      _renderNotes();
       _patchNote(id, { archived: false }).then(() => uiModule.showToast('Unarchived')).catch(() => {
         _notes.splice(idx, 0, removed);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to unarchive');
       });
     });
@@ -2382,10 +2382,10 @@ function _bindCardEvents(body) {
       const idx = _notes.findIndex(n => n.id === id);
       if (idx < 0) return;
       const removed = _notes.splice(idx, 1)[0];
-      _renderNotas();
-      _deleteNoteApi(id).then(() => uiModule.showToast('Eliminard')).catch(() => {
+      _renderNotes();
+      _deleteNoteApi(id).then(() => uiModule.showToast('Deleted')).catch(() => {
         _notes.splice(idx, 0, removed);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to delete');
       });
     });
@@ -2413,15 +2413,15 @@ function _bindCardEvents(body) {
         const curIdx = _notes.findIndex(n => n.id === id);
         if (curIdx < 0) return;
         const removed = _notes.splice(curIdx, 1)[0];
-        _renderNotas();
-        const undo = () => _undoArchivar(removed, curIdx);
+        _renderNotes();
+        const undo = () => _undoArchive(removed, curIdx);
         _pushUndo({ label: 'archive', run: undo });
         const _undoIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9"/></svg>';
         _patchNote(id, { archived: true }).then(() => {
-          uiModule.showToast('Archivard', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
+          uiModule.showToast('Archived', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
         }).catch(() => {
           _notes.splice(curIdx, 0, removed);
-          _renderNotas();
+          _renderNotes();
           uiModule.showError('Failed to archive');
         });
       };
@@ -2442,15 +2442,15 @@ function _bindCardEvents(body) {
       const idx = _notes.findIndex(n => n.id === id);
       if (idx < 0) return;
       const removed = _notes.splice(idx, 1)[0];
-      _renderNotas();
+      _renderNotes();
       _patchNote(id, { archived: false }).then(() => uiModule.showToast('Unarchived')).catch(() => {
         _notes.splice(idx, 0, removed);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to unarchive');
       });
     });
   });
-  // Eliminar (optimistic)
+  // Delete (optimistic)
   body.querySelectorAll('.note-card-delete, .note-card-x').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2458,15 +2458,15 @@ function _bindCardEvents(body) {
       const idx = _notes.findIndex(n => n.id === id);
       if (idx < 0) return;
       const removed = _notes.splice(idx, 1)[0];
-      _renderNotas();
+      _renderNotes();
       _deleteNoteApi(id).catch(() => {
         _notes.splice(idx, 0, removed);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to delete');
       });
     });
   });
-  // Copiar entire checklist (title + items, markdown-style)
+  // Copy entire checklist (title + items, markdown-style)
   body.querySelectorAll('.note-card-copy').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -2495,7 +2495,7 @@ function _bindCardEvents(body) {
         document.body.appendChild(ta);
         ta.select();
         try { document.execCommand('copy'); uiModule.showToast?.('Copied'); }
-        catch { uiModule.showError?.('Copiar failed'); }
+        catch { uiModule.showError?.('Copy failed'); }
         ta.remove();
       }
     });
@@ -2512,22 +2512,22 @@ function _bindCardEvents(body) {
       if (!note || !Array.isArray(note.items) || !note.items[idx]) return;
       const removed = note.items[idx];
       note.items = note.items.filter((_, i) => i !== idx);
-      _renderNotas();
+      _renderNotes();
       _patchNote(noteId, { items: note.items }).catch(() => {
         note.items.splice(idx, 0, removed);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to remove item');
       });
     });
   });
 
-  function _startChecklistItemEditar(noteId, idx, span) {
-    if (span.isContentEditarable) return;
+  function _startChecklistItemEdit(noteId, idx, span) {
+    if (span.isContentEditable) return;
     const note = _notes.find(n => n.id === noteId);
     if (!note || !Array.isArray(note.items) || !note.items[idx]) return;
 
     span.textContent = note.items[idx].text || '';
-    span.contentEditarable = "true";
+    span.contentEditable = "true";
     span.spellcheck = false;
     span.focus();
 
@@ -2538,13 +2538,13 @@ function _bindCardEvents(body) {
     selection.addRange(range);
 
     const save = () => {
-      if (!span.isContentEditarable) return;
-      span.contentEditarable = "false";
+      if (!span.isContentEditable) return;
+      span.contentEditable = "false";
       const newText = span.textContent.trim();
       const oldText = (note.items[idx].text || '').trim();
 
       if (newText === oldText) {
-        _renderNotas();
+        _renderNotes();
         return;
       }
 
@@ -2558,10 +2558,10 @@ function _bindCardEvents(body) {
       _patchNote(noteId, { items: note.items }).catch(() => {
         if (!newText) note.items.splice(idx, 0, oldItem);
         else note.items[idx].text = oldText;
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to update item');
       });
-      _renderNotas();
+      _renderNotes();
     };
 
     const onKeydown = (e) => {
@@ -2570,8 +2570,8 @@ function _bindCardEvents(body) {
         save();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        span.contentEditarable = "false";
-        _renderNotas();
+        span.contentEditable = "false";
+        _renderNotes();
       }
     };
 
@@ -2579,7 +2579,7 @@ function _bindCardEvents(body) {
     span.addEventListener('keydown', onKeydown);
   }
 
-  // Editar a single checklist item (hover Editar button)
+  // Edit a single checklist item (hover Edit button)
   body.querySelectorAll('.note-checkbox-edit').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2587,14 +2587,14 @@ function _bindCardEvents(body) {
       const noteId = btn.dataset.noteId;
       const idx = parseInt(btn.dataset.idx);
       const span = btn.parentElement.querySelector('.note-check-text');
-      if (span) _startChecklistItemEditar(noteId, idx, span);
+      if (span) _startChecklistItemEdit(noteId, idx, span);
     });
   });
 
   // Prevent clicks from toggling the row while actively editing inline
   body.querySelectorAll('.note-check-text').forEach(span => {
     span.addEventListener('click', (e) => {
-      if (span.isContentEditarable) {
+      if (span.isContentEditable) {
         e.stopPropagation();
       }
     });
@@ -2628,7 +2628,7 @@ function _bindCardEvents(body) {
       items.push({ id: _uid(), text, done: false });
       note.items = items;
       input.value = '';
-      _renderNotas();
+      _renderNotes();
       // Refocus the input on the same card
       setTimeout(() => {
         const next = document.querySelector(`.note-cl-quickadd-input[data-note-id="${noteId}"]`);
@@ -2636,7 +2636,7 @@ function _bindCardEvents(body) {
       }, 0);
       _patchNote(noteId, { items }).catch(() => {
         note.items = items.slice(0, -1);
-        _renderNotas();
+        _renderNotes();
         uiModule.showError('Failed to add item');
       });
     });
@@ -2672,7 +2672,7 @@ function _bindCardEvents(body) {
   // Drag-reorder notes on pointer/mouse devices. Mobile uses the custom
   // placeholder sorter below `_bindLongPressDrag`; native HTML5 dragging is
   // unreliable on touch browsers and can compete with the long-press flow.
-  if (!_isNotasMobileMode()) {
+  if (!_isNotesMobileMode()) {
     body.querySelectorAll('.note-card').forEach(card => {
       card.addEventListener('dragstart', (e) => {
         if (e.target.closest('.note-checkbox, .note-card-x, .note-card-select, .note-card-pin, .note-card-action, .note-card-color-dot, .note-card-title, .note-card-edit, .note-card-edit-corner, .note-card-done, .note-card-corner-menu, .note-agent-tag, .note-card-label-chip')) {
@@ -2736,10 +2736,10 @@ function _bindCardEvents(body) {
   });
   body.addEventListener('dragend', () => { _lastSwapId = null; });
 
-  // Legacy touch drag for larger touch devices only. Phone-sized Notas uses
+  // Legacy touch drag for larger touch devices only. Phone-sized Notes uses
   // the placeholder sorter wired by `_bindLongPressDrag`; running both flows
   // makes one press start two independent drag sessions.
-  if (!_isNotasMobileMode() && 'ontouchstart' in window && !body.dataset.touchDragBound) {
+  if (!_isNotesMobileMode() && 'ontouchstart' in window && !body.dataset.touchDragBound) {
     body.dataset.touchDragBound = '1';
     let dragCard = null;
     let isDragging = false;
@@ -2813,7 +2813,7 @@ function _bindCardEvents(body) {
       if (!dragCard) return;
       const t = e.touches[0];
       if (!isDragging) {
-        // Moverment before long-press fires = user is scrolling; cancel pickup.
+        // Movement before long-press fires = user is scrolling; cancel pickup.
         if (Math.abs(t.clientX - startX) > MOVE_THRESHOLD_PX || Math.abs(t.clientY - startY) > MOVE_THRESHOLD_PX) {
           clearTimeout(longPressTimer);
           longPressTimer = null;
@@ -2842,9 +2842,9 @@ function _bindCardEvents(body) {
 // ── Draft autosave ──────────────────────────────────────────────────
 // While a note is open in the editor, its form is snapshotted to
 // localStorage on every change (debounced). If the connection drops, the
-// tab closes, or the page reloads before Guardar is hit, reopening that note
-// restores the unsaved text. Drafts are cleared on an explicit Guardar or
-// Cancelar. Survives offline because it never touches the network.
+// tab closes, or the page reloads before Save is hit, reopening that note
+// restores the unsaved text. Drafts are cleared on an explicit Save or
+// Cancel. Survives offline because it never touches the network.
 const _DRAFT_PREFIX = 'odysseus-note-draft-';
 function _draftKey(id) { return _DRAFT_PREFIX + (id || '__new__'); }
 function _loadDraft(id) {
@@ -2890,8 +2890,8 @@ function _wireDraftAutosave(form, id) {
 
 // Commit whatever in-place editor is open (called when the panel closes
 // or another note is opened) so edits aren't lost when the user navigates
-// away without clicking Guardar. Empty notes are discarded instead of saved.
-function _commitOpenInPlaceEditaror() {
+// away without clicking Save. Empty notes are discarded instead of saved.
+function _commitOpenInPlaceEditor() {
   const form = document.querySelector('#notes-pane .note-form');
   if (!form) return;
   const d = _collectFormDraft(form);
@@ -2909,10 +2909,10 @@ function _applyDraftToNote(note, id) {
   return { note: merged, restored: true };
 }
 
-// ---- Crear / Editar Form ----
+// ---- Create / Edit Form ----
 
 function _buildForm(note = null) {
-  const isEditar = note && note.id;
+  const isEdit = note && note.id;
   const type = note?.note_type || 'note';
   const color = note?.color || '';
   const items = note?.items || [{ id: _uid(), text: '', done: false }];
@@ -2967,20 +2967,20 @@ function _buildForm(note = null) {
       </div>
       <input type="text" class="note-form-label" value="${_esc(note?.label || '')}" placeholder="#tag1 #tag2" title="Tag(s) — space-separated" />
       <div class="note-form-actions-group">
-        ${isEditar ? `
-        <button type="button" class="note-form-text-btn note-form-archive-btn note-form-collapsible" title="Archivar">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg><span class="nft-label">Archivar</span>
+        ${isEdit ? `
+        <button type="button" class="note-form-text-btn note-form-archive-btn note-form-collapsible" title="Archive">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/></svg><span class="nft-label">Archive</span>
         </button>
-        <button type="button" class="note-form-text-btn note-form-delete-btn note-form-collapsible danger" title="Eliminar">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span class="nft-label">Eliminar</span>
+        <button type="button" class="note-form-text-btn note-form-delete-btn note-form-collapsible danger" title="Delete">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span class="nft-label">Delete</span>
         </button>
         ` : ''}
         <span class="note-form-actions-spacer"></span>
-        <button class="note-form-cancel note-form-text-btn note-form-collapsible" title="Cancelar">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg><span class="nft-label">Cancelar</span>
+        <button class="note-form-cancel note-form-text-btn note-form-collapsible" title="Cancel">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg><span class="nft-label">Cancel</span>
         </button>
-        <button class="note-form-save note-form-text-btn" title="${isEditar ? 'Actualizar' : 'Guardar'}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="nft-label">${isEditar ? 'Actualizar' : 'Guardar'}</span>
+        <button class="note-form-save note-form-text-btn" title="${isEdit ? 'Update' : 'Save'}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="nft-label">${isEdit ? 'Update' : 'Save'}</span>
         </button>
       </div>
     </div>
@@ -3190,7 +3190,7 @@ function _buildForm(note = null) {
     if (!v) { tagsEl.innerHTML = ''; return; }
     const label = _formatReminderTag(v);
     const repLabel = rep !== 'none' ? ` · ${_formatRepeatLabel(rep, new Date(v))}` : '';
-    tagsEl.innerHTML = `<button class="note-reminder-tag" type="button" title="Editar reminder">
+    tagsEl.innerHTML = `<button class="note-reminder-tag" type="button" title="Edit reminder">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span>${_esc(label)}${_esc(repLabel)}</span>
       <span class="note-reminder-tag-x" title="Remove">×</span>
@@ -3206,8 +3206,8 @@ function _buildForm(note = null) {
     });
   }
 
-  function _openReminderMenu(anchor, isEditar = false) {
-    // Cerrar any existing menu
+  function _openReminderMenu(anchor, isEdit = false) {
+    // Close any existing menu
     document.querySelectorAll('.note-reminder-menu').forEach(m => m.remove());
     const menu = document.createElement('div');
     menu.className = 'note-reminder-menu';
@@ -3281,7 +3281,7 @@ function _buildForm(note = null) {
           const it = presetItems[i];
           html += `<button class="note-reminder-menu-item" data-action="preset" data-i="${i}"><span>${it.label}</span><span class="note-reminder-menu-sub">${it.sub}</span></button>`;
         }
-        if (isEditar && dueInput.value) {
+        if (isEdit && dueInput.value) {
           const norm = getNorm();
           html += '<div class="note-reminder-menu-divider"></div>';
           html += '<div class="note-reminder-menu-title">Repeat</div>';
@@ -3348,7 +3348,7 @@ function _buildForm(note = null) {
         html += '</div>';
         html += '<div class="note-reminder-menu-divider"></div>';
         const ready = nthDraft.n > 0 && nthDraft.w >= 0;
-        const lbl = ready ? `Guardar: ${_ORDINALS[nthDraft.n - 1]} ${_DAYS[nthDraft.w]}` : 'Pick week and weekday';
+        const lbl = ready ? `Save: ${_ORDINALS[nthDraft.n - 1]} ${_DAYS[nthDraft.w]}` : 'Pick week and weekday';
         html += `<button class="note-reminder-menu-item note-reminder-menu-confirm${ready ? '' : ' disabled'}" data-action="nth-save" ${ready ? '' : 'disabled'}><span>${lbl}</span></button>`;
       }
 
@@ -3458,7 +3458,7 @@ function _buildForm(note = null) {
       </div>
       <div class="note-reminder-menu-divider"></div>
       <button class="note-reminder-menu-item note-reminder-menu-confirm">
-        <span>Guardar</span>
+        <span>Save</span>
       </button>
     `;
     document.body.appendChild(menu);
@@ -3505,7 +3505,7 @@ function _buildForm(note = null) {
         const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: fd, credentials: 'same-origin' });
         const data = await res.json();
         const fileId = data.files?.[0]?.id;
-        if (!fileId) throw new Error('Subir failed');
+        if (!fileId) throw new Error('Upload failed');
         currentImageUrl = `${API_BASE}/api/upload/${fileId}`;
         // Only ever keep the latest attached photo — drop any existing wrap
         // before inserting a fresh one. Picking a second photo replaces the
@@ -3600,7 +3600,7 @@ function _buildForm(note = null) {
     }
   });
 
-  // Guardar. Prevent the button from stealing focus on press: on mobile, the
+  // Save. Prevent the button from stealing focus on press: on mobile, the
   // first tap would otherwise just blur the focused textarea/input (closing
   // the keyboard and shifting layout), so the tap never reached the button and
   // you had to tap "Done" twice. mousedown preventDefault keeps focus put while
@@ -3614,7 +3614,7 @@ function _buildForm(note = null) {
     const _saveBtn = form.querySelector('.note-form-save');
     if (_saveBtn._saving) return;
     // Mobile: when an existing note is opened and closed without edits, the
-    // Actualizar (✓) button morphs into Archivar (set up below). Route the click
+    // Update (✓) button morphs into Archive (set up below). Route the click
     // to the hidden archive button so the existing archive flow + undo toast
     // run unchanged.
     if (_saveBtn.classList.contains('archive-mode')) {
@@ -3642,7 +3642,7 @@ function _buildForm(note = null) {
     if (currentType === 'note') {
       payload.content = form.querySelector('.note-form-content')?.value || '';
     } else if (currentType === 'draw') {
-      // Subir the canvas PNG before saving so image_url points to a
+      // Upload the canvas PNG before saving so image_url points to a
       // persistent file. We block the save until upload completes — drawings
       // can't be re-rendered later without the URL.
       const canvas = form.querySelector('.note-form-canvas');
@@ -3657,11 +3657,11 @@ function _buildForm(note = null) {
     } else {
       payload.items = _collectItems(form);
     }
-    if (isEditar) payload.id = note.id;
+    if (isEdit) payload.id = note.id;
     // Reset fired reminder if due_date changed (so re-arm works), and also
     // clear the entry-glow seen flag so the new firing glows again on the
     // next time the user opens the panel.
-    if (isEditar && note.due_date !== payload.due_date) {
+    if (isEdit && note.due_date !== payload.due_date) {
       const fired = _loadFiredReminders();
       fired.delete(note.id);
       _saveFiredReminders(fired);
@@ -3670,7 +3670,7 @@ function _buildForm(note = null) {
       _saveGlowedReminders(glowed);
       _setReminderCardGlow(note.id, false);
     }
-    // Editared notes move to the top of their section (under pinned). Compute
+    // Edited notes move to the top of their section (under pinned). Compute
     // sort_order = (min unpinned sort_order) - 1 so the saved note sorts above
     // siblings; the pin block keeps its own ordering above this.
     if (!payload.pinned) {
@@ -3679,34 +3679,34 @@ function _buildForm(note = null) {
       // bottom because manually-reordered siblings already carry negative
       // sort_order values.
       const minUnpinned = _notes
-        .filter(n => !n.pinned && (!isEditar || n.id !== note.id))
+        .filter(n => !n.pinned && (!isEdit || n.id !== note.id))
         .reduce((m, n) => Math.min(m, n.sort_order || 0), 0);
       payload.sort_order = minUnpinned - 1;
     }
     // Optimistic update — update local state first, render, then save in background
     _editingId = null;
-    _clearDraft(isEditar ? note.id : '__new__');  // saved → discard the draft
-    if (isEditar) {
+    _clearDraft(isEdit ? note.id : '__new__');  // saved → discard the draft
+    if (isEdit) {
       const idx = _notes.findIndex(n => n.id === note.id);
       if (idx >= 0) _notes[idx] = { ..._notes[idx], ...payload };
     } else {
       _notes.unshift({ ...payload, id: 'tmp_' + _uid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
     }
-    _renderNotas();
+    _renderNotes();
     // Background save
     _saveNote(payload).then(saved => {
-      if (!isEditar && saved && saved.id) {
+      if (!isEdit && saved && saved.id) {
         // Replace temp ID with real one from server. AND re-render — the
         // existing card's `data-note-id="tmp_xxx"` is stale after Object.assign
         // bumps the in-memory id, so all subsequent clicks (edit, done, copy,
         // archive, delete) silently fail to find the note in `_notes`.
         const tmp = _notes.find(n => n.id.startsWith('tmp_'));
         if (tmp) Object.assign(tmp, saved);
-        _renderNotas();
+        _renderNotes();
       }
     }).catch(err => {
-      uiModule.showError('Guardar failed: ' + err.message);
-      _fetchNotas().then(() => _renderNotas());
+      uiModule.showError('Save failed: ' + err.message);
+      _fetchNotes().then(() => _renderNotes());
     });
     } finally {
       // Re-enable on early returns / errors. On success the form is removed by
@@ -3715,73 +3715,73 @@ function _buildForm(note = null) {
     }
   });
 
-  // Mobile-only: when editing an existing note, the Actualizar (✓) button starts in
-  // archive-mode (visually + behaviorally) and flips to Actualizar on the first
+  // Mobile-only: when editing an existing note, the Update (✓) button starts in
+  // archive-mode (visually + behaviorally) and flips to Update on the first
   // edit. Lets the user tap a note to skim, then tap ✓ to archive without ever
-  // touching a separate Archivar button.
-  if (isEditar && window.innerWidth <= 768) {
+  // touching a separate Archive button.
+  if (isEdit && window.innerWidth <= 768) {
     const _saveLabelEl = _saveBtnEl0.querySelector('.nft-label');
-    const _enterArchivar = () => {
+    const _enterArchive = () => {
       _saveBtnEl0.classList.add('archive-mode');
-      if (_saveLabelEl) _saveLabelEl.textContent = 'Archivar';
-      _saveBtnEl0.title = 'Archivar';
+      if (_saveLabelEl) _saveLabelEl.textContent = 'Archive';
+      _saveBtnEl0.title = 'Archive';
     };
-    const _enterActualizar = () => {
+    const _enterUpdate = () => {
       if (!_saveBtnEl0.classList.contains('archive-mode')) return;
       _saveBtnEl0.classList.remove('archive-mode');
-      if (_saveLabelEl) _saveLabelEl.textContent = 'Actualizar';
-      _saveBtnEl0.title = 'Actualizar';
+      if (_saveLabelEl) _saveLabelEl.textContent = 'Update';
+      _saveBtnEl0.title = 'Update';
     };
-    _enterArchivar();
-    form.addEventListener('input', _enterActualizar, true);
-    form.addEventListener('change', _enterActualizar, true);
+    _enterArchive();
+    form.addEventListener('input', _enterUpdate, true);
+    form.addEventListener('change', _enterUpdate, true);
   }
 
-  // Cancelar
-  form.querySelector('.note-form-cancel').addEventListener('click', () => { _clearDraft(isEditar ? note.id : '__new__'); _editingId = null; _renderNotas(); });
+  // Cancel
+  form.querySelector('.note-form-cancel').addEventListener('click', () => { _clearDraft(isEdit ? note.id : '__new__'); _editingId = null; _renderNotes(); });
 
-  // Archivar / Eliminar — edit-mode-only buttons, mirror the (now-hidden) card actions.
+  // Archive / Delete — edit-mode-only buttons, mirror the (now-hidden) card actions.
   form.querySelector('.note-form-archive-btn')?.addEventListener('click', () => {
-    if (!isEditar) return;
+    if (!isEdit) return;
     const id = note.id;
     const idx = _notes.findIndex(n => n.id === id);
     if (idx < 0) return;
     const removed = _notes.splice(idx, 1)[0];
     _editingId = null;
-    _renderNotas();
-    const undo = () => _undoArchivar(removed, idx);
+    _renderNotes();
+    const undo = () => _undoArchive(removed, idx);
     _pushUndo({ label: 'archive', run: undo });
     const _undoIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9"/></svg>';
     _patchNote(id, { archived: true }).then(() => {
-      uiModule.showToast('Archivard', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
+      uiModule.showToast('Archived', { duration: 6000, action: 'Undo', actionIcon: _undoIcon, onAction: undo, actionHint: 'Ctrl+Z' });
     }).catch(() => {
       _notes.splice(idx, 0, removed);
-      _renderNotas();
+      _renderNotes();
       uiModule.showError('Failed to archive');
     });
   });
   form.querySelector('.note-form-delete-btn')?.addEventListener('click', async () => {
-    if (!isEditar) return;
+    if (!isEdit) return;
     const id = note.id;
-    if (uiModule.styledConfirmar) {
-      const ok = await uiModule.styledConfirmar('Eliminar this note?', { confirmText: 'Eliminar', danger: true });
+    if (uiModule.styledConfirm) {
+      const ok = await uiModule.styledConfirm('Delete this note?', { confirmText: 'Delete', danger: true });
       if (!ok) return;
-    } else if (!confirm('Eliminar this note?')) {
+    } else if (!confirm('Delete this note?')) {
       return;
     }
     const idx = _notes.findIndex(n => n.id === id);
     if (idx >= 0) _notes.splice(idx, 1);
     _editingId = null;
-    _renderNotas();
-    _deleteNoteApi(id).then(() => uiModule.showToast('Eliminard')).catch(() => {
+    _renderNotes();
+    _deleteNoteApi(id).then(() => uiModule.showToast('Deleted')).catch(() => {
       uiModule.showError('Failed to delete');
-      _fetchNotas().then(() => _renderNotas());
+      _fetchNotes().then(() => _renderNotes());
     });
   });
 
   // Autosave a draft to localStorage on every change so unsaved edits
   // survive connection loss / reload / accidental close.
-  _wireDraftAutosave(form, isEditar ? note.id : '__new__');
+  _wireDraftAutosave(form, isEdit ? note.id : '__new__');
 
   return form;
 }
@@ -3846,7 +3846,7 @@ function _buildChecklistHtml(items) {
   // `type="button"` matters on mobile — without it some browsers treat
   // bare <button> as form-submit and the click handler never fires inside
   // certain containers. Also bumped tap target so fingers don't miss.
-  html += `<button type="button" class="note-cl-add">+ Agregar</button></div>`;
+  html += `<button type="button" class="note-cl-add">+ Add</button></div>`;
   return html;
 }
 
@@ -3900,7 +3900,7 @@ function _wireRow(row, container) {
 
 function _wireChecklist(container) {
   if (!container) return;
-  // Delegate the + Agregar click off the container so re-renders + mobile
+  // Delegate the + Add click off the container so re-renders + mobile
   // touch quirks don't leave the button dead. The previous direct
   // `addEventListener` on the button silently broke on mobile when
   // _wireChecklist ran more than once (or before the button was in DOM).
@@ -3988,7 +3988,7 @@ function _buildDrawHtml() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
           </button>
         </div>
-        <button type="button" class="note-form-draw-text" title="Agregar text — click to cycle size">T<span class="note-form-draw-text-badge"></span></button>
+        <button type="button" class="note-form-draw-text" title="Add text — click to cycle size">T<span class="note-form-draw-text-badge"></span></button>
         <button type="button" class="note-form-draw-line" title="Line — click to cycle size">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>
           <span class="note-form-draw-shape-badge"></span>
@@ -4064,7 +4064,7 @@ function _wireCanvas(container, initialImageUrl) {
 
   const colorInput = container.querySelector('.note-form-draw-color');
   // Swap the native browser color dialog for the in-house HSV picker
-  // (same one used by Temas + the gallery editor). Existing `input` event
+  // (same one used by Themes + the gallery editor). Existing `input` event
   // listeners + .value reads keep working — see colorPicker.js.
   if (colorInput) attachColorPicker(colorInput);
   const sizeInput = container.querySelector('.note-form-draw-size');
@@ -4105,7 +4105,7 @@ function _wireCanvas(container, initialImageUrl) {
   const _undo = () => {
     const prev = _undoStack.pop();
     if (!prev) return;
-    // Restaurar against the raw backing store: temporarily reset the active
+    // Restore against the raw backing store: temporarily reset the active
     // ctx scale, paint the snapshot 1:1, then reapply our standard transform.
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -4232,7 +4232,7 @@ function _wireCanvas(container, initialImageUrl) {
     e.preventDefault?.();
     const p = _pos(e);
     if (mode.startsWith('line-') || mode.startsWith('circle-')) {
-      // Restaurar the pre-shape bitmap, then redraw the preview shape from
+      // Restore the pre-shape bitmap, then redraw the preview shape from
       // anchor → current pointer.
       if (_shapeSnapshot) {
         ctx.save();
@@ -4361,23 +4361,23 @@ async function _uploadCanvasAsPng(canvas) {
   } catch { return null; }
 }
 
-// ---- Crear / Editar / Eliminar ----
+// ---- Create / Edit / Delete ----
 
 function _createNote(type = 'todo') {
   const body = document.querySelector('#notes-pane .notes-pane-body');
   if (!body || _editingId === '__new__') return;
   _editingId = '__new__';
-  // Restaurar an unsaved new-note draft if one survived a prior close/loss.
+  // Restore an unsaved new-note draft if one survived a prior close/loss.
   const { note: _n, restored } = _applyDraftToNote({ note_type: type }, '__new__');
   const form = _buildForm(_n);
   form.classList.add('note-form-new');
   body.prepend(form);
   form.querySelector('.note-form-title').focus();
-  if (restored) uiModule.showToast('Restaurard unsaved note');
+  if (restored) uiModule.showToast('Restored unsaved note');
 }
 
 // Build the plain-text/markdown form of a note for clipboard copy.
-function _serializeNoteForCopiar(note) {
+function _serializeNoteForCopy(note) {
   const lines = [];
   if (note.title) lines.push(note.title);
   if (note.content) lines.push(note.content);
@@ -4391,9 +4391,9 @@ function _serializeNoteForCopiar(note) {
   return lines.join('\n').trim();
 }
 
-// Copiar a note to the clipboard, briefly swap btnEl's icon to a checkmark, and
-// toast. Compartird by the corner-copy button click and the Ctrl/Cmd+C shortcut.
-// ── ⋯ corner menu (Copiar + Agent) ───────────────────────────────────
+// Copy a note to the clipboard, briefly swap btnEl's icon to a checkmark, and
+// toast. Shared by the corner-copy button click and the Ctrl/Cmd+C shortcut.
+// ── ⋯ corner menu (Copy + Agent) ───────────────────────────────────
 function _openNoteCornerMenu(btn) {
   document.querySelectorAll('.note-corner-menu-dropdown').forEach(dismissOrRemove);
   const id = btn.dataset.noteId;
@@ -4404,7 +4404,7 @@ function _openNoteCornerMenu(btn) {
   menu.innerHTML = `
     <button type="button" class="ncm-item" data-act="copy">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      <span>Copiar</span>
+      <span>Copy</span>
     </button>
     <button type="button" class="ncm-item" data-act="agent">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>
@@ -4501,7 +4501,7 @@ async function _agentSolveNote(id) {
     const dc = await (await fetch(`${API_BASE}/api/default-chat`, { credentials: 'same-origin' })).json();
     if (!dc.endpoint_url || !dc.model) { uiModule.showError('No default chat model configured'); return; }
 
-    // 1. Crear the session server-side (no UI switch). skip_validation
+    // 1. Create the session server-side (no UI switch). skip_validation
     //    avoids re-probing — the default-chat endpoint is already known good.
     const label = (note.title || (Array.isArray(note.items) && note.items[0]?.text) || 'todo').slice(0, 40);
     const csFd = new FormData();
@@ -4518,7 +4518,7 @@ async function _agentSolveNote(id) {
     // 2. Link the session to the note right away so the tag appears.
     const n = _notes.find(x => x.id === id);
     if (n) n.agent_session_id = sid;
-    _renderNotas();
+    _renderNotes();
     _patchNote(id, { agent_session_id: sid }).catch(() => {});
 
     // 3. Kick off the agent run in the background. POST to chat_stream in
@@ -4592,7 +4592,7 @@ async function _agentSolveTodoItem(noteId, idx) {
         n.items[idx].agent_stream_completed_at = '';
       }
     }
-    _renderNotas();
+    _renderNotes();
     _patchNote(noteId, { items: n && Array.isArray(n.items) ? n.items : note.items, agent_session_id: sid }).catch(() => {});
 
     const fd = new FormData();
@@ -4615,7 +4615,7 @@ async function _agentSolveTodoItem(noteId, idx) {
           doneNote.items[idx].agent_session_title = sessionTitle;
           doneNote.items[idx].agent_status = 'stream_complete';
           doneNote.items[idx].agent_stream_completed_at = new Date().toISOString();
-          _renderNotas();
+          _renderNotes();
           _patchNote(noteId, { items: doneNote.items, agent_session_id: sid }).catch(() => {});
         }
       })
@@ -4630,7 +4630,7 @@ async function _agentSolveTodoItem(noteId, idx) {
 async function _copyNote(noteId, btnEl) {
   const note = _notes.find(n => n.id === noteId);
   if (!note) return false;
-  const text = _serializeNoteForCopiar(note);
+  const text = _serializeNoteForCopy(note);
   if (!text) return false;
   let ok = false;
   try {
@@ -4659,7 +4659,7 @@ async function _copyNote(noteId, btnEl) {
     }
     uiModule.showToast?.('Copied');
   } else {
-    uiModule.showError?.('Copiar failed');
+    uiModule.showError?.('Copy failed');
   }
   return ok;
 }
@@ -4670,12 +4670,12 @@ function _editNote(id) {
   _editingId = id;
   const card = document.querySelector(`.note-card[data-note-id="${id}"]`);
   if (!card) return;
-  // Restaurar an unsaved draft (from a prior connection loss / close) over
+  // Restore an unsaved draft (from a prior connection loss / close) over
   // the saved note so the user picks up where they left off.
   const { note: _n, restored } = _applyDraftToNote(note, id);
   const form = _buildForm(_n);
   card.replaceWith(form);
-  if (restored) uiModule.showToast('Restaurard unsaved changes');
+  if (restored) uiModule.showToast('Restored unsaved changes');
   // Pinned notes live in the first masonry column — the edit form has
   // column-span:all, which can leave the form rendered above the fold or
   // visually buried under neighboring pinned cards. Bring it into view
@@ -4698,7 +4698,7 @@ function _editNote(id) {
     catch { form.scrollIntoView(); }
   });
   // Pick the most useful field to focus. On phones especially, the user
-  // taps Editar to type — landing in the title when there's already a title
+  // taps Edit to type — landing in the title when there's already a title
   // (and likely a body to extend) loses momentum. Prefer the body textarea
   // for plain notes, the first checklist item for todos, fall back to title.
   const _focusBest = () => {
@@ -4721,11 +4721,11 @@ function _editNote(id) {
 }
 
 async function _deleteNote(id) {
-  const ok = uiModule?.styledConfirmar
-    ? await uiModule.styledConfirmar('Eliminar this note?', { confirmText: 'Eliminar', danger: true })
-    : confirm('Eliminar this note?');
+  const ok = uiModule?.styledConfirm
+    ? await uiModule.styledConfirm('Delete this note?', { confirmText: 'Delete', danger: true })
+    : confirm('Delete this note?');
   if (!ok) return;
-  try { await _deleteNoteApi(id); await _fetchNotas(); _renderNotas(); uiModule.showToast('Eliminard'); }
+  try { await _deleteNoteApi(id); await _fetchNotes(); _renderNotes(); uiModule.showToast('Deleted'); }
   catch (err) { uiModule.showError(err.message); }
 }
 
@@ -4737,7 +4737,7 @@ async function _deleteNote(id) {
 // rearrange mode where tiles can be dragged to a new sort_order.
 // ────────────────────────────────────────────────────────────────────
 
-function _isNotasMobileMode() {
+function _isNotesMobileMode() {
   return ('ontouchstart' in window) && window.innerWidth <= 768;
 }
 
@@ -4745,11 +4745,11 @@ function _isNotasMobileMode() {
 let _mobileFsOverlay = null;
 let _mobileFsNoteId = null;
 
-function _openMobileFullscreenEditar(id, fromCard) {
+function _openMobileFullscreenEdit(id, fromCard) {
   const note = _notes.find(n => n.id === id);
   if (!note) return;
   // Tear down any previous overlay (defensive).
-  _closeMobileFullscreenEditar({ save: false });
+  _closeMobileFullscreenEdit({ save: false });
   _mobileFsNoteId = id;
   _editingId = id;
 
@@ -4765,12 +4765,12 @@ function _openMobileFullscreenEditar(id, fromCard) {
     <div class="note-fullscreen-body"></div>
   `;
   const body = overlay.querySelector('.note-fullscreen-body');
-  // Reuse the same edit form the in-place flow builds. Guardar buttons,
-  // checklist toggles, etc. all work as-is. Restaurar any unsaved draft.
+  // Reuse the same edit form the in-place flow builds. Save buttons,
+  // checklist toggles, etc. all work as-is. Restore any unsaved draft.
   const { note: _n, restored } = _applyDraftToNote(note, id);
   const form = _buildForm(_n);
   body.appendChild(form);
-  if (restored) uiModule.showToast('Restaurard unsaved changes');
+  if (restored) uiModule.showToast('Restored unsaved changes');
   document.body.appendChild(overlay);
   _mobileFsOverlay = overlay;
 
@@ -4791,12 +4791,12 @@ function _openMobileFullscreenEditar(id, fromCard) {
   const _backBtn = overlay.querySelector('.note-fullscreen-back');
   _backBtn.addEventListener('mousedown', (e) => e.preventDefault());
   _backBtn.addEventListener('click', () => {
-    _closeMobileFullscreenEditar({ save: true });
+    _closeMobileFullscreenEdit({ save: true });
   });
 
-  // The form's built-in Cancelar only resets the in-place edit state; in
+  // The form's built-in Cancel only resets the in-place edit state; in
   // the overlay context it does nothing visible. Replace its handler so
-  // Cancelar actually dismisses the overlay without saving.
+  // Cancel actually dismisses the overlay without saving.
   const cancelBtn = form.querySelector('.note-form-cancel');
   if (cancelBtn) {
     const fresh = cancelBtn.cloneNode(true);
@@ -4805,17 +4805,17 @@ function _openMobileFullscreenEditar(id, fromCard) {
     fresh.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      _closeMobileFullscreenEditar({ save: false });
+      _closeMobileFullscreenEdit({ save: false });
     });
   }
-  // The built-in Guardar handler does the API call + refresh, but doesn't
+  // The built-in Save handler does the API call + refresh, but doesn't
   // dismiss our overlay. Augment it (do NOT replace — the original is
   // async and we'd lose the API call) to schedule a close once the
   // save+render has had time to complete.
   const saveBtn = form.querySelector('.note-form-save');
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
-      setTimeout(() => _closeMobileFullscreenEditar({ save: false }), 350);
+      setTimeout(() => _closeMobileFullscreenEdit({ save: false }), 350);
     });
   }
   // Make the checklist row drag handle (⋮⋮) actually work on touch.
@@ -4829,10 +4829,10 @@ function _openMobileFullscreenEditar(id, fromCard) {
   // ISN'T a link flips back to the input for editing.
   form.querySelectorAll('.note-cl-row').forEach(_addRowReadMode);
 
-  // Mover Archivar + Eliminar from the form's footer actions row up into
+  // Move Archive + Delete from the form's footer actions row up into
   // the header bar (to the right of the back chevron) so they're
   // always reachable without scrolling and free up the footer for
-  // Cancelar/Guardar only. Handlers stay attached when nodes move.
+  // Cancel/Save only. Handlers stay attached when nodes move.
   const headerActions = overlay.querySelector('.note-fullscreen-actions');
   const archiveBtn = form.querySelector('.note-form-archive-btn');
   const deleteBtn  = form.querySelector('.note-form-delete-btn');
@@ -4846,22 +4846,22 @@ function _openMobileFullscreenEditar(id, fromCard) {
   }
   // The built-in archive/delete handlers re-render the notes grid but
   // leave THIS overlay sitting in front of it — looks like nothing
-  // happened. Agregar follow-up listeners that close the overlay so the
+  // happened. Add follow-up listeners that close the overlay so the
   // user sees the action take effect.
   if (archiveBtn) {
     archiveBtn.addEventListener('click', () => {
-      setTimeout(() => _closeMobileFullscreenEditar({ save: false }), 200);
+      setTimeout(() => _closeMobileFullscreenEdit({ save: false }), 200);
     });
   }
   if (deleteBtn) {
     deleteBtn.addEventListener('click', () => {
-      // Eliminar shows a styled confirm — give it room to resolve before
+      // Delete shows a styled confirm — give it room to resolve before
       // we try to dismiss the overlay.
-      setTimeout(() => _closeMobileFullscreenEditar({ save: false }), 500);
+      setTimeout(() => _closeMobileFullscreenEdit({ save: false }), 500);
     });
   }
 
-  // Tuck the tags input into the bottom actions row (Cancelar / Actualizar),
+  // Tuck the tags input into the bottom actions row (Cancel / Update),
   // pinned to the LEFT. Frees the meta row of an extra wrapping line
   // and groups all the "exit" controls together.
   const actionsGroup = form.querySelector('.note-form-actions-group');
@@ -4871,7 +4871,7 @@ function _openMobileFullscreenEditar(id, fromCard) {
   }
 
   // For checklist-type notes, move the photo (attach image) button into
-  // the same row as the + Agregar button (right side) — keeps the meta row
+  // the same row as the + Add button (right side) — keeps the meta row
   // tidy and puts the camera within thumb-reach of the active edit.
   const addBtn   = form.querySelector('.note-cl-add');
   const photoBtn = form.querySelector('.note-form-photo-btn');
@@ -4882,14 +4882,14 @@ function _openMobileFullscreenEditar(id, fromCard) {
     addRow.appendChild(addBtn);
     addRow.appendChild(photoBtn);
     // Tapping anywhere on the row (the empty gap, the dashed border,
-    // the "+ Agregar" label) triggers add. The photo button keeps its own
+    // the "+ Add" label) triggers add. The photo button keeps its own
     // click target so attach-image isn't ambushed.
     addRow.addEventListener('click', (e) => {
       if (e.target.closest('.note-form-photo-btn')) return;
       if (e.target === addBtn || addBtn.contains(e.target)) return;
       addBtn.click();
     });
-    // The form's delegated "+ Agregar" handler does
+    // The form's delegated "+ Add" handler does
     //   inputs.insertBefore(newRow, addBtn)
     // — but addBtn is no longer a direct child of `.note-checklist-inputs`
     // now that we wrapped it. Bind a fresh handler that does the same
@@ -4942,12 +4942,12 @@ function _openMobileFullscreenEditar(id, fromCard) {
   // (New-note creation flows through _createNote, not this function.)
 }
 
-function _closeMobileFullscreenEditar(opts = {}) {
+function _closeMobileFullscreenEdit(opts = {}) {
   if (!_mobileFsOverlay) return;
   const overlay = _mobileFsOverlay;
   _mobileFsOverlay = null;
-  // If the form has a Guardar button, click it on close so edits aren't lost
-  // when the user uses the back arrow instead of an explicit Guardar.
+  // If the form has a Save button, click it on close so edits aren't lost
+  // when the user uses the back arrow instead of an explicit Save.
   if (opts.save) {
     const saveBtn = overlay.querySelector('.note-form-save, [data-action="save"]');
     if (saveBtn) try { saveBtn.click(); } catch {}
@@ -4959,7 +4959,7 @@ function _closeMobileFullscreenEditar(opts = {}) {
     _mobileFsNoteId = null;
     _editingId = null;
     // Refresh the grid so any save the user made is reflected.
-    if (opts.save !== false) { _fetchNotas().then(_renderNotas).catch(() => {}); }
+    if (opts.save !== false) { _fetchNotes().then(_renderNotes).catch(() => {}); }
   }, 220);
 }
 
@@ -5019,7 +5019,7 @@ function _enterDragMode(initialCard, initialTouch) {
   document.body.classList.add('notes-drag-mode');
   document.querySelectorAll('.note-card').forEach(_setupDragForCard);
   if (!_docDragHandlersBound) {
-    document.addEventListener('touchmove', _onDocTouchMover, { passive: false });
+    document.addEventListener('touchmove', _onDocTouchMove, { passive: false });
     document.addEventListener('touchend',  _onDocTouchEnd,  { passive: true });
     document.addEventListener('touchcancel', _onDocTouchEnd, { passive: true });
     _docDragHandlersBound = true;
@@ -5087,15 +5087,15 @@ function _beginGrab(card, touch) {
   try { navigator.vibrate?.(8); } catch {}
 }
 
-function _onDocTouchMover(e) {
+function _onDocTouchMove(e) {
   if (!_dragState) return;
   if (e.touches.length !== 1) return;
   e.preventDefault();
   const touch = e.touches[0];
   const { card, placeholder, grid } = _dragState;
   card.style.left = (touch.clientX - _dragState.grabOffsetX) + 'px';
-  const quickAgregar = grid.querySelector('.notes-quick-add');
-  const minTop = quickAgregar ? quickAgregar.getBoundingClientRect().bottom + 4 : grid.getBoundingClientRect().top;
+  const quickAdd = grid.querySelector('.notes-quick-add');
+  const minTop = quickAdd ? quickAdd.getBoundingClientRect().bottom + 4 : grid.getBoundingClientRect().top;
   const maxTop = Math.max(minTop, window.innerHeight - card.getBoundingClientRect().height - 8);
   const nextTop = Math.max(minTop, Math.min(maxTop, touch.clientY - _dragState.grabOffsetY));
   card.style.top = nextTop + 'px';
@@ -5108,7 +5108,7 @@ function _onDocTouchMover(e) {
   if (!target || target === card) return;
   if (target.parentNode !== grid) return;
 
-  // Mover the PLACEHOLDER (not the card) above or below the target depending
+  // Move the PLACEHOLDER (not the card) above or below the target depending
   // on which half of the target the finger is in. This is the hysteresis
   // that stops the oscillation — once the placeholder moves past a card,
   // the cursor has to cross THAT card's midpoint in the other direction
@@ -5141,7 +5141,7 @@ function _onDocTouchEnd() {
     placeholder.parentNode.insertBefore(card, placeholder);
     placeholder.remove();
     card.classList.remove('note-card-dragging');
-    // Restaurar the card's pre-drag inline styles. Mobile masonry stores
+    // Restore the card's pre-drag inline styles. Mobile masonry stores
     // grid-row-end inline, and custom backgrounds use inline style too; wiping
     // cssText made dropped cards collapse into neighboring notes in grid view.
     if (prevStyle) card.setAttribute('style', prevStyle);
@@ -5203,7 +5203,7 @@ function _wireChecklistTouchReorder(form) {
     }, { passive: false });
   });
   if (!_clDocBound) {
-    document.addEventListener('touchmove', _onClTouchMover, { passive: false });
+    document.addEventListener('touchmove', _onClTouchMove, { passive: false });
     document.addEventListener('touchend',  _onClTouchEnd,  { passive: true });
     document.addEventListener('touchcancel', _onClTouchEnd, { passive: true });
     _clDocBound = true;
@@ -5234,7 +5234,7 @@ function _beginChecklistGrab(row, container, touch) {
   try { navigator.vibrate?.(8); } catch {}
 }
 
-function _onClTouchMover(e) {
+function _onClTouchMove(e) {
   if (!_clDrag) return;
   if (e.touches.length !== 1) return;
   e.preventDefault();
@@ -5293,7 +5293,7 @@ async function _commitNoteReorder() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
     });
-    // Actualizar local sort_order so subsequent renders agree with the server.
+    // Update local sort_order so subsequent renders agree with the server.
     ids.forEach((nid, i) => {
       const n = _notes.find(nn => nn.id === nid);
       if (n) n.sort_order = i;
@@ -5323,24 +5323,24 @@ async function _initReminders() {
 // loading, note in a different filter, etc.).
 async function openNote(noteId) {
   const wasOpen = !!(isPanelOpen && isPanelOpen());
-  _showingArchivard = false;
+  _showingArchived = false;
   _activeLabel = null;
   _activeFilter = null;
   _searchQuery = '';
   if (!wasOpen) {
     openPanel();
   } else {
-    _bringNotasToFront();
+    _bringNotesToFront();
     const searchEl = document.getElementById('notes-search');
     if (searchEl) searchEl.value = '';
     const pane = document.getElementById('notes-pane');
     if (pane) pane.classList.remove('notes-pane-archive');
     const archiveBtn = document.getElementById('notes-archive-toggle');
     if (archiveBtn) archiveBtn.classList.remove('active');
-    await _fetchNotas();
-    _renderNotas();
+    await _fetchNotes();
+    _renderNotes();
   }
-  // openPanel() kicks off _fetchNotas() asynchronously, so the cards for
+  // openPanel() kicks off _fetchNotes() asynchronously, so the cards for
   // newly-created notes may not be in the DOM yet. Poll until the card exists.
   if (!noteId) return;
   let tries = 0;
@@ -5362,9 +5362,9 @@ async function openNote(noteId) {
   setTimeout(tryNext, 120);
 }
 
-const notesModule = { openPanel, closePanel, togglePanel, isPanelOpen, openNote, openNotas: openPanel, closeNotas: closePanel, isNotasOpen: isPanelOpen, refreshDueBadge };
+const notesModule = { openPanel, closePanel, togglePanel, isPanelOpen, openNote, openNotes: openPanel, closeNotes: closePanel, isNotesOpen: isPanelOpen, refreshDueBadge };
 export default notesModule;
-export { openPanel as openNotas, closePanel as closeNotas, isPanelOpen as isNotasOpen, openNote };
+export { openPanel as openNotes, closePanel as closeNotes, isPanelOpen as isNotesOpen, openNote };
 window.notesModule = notesModule;
 
 // Start reminder loop on module load (after a short delay so app loads first)

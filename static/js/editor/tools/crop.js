@@ -5,7 +5,7 @@
  *
  * Owns its own begin/drag/end handlers and reads/writes shared state.
  * The factory takes a small dependency bag for things still living in
- * galleryEditaror.js — `composite` redraws the canvas, `showCropApply`
+ * galleryEditor.js — `composite` redraws the canvas, `showCropApply`
  * mounts the floating W×H + Apply panel after the user finishes
  * dragging.
  *
@@ -28,7 +28,7 @@ export function createCropTool({ composite, showCropApply }) {
           coords.x >= state.cropRect.x && coords.x <= state.cropRect.x + state.cropRect.w &&
           coords.y >= state.cropRect.y && coords.y <= state.cropRect.y + state.cropRect.h) {
         state.cropMoving = true;
-        state.cropMoverStart = { x: coords.x, y: coords.y, rx: state.cropRect.x, ry: state.cropRect.y };
+        state.cropMoveStart = { x: coords.x, y: coords.y, rx: state.cropRect.x, ry: state.cropRect.y };
         return;
       }
       state.cropping = true;
@@ -42,14 +42,14 @@ export function createCropTool({ composite, showCropApply }) {
     },
 
     drag(e) {
-      // Mover-mode: drag the existing rect around the canvas.
-      if (state.cropMoving && state.cropRect && state.cropMoverStart) {
+      // Move-mode: drag the existing rect around the canvas.
+      if (state.cropMoving && state.cropRect && state.cropMoveStart) {
         e.preventDefault();
         const c = canvasCoords(e, state.mainCanvas);
-        const dx = c.x - state.cropMoverStart.x;
-        const dy = c.y - state.cropMoverStart.y;
-        let nx = state.cropMoverStart.rx + dx;
-        let ny = state.cropMoverStart.ry + dy;
+        const dx = c.x - state.cropMoveStart.x;
+        const dy = c.y - state.cropMoveStart.y;
+        let nx = state.cropMoveStart.rx + dx;
+        let ny = state.cropMoveStart.ry + dy;
         // Clamp to canvas bounds so the rect stays fully visible.
         nx = Math.max(0, Math.min(nx, state.mainCanvas.width - state.cropRect.w));
         ny = Math.max(0, Math.min(ny, state.mainCanvas.height - state.cropRect.h));
@@ -120,11 +120,11 @@ export function createCropTool({ composite, showCropApply }) {
     },
 
     end() {
-      // Mover-mode wrap-up: refresh the floating panel so Apply follows
+      // Move-mode wrap-up: refresh the floating panel so Apply follows
       // the rect to its new spot.
       if (state.cropMoving) {
         state.cropMoving = false;
-        state.cropMoverStart = null;
+        state.cropMoveStart = null;
         if (state.cropRect) showCropApply();
         return;
       }

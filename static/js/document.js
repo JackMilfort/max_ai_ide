@@ -21,13 +21,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   let API_BASE = '';
   let isOpen = false;
   let _hlDebounce = null;
-  let _isEditaringTabTitle = false;
+  let _isEditingTabTitle = false;
   let _autoDetectDebounce = null;
   let _autoTitleDebounce = null;
-  let _autoGuardarDebounce = null;
-  let _lastAutoGuardarErrorAt = 0;
+  let _autoSaveDebounce = null;
+  let _lastAutoSaveErrorAt = 0;
   let _animationInProgress = false;
-  let _animationCancelar = null;      // function to cancel current animation
+  let _animationCancel = null;      // function to cancel current animation
   let _htmlPreviewActive = false;   // true when inline HTML preview iframe is showing
   let _emailAccountsCache = null;
   let _emailAccountsCacheAt = 0;
@@ -36,7 +36,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   let _emailStreamRenderedBody = '';
   let _emailStreamTargetBody = '';
   let _emailLocalDraftDebounce = null;
-  let _emailRichbodyGuardarDebounce = null;
+  let _emailRichbodySaveDebounce = null;
   const _EMAIL_LOCAL_DRAFT_PREFIX = 'odysseus.email.replyDraft.v1:';
 
   // Diff mode state
@@ -48,7 +48,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   let _mdPreviewClickTimes = [];
   let _mdPreviewHintLastAt = 0;
 
-  // Idioma auto-detection config
+  // Language auto-detection config
   const AUTO_DETECT_DELAY = 500;
   const AUTO_DETECT_MIN_CHARS = 30;
   const AUTO_DETECT_MIN_RELEVANCE = 8;
@@ -61,13 +61,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     csv: 'csv',
   };
 
-  // Idiomas rendered in the sandboxed preview iframe. SVG and XML markup
+  // Languages rendered in the sandboxed preview iframe. SVG and XML markup
   // render as inline content in an HTML document, so they share the HTML
   // "Run / Preview" path. (hljs maps detected `xml` → `html` already; this also
   // covers the doc being explicitly typed svg/xml.)
   const _isRenderLang = (l) => ['html', 'svg', 'xml'].includes((l || '').toLowerCase());
-  // Idiomas that get the segmented Code / Run-or-View toggle in the toolbar
-  // (the same UX as markdown's Editar / Preview switch). CSV's "run" view is the
+  // Languages that get the segmented Code / Run-or-View toggle in the toolbar
+  // (the same UX as markdown's Edit / Preview switch). CSV's "run" view is the
   // table; Python/JS/etc.'s is the code-run output; HTML/SVG/XML render via
   // the iframe preview.
   const _hasViewToggle = (l) => {
@@ -81,7 +81,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     ].includes(lang) || _isRenderLang(lang);
   };
 
-  async function _getCorreoAccountsCached() {
+  async function _getEmailAccountsCached() {
     const now = Date.now();
     if (_emailAccountsCache && (now - _emailAccountsCacheAt) < 30000) return _emailAccountsCache;
     try {
@@ -102,9 +102,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   async function _resolveComposeSendAccountId() {
-    const activeAccountId = window.__odysseusActiveCorreoAccount || null;
+    const activeAccountId = window.__odysseusActiveEmailAccount || null;
     if (!activeAccountId) return null;
-    const accounts = await _getCorreoAccountsCached();
+    const accounts = await _getEmailAccountsCached();
     const activeAccount = accounts.find(a => String(a.id) === String(activeAccountId));
     if (!activeAccount || _accountCanSend(activeAccount)) return activeAccountId;
     if (uiModule) uiModule.showToast('Selected email account is receive-only; using your SMTP account.');
@@ -182,7 +182,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     window.addEventListener('hashchange', _maybeOpenDocFromHash);
   }
 
-  /** Actualizar overflow-doc-btn accent indicator, toolbar indicator, and session list icon */
+  /** Update overflow-doc-btn accent indicator, toolbar indicator, and session list icon */
   function _syncDocIndicator() {
     const btn = document.getElementById('overflow-doc-btn');
     // Has docs = at least one non-empty doc in the map
@@ -193,7 +193,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (indicator) indicator.classList.toggle('visible', hasDocs);
     // Hide overflow menu item when indicator is shown outside
     if (btn) btn.style.display = hasDocs ? 'none' : '';
-    // Actualizar session list icon
+    // Update session list icon
     const sid = sessionModule?.getCurrentSessionId();
     if (sid && sessionModule.setSessionHasDocs) {
       sessionModule.setSessionHasDocs(sid, hasDocs);
@@ -279,7 +279,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   function renderTabs() {
-    if (_isEditaringTabTitle) return;  // Don't rebuild while editing a title
+    if (_isEditingTabTitle) return;  // Don't rebuild while editing a title
     const tabBar = document.getElementById('doc-tab-bar');
     if (!tabBar) return;
 
@@ -302,7 +302,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const menuBtn = `<button class="doc-tab-menu-btn" data-doc-id="${id}" title="Document actions"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="19" r="2.5"/></svg></button>`;
       const ver = doc.version || doc.version_count || 1;
       const verChip = `<span class="doc-tab-version" data-doc-id="${id}" title="Version history">v${ver}</span>`;
-      // Idioma icon before the title — same family as the meta-line / picker
+      // Language icon before the title — same family as the meta-line / picker
       // icons. Hidden via :empty CSS when the doc has no useful language.
       const lic = (doc.language && doc.language !== 'text')
         ? langIcon(doc.language, 12, { style: 'opacity:0.65;flex-shrink:0;color:currentColor;margin-right:4px;' })
@@ -361,7 +361,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       tab.addEventListener('click', (e) => {
         // Check if click was on or inside the close/play button
         if (e.target.closest('.doc-tab-close') || e.target.closest('.doc-tab-play') || e.target.closest('.doc-tab-menu-btn') || e.target.closest('.doc-tab-version')) return;
-        if (_isEditaringTabTitle) return;
+        if (_isEditingTabTitle) return;
         // If clicking the title span, delay to allow dblclick
         if (e.target.classList.contains('doc-tab-title')) {
           clearTimeout(_tabClickTimer);
@@ -379,7 +379,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         const docId = tab.dataset.docId;
         const doc = docs.get(docId);
         if (!doc) return;
-        startTitleEditar(titleSpan, docId, doc);
+        startTitleEdit(titleSpan, docId, doc);
       });
     });
 
@@ -431,7 +431,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           || (sessionModule && sessionModule.getCurrentSessionId());
         if (!sessionId) {
           try {
-            sessionId = await _autoCrearSession();
+            sessionId = await _autoCreateSession();
           } catch (e) {
             console.error('Failed to auto-create session for document:', e);
             return;
@@ -449,9 +449,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   /** Start inline editing of a tab title */
-  function startTitleEditar(titleSpan, docId, doc) {
-    if (_isEditaringTabTitle) return;
-    _isEditaringTabTitle = true;
+  function startTitleEdit(titleSpan, docId, doc) {
+    if (_isEditingTabTitle) return;
+    _isEditingTabTitle = true;
 
     const fullTitle = doc.title || '';
     const input = document.createElement('input');
@@ -463,10 +463,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     input.focus();
     input.select();
 
-    function commitEditar() {
-      if (!_isEditaringTabTitle) return;
+    function commitEdit() {
+      if (!_isEditingTabTitle) return;
       const newTitle = input.value.trim();
-      _isEditaringTabTitle = false;
+      _isEditingTabTitle = false;
       doc.title = newTitle;
       if (docId === activeDocId) {
         const titleInput = document.getElementById('doc-title-input');
@@ -476,21 +476,21 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       renderTabs();
     }
 
-    function cancelEditar() {
-      _isEditaringTabTitle = false;
+    function cancelEdit() {
+      _isEditingTabTitle = false;
       renderTabs();
     }
 
-    input.addEventListener('blur', commitEditar);
+    input.addEventListener('blur', commitEdit);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        input.removeEventListener('blur', commitEditar);
-        commitEditar();
+        input.removeEventListener('blur', commitEdit);
+        commitEdit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        input.removeEventListener('blur', commitEditar);
-        cancelEditar();
+        input.removeEventListener('blur', commitEdit);
+        cancelEdit();
       }
     });
   }
@@ -644,10 +644,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // export reads the values the user actually sees:
     //  - Markdown view: textarea.value may differ from doc.content if the
     //    user typed but the existing 2s autosave hasn't fired.
-    //  - PDF view: there may be a pending debounced _pdfPaneGuardarTimer that
+    //  - PDF view: there may be a pending debounced _pdfPaneSaveTimer that
     //    hasn't flushed the user's input changes yet.
-    if (_pdfPaneGuardarTimer) {
-      clearTimeout(_pdfPaneGuardarTimer);
+    if (_pdfPaneSaveTimer) {
+      clearTimeout(_pdfPaneSaveTimer);
       await _savePdfPaneToMarkdown();
     }
     const ta = document.getElementById('doc-editor-textarea');
@@ -678,7 +678,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       <div class="modal-content" style="width:min(780px,94vw);">
         <div class="modal-header">
           <h4>Export filled PDF</h4>
-          <button id="pdf-export-close" class="modal-close" title="Cerrar">×</button>
+          <button id="pdf-export-close" class="modal-close" title="Close">×</button>
         </div>
         <div id="pdf-export-summary" style="font-size:0.78rem;opacity:0.7;margin:0 0 6px;">Loading field values…</div>
         <div id="pdf-export-body" class="modal-body" style="font-size:0.85rem;">
@@ -686,8 +686,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         </div>
         <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border);margin-top:6px;align-items:center;">
           <span id="pdf-export-status" style="font-size:0.75rem;opacity:0.7;margin-right:auto;"></span>
-          <button id="pdf-export-cancel" class="confirm-btn confirm-btn-secondary">Cancelar</button>
-          <button id="pdf-export-download" class="confirm-btn confirm-btn-primary" disabled>Descargar PDF</button>
+          <button id="pdf-export-cancel" class="confirm-btn confirm-btn-secondary">Cancel</button>
+          <button id="pdf-export-download" class="confirm-btn confirm-btn-primary" disabled>Download PDF</button>
         </div>
       </div>
     `;
@@ -935,7 +935,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   const _pdfPaneFieldsByDoc = new Map(); // docId -> [{name, type, inputEl, ...}]
   const _pdfPaneAnnotationsByDoc = new Map(); // docId -> [{id, page, x, y, w, h, el, wrap}]
   const _pdfUndoStackByDoc = new Map(); // docId -> markdown snapshots
-  let _pdfPaneGuardarTimer = null;
+  let _pdfPaneSaveTimer = null;
 
   // Match a freeform-annotation bullet line in the markdown source.
   // Coords are percentages of page width/height (0–100) so they scale with
@@ -1040,16 +1040,16 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const prev = stack.pop();
     if (!prev) return false;
     _pdfUndoStackByDoc.set(docId, stack);
-    if (_pdfPaneGuardarTimer) {
-      clearTimeout(_pdfPaneGuardarTimer);
-      _pdfPaneGuardarTimer = null;
+    if (_pdfPaneSaveTimer) {
+      clearTimeout(_pdfPaneSaveTimer);
+      _pdfPaneSaveTimer = null;
     }
     const doc = docs.get(docId);
     if (!doc) return false;
     doc.content = prev;
     const ta = document.getElementById('doc-editor-textarea');
     if (ta) ta.value = prev;
-    _setPdfGuardarStatus('saving');
+    _setPdfSaveStatus('saving');
     try {
       const res = await fetch(`${API_BASE}/api/document/${docId}`, {
         method: 'PUT',
@@ -1057,11 +1057,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         body: JSON.stringify({ content: prev }),
       });
       if (!res.ok) throw new Error(res.statusText || String(res.status));
-      _setPdfGuardarStatus('saved');
+      _setPdfSaveStatus('saved');
       _renderPdfPane();
       return true;
     } catch (e) {
-      _setPdfGuardarStatus('error', e.message || 'Undo failed');
+      _setPdfSaveStatus('error', e.message || 'Undo failed');
       return true;
     }
   }
@@ -1259,7 +1259,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
             if (sig) {
               _sigCache.set(sig.id, sig.dataUrl);
               await renderSigUI(sig.id);
-              _schedulePdfPaneGuardar();
+              _schedulePdfPaneSave();
             }
           });
           renderSigUI(initialSigId);
@@ -1293,12 +1293,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         if (!isSig) {
           el.dataset.fieldName = f.name;
           el.dataset.fieldType = f.type;
-          el.addEventListener('input', _schedulePdfPaneGuardar);
-          el.addEventListener('change', _schedulePdfPaneGuardar);
+          el.addEventListener('input', _schedulePdfPaneSave);
+          el.addEventListener('change', _schedulePdfPaneSave);
         }
         pageWrap.appendChild(el);
         // Signature fields are also persisted via the markdown bullet — the
-        // click handler invokes _schedulePdfPaneGuardar directly after picking.
+        // click handler invokes _schedulePdfPaneSave directly after picking.
         fieldRefs.push({ name: f.name, type: isSig ? 'signature' : f.type, el });
 
         // Date-field shortcut: any text field whose name or label hints at
@@ -1316,7 +1316,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const yyyy = d.getFullYear();
             el.value = `${dd}/${mm}/${yyyy}`;
-            _schedulePdfPaneGuardar();
+            _schedulePdfPaneSave();
           });
           pageWrap.appendChild(today);
         }
@@ -1372,7 +1372,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           // pick the signature when they place the box.
           built.ref.el.click();
         }
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
         // Mode stays armed — keep placing more until the user clicks the
         // toolbar button again to turn it off.
       });
@@ -1435,7 +1435,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const del = document.createElement('button');
     del.type = 'button';
     del.textContent = '✖';
-    del.title = 'Eliminar annotation';
+    del.title = 'Delete annotation';
     del.style.cssText = `position:absolute;top:${OFF}px;right:${OFF}px;width:${HS}px;height:${HS}px;padding:0 0 0 1px;border:1px solid var(--accent, var(--red));background:#fff;color:var(--accent, var(--red));border-radius:50%;cursor:pointer;font-size:11px;line-height:1;display:${HIDE};font-weight:bold;touch-action:none;`;
 
     // ☰ drag handle — same size as the × button.
@@ -1528,7 +1528,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           _sigCache.set(sig.id, sig.dataUrl);
           await _renderSig(sig.id);
           ref.value = `signature:${sig.id}`;
-          _schedulePdfPaneGuardar();
+          _schedulePdfPaneSave();
         }
       });
       // Render any pre-existing signature value
@@ -1584,12 +1584,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         }
         ref.value = input.value;
         _autoGrow();
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
       });
       input.addEventListener('change', () => {
         ref.value = input.value;
         _autoGrow();
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
       });
       input.addEventListener('focus', () => {
         _pushPdfUndoSnapshot();
@@ -1619,13 +1619,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _pushPdfUndoSnapshot();
       try { grip.setPointerCapture(ev.pointerId); } catch (_) {}
       // Hide the × and resize handles while moving so they don't obscure the
-      // box — easier to see exactly where it lands. Restaurard on release.
+      // box — easier to see exactly where it lands. Restored on release.
       del.style.display = 'none';
       resize.style.display = 'none';
       if (menuBtn) menuBtn.style.display = 'none';
       const start = { mx: ev.clientX, my: ev.clientY, x: ref.x, y: ref.y };
       const rect = pageWrap.getBoundingClientRect();
-      const onMover = (e) => {
+      const onMove = (e) => {
         const dxPct = ((e.clientX - start.mx) / rect.width) * 100;
         const dyPct = ((e.clientY - start.my) / rect.height) * 100;
         ref.x = Math.max(0, Math.min(100 - ref.w, start.x + dxPct));
@@ -1634,12 +1634,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         wrap.style.top = ref.y + '%';
       };
       const onUp = () => {
-        document.removeEventListener('pointermove', onMover);
+        document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         _setHandlesVisible(true);
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
       };
-      document.addEventListener('pointermove', onMover);
+      document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
     });
 
@@ -1655,7 +1655,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (menuBtn) menuBtn.style.display = 'none';
       const start = { mx: ev.clientX, my: ev.clientY, w: ref.w, h: ref.h };
       const rect = pageWrap.getBoundingClientRect();
-      const onMover = (e) => {
+      const onMove = (e) => {
         const dwPct = ((e.clientX - start.mx) / rect.width) * 100;
         const dhPct = ((e.clientY - start.my) / rect.height) * 100;
         ref.w = Math.max(1, Math.min(100 - ref.x, start.w + dwPct));
@@ -1664,12 +1664,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         wrap.style.height = ref.h + '%';
       };
       const onUp = () => {
-        document.removeEventListener('pointermove', onMover);
+        document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         _setHandlesVisible(true);
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
       };
-      document.addEventListener('pointermove', onMover);
+      document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
     });
 
@@ -1714,7 +1714,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         if (fromSlider) valInput.value = v.toFixed(2);
         else slider.value = String(Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), v)));
         _pdfLastLineHeight.set(activeDocId, v);
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
       };
       slider.addEventListener('input', () => _applyLh(parseFloat(slider.value), true));
       valInput.addEventListener('input', () => _applyLh(parseFloat(valInput.value), false));
@@ -1738,7 +1738,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         try { input.setSelectionRange(next, next); } catch (_) {}
         ref.value = input.value;
         if (typeof ref._autoGrow === 'function') ref._autoGrow();
-        _schedulePdfPaneGuardar();
+        _schedulePdfPaneSave();
         input.focus({ preventScroll: true });
       });
       // Stop popover clicks from bubbling to pageWrap (would create new ann)
@@ -1769,7 +1769,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const idx = refs.indexOf(ref);
     if (idx >= 0) refs.splice(idx, 1);
     ref.wrap.remove();
-    _schedulePdfPaneGuardar();
+    _schedulePdfPaneSave();
   }
 
   // Prompt user for an instruction and ask the backend's VL pipeline to
@@ -1787,7 +1787,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     );
     if (!instruction || !instruction.trim()) return;
 
-    _setPdfGuardarStatus('saving');
+    _setPdfSaveStatus('saving');
     const btn = document.getElementById('doc-pdf-ai-fill-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Thinking…'; }
     try {
@@ -1803,7 +1803,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const data = await res.json();
       const proposed = (data && data.annotations) || [];
       if (!proposed.length) {
-        _setPdfGuardarStatus('idle');
+        _setPdfSaveStatus('idle');
         if (uiModule && uiModule.showToast) uiModule.showToast('AI found nothing to fill');
         return;
       }
@@ -1835,32 +1835,32 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         const t = await r2.text().catch(() => r2.statusText);
         throw new Error(t || r2.statusText);
       }
-      _setPdfGuardarStatus('saved');
+      _setPdfSaveStatus('saved');
       if (uiModule && uiModule.showToast) uiModule.showToast(`AI added ${proposed.length} annotations`);
       _renderPdfPane();
     } catch (e) {
       console.error('AI fill failed:', e);
-      _setPdfGuardarStatus('error', `AI fill failed: ${e.message || e}`);
+      _setPdfSaveStatus('error', `AI fill failed: ${e.message || e}`);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'AI fill'; }
     }
   }
 
-  function _schedulePdfPaneGuardar() {
-    _setPdfGuardarStatus('dirty');
-    if (_pdfPaneGuardarTimer) clearTimeout(_pdfPaneGuardarTimer);
-    _pdfPaneGuardarTimer = setTimeout(() => _savePdfPaneToMarkdown(), 600);
+  function _schedulePdfPaneSave() {
+    _setPdfSaveStatus('dirty');
+    if (_pdfPaneSaveTimer) clearTimeout(_pdfPaneSaveTimer);
+    _pdfPaneSaveTimer = setTimeout(() => _savePdfPaneToMarkdown(), 600);
   }
 
-  function _setPdfGuardarStatus(status, msg) {
+  function _setPdfSaveStatus(status, msg) {
     const pill = document.getElementById('doc-pdf-save-pill');
     if (!pill) return;
     const palette = {
       idle:   { txt: '',           bg: 'transparent',           fg: 'transparent' },
-      dirty:  { txt: 'Editaring…',   bg: 'var(--panel)',          fg: 'var(--fg)' },
+      dirty:  { txt: 'Editing…',   bg: 'var(--panel)',          fg: 'var(--fg)' },
       saving: { txt: 'Saving…',    bg: 'var(--panel)',          fg: 'var(--fg)' },
-      saved:  { txt: 'Guardard',      bg: 'rgba(34,197,94,0.85)',  fg: '#fff' },
-      error:  { txt: msg || 'Guardar failed', bg: 'var(--red)',    fg: 'var(--bg)' },
+      saved:  { txt: 'Saved',      bg: 'rgba(34,197,94,0.85)',  fg: '#fff' },
+      error:  { txt: msg || 'Save failed', bg: 'var(--red)',    fg: 'var(--bg)' },
     };
     const p = palette[status] || palette.idle;
     pill.textContent = p.txt;
@@ -1869,13 +1869,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     pill.style.display = p.txt ? '' : 'none';
     if (status === 'saved') {
       setTimeout(() => {
-        if (pill.textContent === 'Guardard') _setPdfGuardarStatus('idle');
+        if (pill.textContent === 'Saved') _setPdfSaveStatus('idle');
       }, 1200);
     }
   }
 
   async function _savePdfPaneToMarkdown(opts = {}) {
-    _pdfPaneGuardarTimer = null;
+    _pdfPaneSaveTimer = null;
     const docId = activeDocId;
     const fields = _pdfPaneFieldsByDoc.get(docId) || [];
     const annotations = _pdfPaneAnnotationsByDoc.get(docId) || [];
@@ -1937,13 +1937,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       };
     }));
     if (md === doc.content) {
-      _setPdfGuardarStatus('idle');
+      _setPdfSaveStatus('idle');
       return true;
     }
     doc.content = md;
     const ta = document.getElementById('doc-editor-textarea');
     if (ta) ta.value = md;
-    _setPdfGuardarStatus('saving');
+    _setPdfSaveStatus('saving');
     try {
       const res = await fetch(`${API_BASE}/api/document/${docId}`, {
         method: 'PUT',
@@ -1953,14 +1953,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       });
       if (!res.ok) {
         const t = await res.text().catch(() => res.statusText);
-        _setPdfGuardarStatus('error', `Guardar failed: ${res.status}`);
+        _setPdfSaveStatus('error', `Save failed: ${res.status}`);
         console.warn('PDF-pane save HTTP error:', res.status, t);
         return false;
       }
-      _setPdfGuardarStatus('saved');
+      _setPdfSaveStatus('saved');
       return true;
     } catch (e) {
-      _setPdfGuardarStatus('error', e.message || 'Guardar failed');
+      _setPdfSaveStatus('error', e.message || 'Save failed');
       console.warn('PDF-pane save failed:', e);
       return false;
     }
@@ -1968,8 +1968,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   // Flush any pending debounced save before navigating away
   window.addEventListener('beforeunload', () => {
-    if (_pdfPaneGuardarTimer) {
-      clearTimeout(_pdfPaneGuardarTimer);
+    if (_pdfPaneSaveTimer) {
+      clearTimeout(_pdfPaneSaveTimer);
       _savePdfPaneToMarkdown({ keepalive: true });
     }
   });
@@ -1980,8 +1980,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const pane = document.getElementById('doc-pdf-view');
     if (!pane || !activeDocId) return;
     if (pane.style.display === 'none') return;
-    if (_pdfPaneGuardarTimer) {
-      clearTimeout(_pdfPaneGuardarTimer);
+    if (_pdfPaneSaveTimer) {
+      clearTimeout(_pdfPaneSaveTimer);
       await _savePdfPaneToMarkdown();
     }
     _renderPdfPane();
@@ -2000,8 +2000,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       btn?.classList.add('active');
     } else {
       // Flush any pending debounced edit before tearing down the field refs.
-      if (_pdfPaneGuardarTimer) {
-        clearTimeout(_pdfPaneGuardarTimer);
+      if (_pdfPaneSaveTimer) {
+        clearTimeout(_pdfPaneSaveTimer);
         await _savePdfPaneToMarkdown();
       }
       _pdfViewState.set(activeDocId, false);
@@ -2026,7 +2026,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   function _syncHeaderBarVisibility() {
     const hdr = document.getElementById('doc-editor-actions');
     if (!hdr) return;
-    // Correo docs hide the whole header (they use their own send footer) — never
+    // Email docs hide the whole header (they use their own send footer) — never
     // resurrect it here.
     if (docs.get(activeDocId)?.language === 'email') { hdr.style.display = 'none'; return; }
     const vis = (id) => {
@@ -2059,20 +2059,20 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       || '';
     const isForm = _isFormBackedDoc(live);
     // Footer main button: for a doc opened from an email attachment, morph the
-    // Guardar button into "Attach" (send the filled file back to the sender via
+    // Save button into "Attach" (send the filled file back to the sender via
     // the signed-reply flow). Otherwise it forces a new saved version.
     const _copyBtn = document.getElementById('doc-footer-copy-btn');
     if (_copyBtn) {
       const _ad = docs.get(activeDocId);
-      const _replyable = !!(_ad && _ad.sourceCorreoUid && _ad.sourceCorreoFolder);
+      const _replyable = !!(_ad && _ad.sourceEmailUid && _ad.sourceEmailFolder);
       if (_replyable && _copyBtn.dataset.mode !== 'reply') {
         _copyBtn.dataset.mode = 'reply';
         _copyBtn.title = 'Reply to the sender with this filled file attached';
         _copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Attach';
       } else if (!_replyable && _copyBtn.dataset.mode !== 'save') {
         _copyBtn.dataset.mode = 'save';
-        _copyBtn.title = 'Guardar new version';
-        _copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar';
+        _copyBtn.title = 'Save new version';
+        _copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save';
       }
     }
     // Standalone Export PDF / PDF-toggle icon buttons are retired — for a
@@ -2128,7 +2128,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     let show = false;
     actionBtn.classList.remove('active');
 
-    // The markdown Editar/Preview toggle is a two-icon switch; other modes use
+    // The markdown Edit/Preview toggle is a two-icon switch; other modes use
     // the single dynamic preview button.
     const mdToggle = document.getElementById('doc-md-view-toggle');
     if (mdToggle) mdToggle.style.display = (lang === 'markdown') ? 'inline-flex' : 'none';
@@ -2166,7 +2166,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         const codeIco = (lang === 'csv')
           ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>'
           : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
-        const codeTitle = (lang === 'csv') ? 'Editar' : 'Editar code';
+        const codeTitle = (lang === 'csv') ? 'Edit' : 'Edit code';
         if (codeBtn.dataset.lastIcon !== lang) {
           codeBtn.innerHTML = codeIco;
           codeBtn.title = codeTitle;
@@ -2174,7 +2174,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         }
       }
       // Reflect which side is currently active so the toggle shows the same
-      // visual feedback markdown's Editar/Preview switch does (background tint
+      // visual feedback markdown's Edit/Preview switch does (background tint
       // + the "punch" pop animation from .md-view-toggle .md-view-opt.active).
       // For CSV the run side = table view; for HTML/SVG/XML = iframe preview;
       // for runnable langs = output panel open.
@@ -2198,7 +2198,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     } else if (lang === 'csv') {
       show = true;
       actionBtn.innerHTML = _csvActive ? _penIco : '<span style="font-size:12px;font-weight:600;">⊞</span>';
-      actionBtn.title = _csvActive ? 'Editar' : 'Table View';
+      actionBtn.title = _csvActive ? 'Edit' : 'Table View';
       if (_csvActive) actionBtn.classList.add('active');
     } else if (_isRenderLang(lang)) {
       // SVG/HTML/XML use the segmented Code </> | Run ▶ light-switch toggle
@@ -2242,9 +2242,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     _syncHeaderBarVisibility();
   }
 
-  // ── Correo document type helpers ──
+  // ── Email document type helpers ──
 
-  function _parseCorreoHeader(content) {
+  function _parseEmailHeader(content) {
     const empty = { to: '', cc: '', bcc: '', subject: '', inReplyTo: '', references: '', sourceUid: '', sourceFolder: '', forwardAttachments: false, attachments: [], body: content || '' };
     if (!content) return empty;
     const parts = content.split(/\n---\n/);
@@ -2276,7 +2276,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return fields;
   }
 
-  function _buildCorreoContent(to, subject, inReplyTo, references, body, sourceUid, sourceFolder, cc, bcc) {
+  function _buildEmailContent(to, subject, inReplyTo, references, body, sourceUid, sourceFolder, cc, bcc) {
     let header = `To: ${to}`;
     if (cc) header += `\nCc: ${cc}`;
     if (bcc) header += `\nBcc: ${bcc}`;
@@ -2288,12 +2288,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return header + '\n---\n' + body;
   }
 
-  function _looksLikeWrappedCorreoContent(text) {
+  function _looksLikeWrappedEmailContent(text) {
     const t = String(text || '').replace(/\r\n/g, '\n').trim();
     return /\n---\n/.test(t) && /^(To|Cc|Bcc|Subject|In-Reply-To|References|X-Source-UID|X-Source-Folder):\s*/im.test(t);
   }
 
-  function _decodeBase64CorreoWrapper(block) {
+  function _decodeBase64EmailWrapper(block) {
     const compact = String(block || '').replace(/\s+/g, '');
     if (compact.length < 24 || compact.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(compact)) return null;
     try {
@@ -2307,34 +2307,34 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         decoded = decodeURIComponent(escape(bin));
       }
       decoded = decoded.replace(/\r\n/g, '\n');
-      return _looksLikeWrappedCorreoContent(decoded) ? decoded : null;
+      return _looksLikeWrappedEmailContent(decoded) ? decoded : null;
     } catch (_) {
       return null;
     }
   }
 
-  function _sanitizeOutgoingCorreoBody(raw) {
+  function _sanitizeOutgoingEmailBody(raw) {
     let text = String(raw || '').replace(/\r\n/g, '\n');
     const trimmed = text.trim();
-    const decodedWhole = _decodeBase64CorreoWrapper(trimmed);
-    if (decodedWhole) text = _parseCorreoHeader(decodedWhole).body || '';
-    else if (_looksLikeWrappedCorreoContent(trimmed)) text = _parseCorreoHeader(trimmed).body || '';
+    const decodedWhole = _decodeBase64EmailWrapper(trimmed);
+    if (decodedWhole) text = _parseEmailHeader(decodedWhole).body || '';
+    else if (_looksLikeWrappedEmailContent(trimmed)) text = _parseEmailHeader(trimmed).body || '';
 
     const parts = text.split(/(\n{2,})/);
     let changed = false;
     const clean = parts.map(part => {
       if (/^\n+$/.test(part)) return part;
-      const decoded = _decodeBase64CorreoWrapper(part);
+      const decoded = _decodeBase64EmailWrapper(part);
       if (!decoded) return part;
       changed = true;
-      return _parseCorreoHeader(decoded).body || '';
+      return _parseEmailHeader(decoded).body || '';
     }).join('');
 
     if (!changed && /<[^>]+>/.test(text) && typeof document !== 'undefined') {
       const probe = document.createElement('div');
       probe.innerHTML = text;
       const plain = (probe.innerText || probe.textContent || '').trim();
-      const plainClean = plain ? _sanitizeOutgoingCorreoBody(plain) : plain;
+      const plainClean = plain ? _sanitizeOutgoingEmailBody(plain) : plain;
       if (plainClean !== plain) return plainClean;
     }
 
@@ -2351,7 +2351,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return _EMAIL_LOCAL_DRAFT_PREFIX + encodeURIComponent(`${folder}|${uid}|${msg}`);
   }
 
-  function _loadCorreoLocalDraft(fields) {
+  function _loadEmailLocalDraft(fields) {
     const key = _emailLocalDraftKey(fields?.sourceUid, fields?.sourceFolder, fields?.inReplyTo);
     if (!key) return null;
     try {
@@ -2371,7 +2371,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   function _emailFieldsWithLocalDraft(fields) {
-    const draft = _loadCorreoLocalDraft(fields);
+    const draft = _loadEmailLocalDraft(fields);
     if (!draft) return fields;
     return {
       ...fields,
@@ -2383,11 +2383,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       references: draft.references ?? fields.references,
       sourceUid: draft.sourceUid ?? fields.sourceUid,
       sourceFolder: draft.sourceFolder ?? fields.sourceFolder,
-      body: _sanitizeOutgoingCorreoBody(draft.body ?? fields.body),
+      body: _sanitizeOutgoingEmailBody(draft.body ?? fields.body),
     };
   }
 
-  function _persistCorreoLocalDraftNow() {
+  function _persistEmailLocalDraftNow() {
     const doc = activeDocId && docs.get(activeDocId);
     if (!doc || doc.language !== 'email') return;
     const sourceUid = document.getElementById('doc-email-source-uid')?.value || '';
@@ -2413,19 +2413,19 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     try { localStorage.setItem(key, JSON.stringify(payload)); } catch (_) {}
   }
 
-  function _persistCorreoLocalDraftSoon() {
+  function _persistEmailLocalDraftSoon() {
     clearTimeout(_emailLocalDraftDebounce);
-    _emailLocalDraftDebounce = setTimeout(_persistCorreoLocalDraftNow, 800);
+    _emailLocalDraftDebounce = setTimeout(_persistEmailLocalDraftNow, 800);
   }
 
-  function _clearCorreoLocalDraft(sourceUid, sourceFolder, inReplyTo) {
+  function _clearEmailLocalDraft(sourceUid, sourceFolder, inReplyTo) {
     const key = _emailLocalDraftKey(sourceUid, sourceFolder, inReplyTo);
     if (!key) return;
     try { localStorage.removeItem(key); } catch (_) {}
   }
 
-  function _clearCurrentCorreoLocalDraft() {
-    _clearCorreoLocalDraft(
+  function _clearCurrentEmailLocalDraft() {
+    _clearEmailLocalDraft(
       document.getElementById('doc-email-source-uid')?.value || '',
       document.getElementById('doc-email-source-folder')?.value || 'INBOX',
       document.getElementById('doc-email-in-reply-to')?.value || '',
@@ -2450,7 +2450,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         ? markdownModule.sanitizeAllowedHtml(t)
         : _emailPlainTextToHtml(t);
     }
-    // Correo body: keep author-typed `:shortcode:` text literal. Issue #345
+    // Email body: keep author-typed `:shortcode:` text literal. Issue #345
     // (shortcode → emoji) is scoped to chat; do not rewrite colons in mail.
     try { return markdownModule.mdToHtml(text, { shortcodes: false }); }
     catch (_) { return _emailPlainTextToHtml(text); }
@@ -2458,14 +2458,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   // Mirror the rich body's plain text into the hidden textarea so the existing
   // send / draft / change-detection plumbing (which reads the textarea) stays
   // valid. The rich body's HTML is read separately on send (body_html).
-  function _syncCorreoRichbody(rich) {
+  function _syncEmailRichbody(rich) {
     const ta = document.getElementById('doc-editor-textarea');
     if (!ta) return;
     ta.value = rich.innerText;
     const doc = activeDocId && docs.get(activeDocId);
     if (doc && doc.language === 'email') {
-      const fields = _parseCorreoHeader(doc.content || '');
-      doc.content = _buildCorreoContent(
+      const fields = _parseEmailHeader(doc.content || '');
+      doc.content = _buildEmailContent(
         document.getElementById('doc-email-to')?.value || fields.to || '',
         document.getElementById('doc-email-subject')?.value || fields.subject || '',
         document.getElementById('doc-email-in-reply-to')?.value || fields.inReplyTo || '',
@@ -2478,17 +2478,17 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       );
     }
   }
-  function _scheduleCorreoRichbodyGuardar() {
-    _persistCorreoLocalDraftSoon();
-    clearTimeout(_emailRichbodyGuardarDebounce);
-    _emailRichbodyGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2500);
+  function _scheduleEmailRichbodySave() {
+    _persistEmailLocalDraftSoon();
+    clearTimeout(_emailRichbodySaveDebounce);
+    _emailRichbodySaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2500);
   }
-  function _wireCorreoRichbody(rich) {
-    if (rich._wired) { _syncCorreoRichbody(rich); return; }
+  function _wireEmailRichbody(rich) {
+    if (rich._wired) { _syncEmailRichbody(rich); return; }
     rich._wired = true;
     rich.addEventListener('input', () => {
-      _syncCorreoRichbody(rich);
-      _scheduleCorreoRichbodyGuardar();
+      _syncEmailRichbody(rich);
+      _scheduleEmailRichbodySave();
     });
     // Highlight toolbar buttons (B / I / S, headings, lists) when the caret
     // sits inside formatted text. queryCommandState reflects the live
@@ -2539,7 +2539,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return r && r.style.display !== 'none' ? r : null;
   }
 
-  function _captureCorreoBodyFocusState() {
+  function _captureEmailBodyFocusState() {
     const rich = _emailRichbodyActive();
     const ta = document.getElementById('doc-editor-textarea');
     const active = document.activeElement;
@@ -2561,7 +2561,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return null;
   }
 
-  function _restoreCorreoBodyFocusState(state) {
+  function _restoreEmailBodyFocusState(state) {
     if (!state) return;
     requestAnimationFrame(() => {
       if (state.type === 'rich') {
@@ -2586,7 +2586,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  function _renderStreamingCorreoBody(body, { immediate = false } = {}) {
+  function _renderStreamingEmailBody(body, { immediate = false } = {}) {
     const rich = document.getElementById('doc-email-richbody');
     const textarea = document.getElementById('doc-editor-textarea');
     if (!rich) return;
@@ -2688,7 +2688,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return best;
   }
 
-  function _splitCorreoReplyQuote(text) {
+  function _splitEmailReplyQuote(text) {
     const original = String(text || '');
     if (!original) return { body: '', quote: '', stripped: false };
     const literal = '---------- Previous message ----------';
@@ -2714,25 +2714,25 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return { body, quote, stripped: true };
   }
 
-  function _stripCorreoReplyQuoteText(text) {
-    const split = _splitCorreoReplyQuote(text);
+  function _stripEmailReplyQuoteText(text) {
+    const split = _splitEmailReplyQuote(text);
     return { body: split.body, stripped: split.stripped };
   }
 
   function _emailReplyOwnText(text) {
-    return _stripCorreoReplyQuoteText(text).body;
+    return _stripEmailReplyQuoteText(text).body;
   }
 
-  function _setCorreoBodyText(textarea, value) {
+  function _setEmailBodyText(textarea, value) {
     if (!textarea) return;
     textarea.value = value || '';
     syncHighlighting();
     const rich = _emailRichbodyActive();
     if (rich) rich.innerHTML = _emailBodyToHtml(textarea.value);
-    _persistCorreoLocalDraftSoon();
+    _persistEmailLocalDraftSoon();
   }
 
-  async function _streamCorreoBodyText(textarea, value) {
+  async function _streamEmailBodyText(textarea, value) {
     if (!textarea) return;
     const finalText = String(value || '');
     const maxFrames = 90;
@@ -2744,17 +2744,17 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const next = finalText.slice(0, i + chunk);
       textarea.value = next;
       if (rich) rich.innerHTML = _emailBodyToHtml(next);
-      _persistCorreoLocalDraftSoon();
+      _persistEmailLocalDraftSoon();
       await new Promise(resolve => requestAnimationFrame(resolve));
     }
-    _setCorreoBodyText(textarea, finalText);
+    _setEmailBodyText(textarea, finalText);
   }
 
-  function _focusCorreoBodyEnd() {
+  function _focusEmailBodyEnd() {
     const target = _emailRichbodyActive() || document.getElementById('doc-editor-textarea');
     if (!target) return;
     target.focus();
-    if (target.isContentEditarable) {
+    if (target.isContentEditable) {
       const range = document.createRange();
       range.selectNodeContents(target);
       range.collapse(false);
@@ -2769,7 +2769,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  function _syncCorreoHeaderSummary() {
+  function _syncEmailHeaderSummary() {
     const to = document.getElementById('doc-email-to')?.value?.trim() || 'No recipient';
     const subject = document.getElementById('doc-email-subject')?.value?.trim() || 'No subject';
     const cc = document.getElementById('doc-email-cc')?.value?.trim() || '';
@@ -2783,7 +2783,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     summary.title = summary.textContent;
   }
 
-  function _setCorreoHeaderInputValue(id, value, { preserveFocused = true, preserveNonEmpty = false } = {}) {
+  function _setEmailHeaderInputValue(id, value, { preserveFocused = true, preserveNonEmpty = false } = {}) {
     const el = document.getElementById(id);
     if (!el) return;
     const next = value || '';
@@ -2792,7 +2792,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (el.value !== next) el.value = next;
   }
 
-  function _setCorreoHeaderCollapsed(collapsed, { manual = true } = {}) {
+  function _setEmailHeaderCollapsed(collapsed, { manual = true } = {}) {
     const header = document.getElementById('doc-email-header');
     const btn = document.getElementById('doc-email-collapse-btn');
     if (!header) return;
@@ -2805,22 +2805,22 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const doc = activeDocId && docs.get(activeDocId);
     if (doc && manual) doc._emailHeaderCollapsed = !!collapsed;
     if (manual && !collapsed) _emailHeaderManualExpandUntil = Date.now() + 1400;
-    _syncCorreoHeaderSummary();
+    _syncEmailHeaderSummary();
   }
 
-  function _shouldAutoCollapseCorreoHeader() {
+  function _shouldAutoCollapseEmailHeader() {
     return window.innerWidth <= 768;
   }
 
-  function _maybeAutoCollapseCorreoHeader() {
+  function _maybeAutoCollapseEmailHeader() {
     const doc = activeDocId && docs.get(activeDocId);
     if (!doc || doc.language !== 'email') return;
     if (Date.now() < _emailHeaderManualExpandUntil) return;
     if (document.activeElement?.closest?.('#doc-email-fields')) return;
-    if (_shouldAutoCollapseCorreoHeader()) _setCorreoHeaderCollapsed(true, { manual: false });
+    if (_shouldAutoCollapseEmailHeader()) _setEmailHeaderCollapsed(true, { manual: false });
   }
 
-  function _showCorreoFields(doc, { applyLocalDraft = true } = {}) {
+  function _showEmailFields(doc, { applyLocalDraft = true } = {}) {
     const emailHeader = document.getElementById('doc-email-header');
     const emailActions = document.getElementById('doc-email-actions');
     // Show MD toolbar for email too (B, I, etc.)
@@ -2835,7 +2835,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     document.querySelectorAll('.md-toolbar-email-only').forEach(el => { el.style.display = 'inline-flex'; });
     if (emailHeader) emailHeader.style.display = '';
     if (emailActions) emailActions.style.display = '';
-    // Correos have their own complete footer (Cerrar / More / Send), so hide the
+    // Emails have their own complete footer (Close / More / Send), so hide the
     // generic documents action bar AND the generic bottom footer. The TYPE
     // picker is the exception — relocate it into the email footer so the
     // type-switching affordance is in the same footer slot across all docs.
@@ -2852,27 +2852,27 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     document.getElementById('doc-editor-textarea')?.classList.add('email-mode');
     document.getElementById('doc-editor-code')?.classList.add('email-mode');
     document.getElementById('doc-editor-highlight')?.classList.add('email-mode');
-    let fields = _parseCorreoHeader(doc.content || '');
+    let fields = _parseEmailHeader(doc.content || '');
     if (applyLocalDraft) fields = _emailFieldsWithLocalDraft(fields);
-    const preserveCorreoHeader = !!(fields.sourceUid || fields.inReplyTo || fields.references);
+    const preserveEmailHeader = !!(fields.sourceUid || fields.inReplyTo || fields.references);
     const subjectInput = document.getElementById('doc-email-subject');
     const textarea = document.getElementById('doc-editor-textarea');
-    _setCorreoHeaderInputValue('doc-email-to', fields.to, { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderInputValue('doc-email-subject', fields.subject, { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderCollapsed(!!(doc && doc._emailHeaderCollapsed), { manual: false });
+    _setEmailHeaderInputValue('doc-email-to', fields.to, { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderInputValue('doc-email-subject', fields.subject, { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderCollapsed(!!(doc && doc._emailHeaderCollapsed), { manual: false });
     if (subjectInput && !subjectInput._emailTabBodyBound) {
       subjectInput._emailTabBodyBound = true;
       subjectInput.addEventListener('keydown', (e) => {
         if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
-          _focusCorreoBodyEnd();
+          _focusEmailBodyEnd();
         }
       });
     }
-    _setCorreoHeaderInputValue('doc-email-in-reply-to', fields.inReplyTo, { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderInputValue('doc-email-references', fields.references, { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderInputValue('doc-email-source-uid', fields.sourceUid || '', { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderInputValue('doc-email-source-folder', fields.sourceFolder || '', { preserveNonEmpty: preserveCorreoHeader });
+    _setEmailHeaderInputValue('doc-email-in-reply-to', fields.inReplyTo, { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderInputValue('doc-email-references', fields.references, { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderInputValue('doc-email-source-uid', fields.sourceUid || '', { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderInputValue('doc-email-source-folder', fields.sourceFolder || '', { preserveNonEmpty: preserveEmailHeader });
     // Show/hide unread button only if we have a source UID (came from inbox)
     const unreadBtn = document.getElementById('doc-email-unread-btn');
     if (unreadBtn) unreadBtn.style.display = fields.sourceUid ? '' : 'none';
@@ -2929,12 +2929,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           } else {
             // Non-PDF: download via fetch+blob+anchor — browser-native download
             // with target=_blank was unreliable in some browsers (the click did
-            // nothing). The blob path forces a real Guardar dialog every time.
+            // nothing). The blob path forces a real Save dialog every time.
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.className = 'email-attachment-chip';
             // Full filename on hover for the chip ellipsis-truncated label.
-            chip.title = `Descargar ${att.filename}`;
+            chip.title = `Download ${att.filename}`;
             chip.innerHTML = chipHtml;
             chip.addEventListener('click', () => _withSpinner(chip, async () => {
               try {
@@ -2950,8 +2950,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
                 a.remove();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
               } catch (e) {
-                console.error('Descargar attachment failed:', e);
-                if (uiModule) uiModule.showError('Descargar failed: ' + e.message);
+                console.error('Download attachment failed:', e);
+                if (uiModule) uiModule.showError('Download failed: ' + e.message);
               }
             }));
             attDiv.appendChild(chip);
@@ -2980,7 +2980,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _emailStreamRenderedBody = fields.body || '';
       _emailStreamTargetBody = fields.body || '';
       _rich.innerHTML = _emailBodyToHtml(fields.body);
-      _wireCorreoRichbody(_rich);
+      _wireEmailRichbody(_rich);
       setTimeout(() => {
         try {
           const _isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
@@ -2995,8 +2995,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const ccRow = document.getElementById('doc-email-cc-row');
     const bccRow = document.getElementById('doc-email-bcc-row');
     const ccToggle = document.getElementById('doc-email-show-cc');
-    _setCorreoHeaderInputValue('doc-email-cc', fields.cc || '', { preserveNonEmpty: preserveCorreoHeader });
-    _setCorreoHeaderInputValue('doc-email-bcc', fields.bcc || '', { preserveNonEmpty: preserveCorreoHeader });
+    _setEmailHeaderInputValue('doc-email-cc', fields.cc || '', { preserveNonEmpty: preserveEmailHeader });
+    _setEmailHeaderInputValue('doc-email-bcc', fields.bcc || '', { preserveNonEmpty: preserveEmailHeader });
     const hasCcBcc = !!(
       fields.cc ||
       fields.bcc ||
@@ -3006,29 +3006,29 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (ccRow) ccRow.style.display = hasCcBcc ? '' : 'none';
     if (bccRow) bccRow.style.display = hasCcBcc ? '' : 'none';
     if (ccToggle) ccToggle.style.display = hasCcBcc ? 'none' : '';
-    _syncCorreoHeaderSummary();
+    _syncEmailHeaderSummary();
     _stageForwardedSourceAttachments(fields).catch(err => console.error('Forward attachment staging failed:', err));
   }
 
-  function _syncStreamingCorreoFields(doc) {
+  function _syncStreamingEmailFields(doc) {
     if (!doc) return;
-    const fields = _parseCorreoHeader(doc.content || '');
+    const fields = _parseEmailHeader(doc.content || '');
     const rich = document.getElementById('doc-email-richbody');
     const srcWrap = document.getElementById('doc-editor-wrap');
     const textarea = document.getElementById('doc-editor-textarea');
     if (!rich || rich.style.display === 'none') {
-      _showCorreoFields(doc);
+      _showEmailFields(doc);
       return;
     }
 
-    _setCorreoHeaderInputValue('doc-email-to', fields.to, { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-subject', fields.subject, { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-in-reply-to', fields.inReplyTo, { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-references', fields.references, { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-source-uid', fields.sourceUid || '', { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-source-folder', fields.sourceFolder || '', { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-cc', fields.cc || '', { preserveNonEmpty: true });
-    _setCorreoHeaderInputValue('doc-email-bcc', fields.bcc || '', { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-to', fields.to, { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-subject', fields.subject, { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-in-reply-to', fields.inReplyTo, { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-references', fields.references, { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-source-uid', fields.sourceUid || '', { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-source-folder', fields.sourceFolder || '', { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-cc', fields.cc || '', { preserveNonEmpty: true });
+    _setEmailHeaderInputValue('doc-email-bcc', fields.bcc || '', { preserveNonEmpty: true });
 
     const unreadBtn = document.getElementById('doc-email-unread-btn');
     if (unreadBtn) unreadBtn.style.display = fields.sourceUid ? '' : 'none';
@@ -3042,9 +3042,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     if (srcWrap) srcWrap.style.display = 'none';
     rich.style.display = '';
-    _renderStreamingCorreoBody(fields.body || '');
+    _renderStreamingEmailBody(fields.body || '');
     if (doc._originalBody == null) doc._originalBody = fields.body || '';
-    _syncCorreoHeaderSummary();
+    _syncEmailHeaderSummary();
   }
 
   async function _uploadComposeFiles(files) {
@@ -3116,12 +3116,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
     if (added) {
       _renderComposeAttachments();
-      clearTimeout(_autoGuardarDebounce);
-      _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+      clearTimeout(_autoSaveDebounce);
+      _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
     }
   }
 
-  async function _handleAttachSubir(e) {
+  async function _handleAttachUpload(e) {
     const files = e.target.files;
     e.target.value = ''; // reset for next upload
     await _uploadComposeFiles(files);
@@ -3162,7 +3162,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   function _odysseusAttachLabel(item, kind) {
     if (kind === 'gallery') {
-      return item.caption || item.prompt || item.filename || 'Galería image';
+      return item.caption || item.prompt || item.filename || 'Gallery image';
     }
     return item.title || 'Untitled document';
   }
@@ -3209,10 +3209,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return data;
   }
 
-  function _afterOdysseusAttachmentsAgregared(count, label) {
+  function _afterOdysseusAttachmentsAdded(count, label) {
     _renderComposeAttachments();
-    clearTimeout(_autoGuardarDebounce);
-    _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+    clearTimeout(_autoSaveDebounce);
+    _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
     if (uiModule) uiModule.showToast(count > 1 ? `Attached ${count} items` : `Attached ${label || 'item'}`);
   }
 
@@ -3220,7 +3220,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     try {
       const data = await _stageOdysseusAttachment(kind, id);
       if (!data) return;
-      _afterOdysseusAttachmentsAgregared(1, label || data.filename);
+      _afterOdysseusAttachmentsAdded(1, label || data.filename);
       if (!opts.keepOpen) _closeOdysseusAttachMenu();
     } catch (err) {
       console.error('Failed to attach Odysseus item:', err);
@@ -3255,7 +3255,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const items = rows.map(row => ({ kind: row.dataset.kind, id: row.dataset.id })).filter(x => x.kind && x.id);
       let zip = false;
       if (items.length > 5) {
-        const ask = window.styledConfirmar || uiModule?.styledConfirmar;
+        const ask = window.styledConfirm || uiModule?.styledConfirm;
         zip = ask
           ? await ask(`Attach ${items.length} files as one zip?`, { confirmText: 'Zip', cancelText: 'Separate' })
           : window.confirm(`Attach ${items.length} files as one zip?`);
@@ -3269,7 +3269,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           added += 1;
         }
       }
-      _afterOdysseusAttachmentsAgregared(added, zip ? 'odysseus-attachments.zip' : undefined);
+      _afterOdysseusAttachmentsAdded(added, zip ? 'odysseus-attachments.zip' : undefined);
       _closeOdysseusAttachMenu();
     } catch (err) {
       console.error('Failed to attach selected Odysseus items:', err);
@@ -3293,7 +3293,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
     const q = (menu.querySelector('.email-odysseus-attach-search')?.value || '').trim();
     try {
-      const params = new URLBuscarParams({ sort: 'recent', limit: '20' });
+      const params = new URLSearchParams({ sort: 'recent', limit: '20' });
       if (q) params.set('search', q);
       const endpoint = kind === 'gallery'
         ? `${API_BASE}/api/gallery/library?${params}`
@@ -3353,7 +3353,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   function _showComposeAttachMenu(anchor) {
-    if (_activeDocIdioma() !== 'email') {
+    if (_activeDocLanguage() !== 'email') {
       document.getElementById('doc-md-image-input')?.click();
       return;
     }
@@ -3363,21 +3363,21 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     menu.innerHTML = `
       <button type="button" class="email-odysseus-attach-local">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Subir file
+        Upload file
       </button>
       <div class="email-odysseus-attach-tabs">
         <button type="button" data-ody-attach-kind="document" class="active">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h6"/></svg>
-          <span>Documentos</span>
+          <span>Documents</span>
         </button>
         <button type="button" data-ody-attach-kind="gallery">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          <span>Galería</span>
+          <span>Gallery</span>
         </button>
       </div>
       <label class="email-odysseus-attach-search-wrap">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="search" class="email-odysseus-attach-search" placeholder="Buscar attachments">
+        <input type="search" class="email-odysseus-attach-search" placeholder="Search attachments">
       </label>
       <div class="email-odysseus-attach-list"></div>
       <div class="email-odysseus-attach-actions">
@@ -3398,10 +3398,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     menu.querySelectorAll('[data-ody-attach-kind]').forEach(btn => {
       btn.addEventListener('click', () => _loadOdysseusAttachItems(menu, btn.dataset.odyAttachKind));
     });
-    let attachBuscarTimer = null;
+    let attachSearchTimer = null;
     menu.querySelector('.email-odysseus-attach-search')?.addEventListener('input', () => {
-      clearTimeout(attachBuscarTimer);
-      attachBuscarTimer = setTimeout(() => {
+      clearTimeout(attachSearchTimer);
+      attachSearchTimer = setTimeout(() => {
         _loadOdysseusAttachItems(menu, menu.dataset.odyAttachKind || 'document');
       }, 220);
     });
@@ -3424,7 +3424,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return base.replace(/[\[\]\n\r]/g, ' ').replace(/\s+/g, ' ').trim() || 'image';
   }
 
-  function _activeDocIdioma() {
+  function _activeDocLanguage() {
     const doc = activeDocId && docs.get(activeDocId);
     return ((doc && doc.language) || document.getElementById('doc-language-select')?.value || '').toLowerCase();
   }
@@ -3440,8 +3440,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     _hlDebounce = setTimeout(syncHighlighting, 80);
     clearTimeout(_autoTitleDebounce);
     _autoTitleDebounce = setTimeout(() => autoTitleFromContent(ta.value), 600);
-    clearTimeout(_autoGuardarDebounce);
-    _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+    clearTimeout(_autoSaveDebounce);
+    _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
   }
 
   function _insertMarkdownImages(uploadedFiles) {
@@ -3479,7 +3479,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (uiModule) uiModule.showError('Choose an image file');
       return;
     }
-    if (_activeDocIdioma() !== 'markdown') {
+    if (_activeDocLanguage() !== 'markdown') {
       if (uiModule) uiModule.showError('Switch the document to markdown before inserting images');
       return;
     }
@@ -3505,7 +3505,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  async function _handleMarkdownImageSubir(e) {
+  async function _handleMarkdownImageUpload(e) {
     const files = e.target.files;
     e.target.value = '';
     await _uploadMarkdownImages(files);
@@ -3575,7 +3575,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     try { input.setSelectionRange(end, end); } catch (_) {}
   }
 
-  // Buscar contacts for an autocomplete dropdown. `input` is the To/Cc/Bcc
+  // Search contacts for an autocomplete dropdown. `input` is the To/Cc/Bcc
   // text field, `sugg` is its sibling .email-autocomplete div. Suggestions
   // are scoped to the LAST comma-separated fragment so already-entered
   // recipients aren't disturbed.
@@ -3708,29 +3708,29 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  function _hideCorreoFields() {
+  function _hideEmailFields() {
     const emailHeader = document.getElementById('doc-email-header');
     const emailActions = document.getElementById('doc-email-actions');
     if (emailHeader) emailHeader.style.display = 'none';
     if (emailActions) emailActions.style.display = 'none';
-    // Restaurar toolbar items that were hidden for email (Code dropdown).
+    // Restore toolbar items that were hidden for email (Code dropdown).
     document.querySelectorAll('.md-toolbar-email-hide').forEach(el => { el.style.display = ''; });
     // Re-hide email-only toolbar items (AI reply button).
     document.querySelectorAll('.md-toolbar-email-only').forEach(el => { el.style.display = 'none'; });
-    // Restaurar the generic documents action bar + its bottom footer (Cerrar /
-    // Copiar / Export) for non-email docs.
+    // Restore the generic documents action bar + its bottom footer (Close /
+    // Copy / Export) for non-email docs.
     const docActions = document.getElementById('doc-editor-actions');
     if (docActions) docActions.style.display = '';
     const docFooter = document.getElementById('doc-actions-footer');
     if (docFooter) docFooter.style.display = '';
     // Return the type picker to its non-email home (right before the
-    // Copiar/Export split) — _showCorreoFields moved it into the email footer.
+    // Copy/Export split) — _showEmailFields moved it into the email footer.
     if (docFooter) {
       const _lang = document.getElementById('doc-language-select');
       const _split = docFooter.querySelector('#doc-copy-export-split');
       if (_lang && _split) docFooter.insertBefore(_lang, _split);
     }
-    // Restaurar the source editor and hide the WYSIWYG email body.
+    // Restore the source editor and hide the WYSIWYG email body.
     const _rich = document.getElementById('doc-email-richbody');
     if (_rich) _rich.style.display = 'none';
     const _srcWrap = document.getElementById('doc-editor-wrap');
@@ -3776,7 +3776,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  async function _sendCorreo() {
+  async function _sendEmail() {
     const sendDocId = activeDocId;
     const to = document.getElementById('doc-email-to')?.value?.trim();
     const cc = document.getElementById('doc-email-cc')?.value?.trim() || '';
@@ -3789,10 +3789,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // WYSIWYG: the rich body's HTML becomes the email's HTML part (server
     // sanitizes it). `body` (plain text mirror) stays the text/plain fallback.
     const _rich = _emailRichbodyActive();
-    if (_rich) _syncCorreoRichbody(_rich);
+    if (_rich) _syncEmailRichbody(_rich);
     const textarea = document.getElementById('doc-editor-textarea');
     const rawBody = (_rich ? (_rich.innerText || _rich.textContent || '') : (textarea?.value || '')).trim();
-    const body = _sanitizeOutgoingCorreoBody(rawBody);
+    const body = _sanitizeOutgoingEmailBody(rawBody);
     let bodyHtml = _rich ? _rich.innerHTML : null;
     if (_rich && body !== rawBody) bodyHtml = _emailBodyToHtml(body);
     const doc = docs.get(activeDocId);
@@ -3814,7 +3814,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     let sendSpinner = null;
     let origBtnHtml = '';
-    let detachedCorreoDoc = null;
+    let detachedEmailDoc = null;
     if (btn) {
       btn.disabled = true;
       origBtnHtml = btn.innerHTML;
@@ -3830,16 +3830,16 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         uiModule.showToast('Sending', {
           duration: 3200,
           leadingIcon: 'spinner',
-          action: 'Cancelar',
+          action: 'Cancel',
           onAction: () => { canceled = true; },
         });
       }
       await _sleep(3000);
-      if (!canceled) detachedCorreoDoc = _detachActiveCorreoForBackground(sendDocId);
+      if (!canceled) detachedEmailDoc = _detachActiveEmailForBackground(sendDocId);
       await _sleep(200);
       if (canceled) {
-        _restoreDetachedCorreoDoc(detachedCorreoDoc);
-        detachedCorreoDoc = null;
+        _restoreDetachedEmailDoc(detachedEmailDoc);
+        detachedEmailDoc = null;
         if (uiModule) uiModule.showToast('Send canceled');
         return;
       }
@@ -3874,7 +3874,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
             action: 'View Message',
             onAction: () => {
               import('./emailLibrary.js').then(mod => {
-                const open = mod.openCorreoLibrary || (mod.default && mod.default.openCorreoLibrary);
+                const open = mod.openEmailLibrary || (mod.default && mod.default.openEmailLibrary);
                 if (open) open({
                   account_id: data.account_id || activeAccountId || null,
                   folder: data.sent_folder || 'Sent',
@@ -3905,14 +3905,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         }
         // Mark the source email as answered if this was a reply
         if (sourceUid) {
-          _clearCorreoLocalDraft(sourceUid, sourceFolder, inReplyTo);
-          const markParams = new URLBuscarParams({ folder: sourceFolder });
+          _clearEmailLocalDraft(sourceUid, sourceFolder, inReplyTo);
+          const markParams = new URLSearchParams({ folder: sourceFolder });
           if (data.account_id || activeAccountId) markParams.set('account_id', data.account_id || activeAccountId);
           fetch(`${API_BASE}/api/email/mark-answered/${encodeURIComponent(sourceUid)}?${markParams.toString()}`, { method: 'POST' }).catch(() => {});
           // Tell the inbox to refresh so the answered state shows
           window.dispatchEvent(new CustomEvent('email-answered', { detail: { uid: sourceUid, folder: sourceFolder, account_id: data.account_id || activeAccountId || null } }));
         }
-        // Eliminar the compose document after successful send. It was usually
+        // Delete the compose document after successful send. It was usually
         // already detached from the visible tabs so sending can finish in the
         // background while the user continues in the next tab.
         if (sendDocId) {
@@ -3930,13 +3930,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           _syncDocIndicator();
         }
       } else {
-        _restoreDetachedCorreoDoc(detachedCorreoDoc);
-        detachedCorreoDoc = null;
+        _restoreDetachedEmailDoc(detachedEmailDoc);
+        detachedEmailDoc = null;
         if (uiModule) uiModule.showError(data.error || 'Failed to send');
       }
     } catch (e) {
-      _restoreDetachedCorreoDoc(detachedCorreoDoc);
-      detachedCorreoDoc = null;
+      _restoreDetachedEmailDoc(detachedEmailDoc);
+      detachedEmailDoc = null;
       if (uiModule) uiModule.showError(e?.message ? `Failed to send email: ${e.message}` : 'Failed to send email');
     } finally {
       if (sendSpinner) sendSpinner.destroy();
@@ -3955,10 +3955,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const inReplyTo = document.getElementById('doc-email-in-reply-to')?.value?.trim();
     const references = document.getElementById('doc-email-references')?.value?.trim();
     const _rich = _emailRichbodyActive();
-    if (_rich) _syncCorreoRichbody(_rich);
+    if (_rich) _syncEmailRichbody(_rich);
     const textarea = document.getElementById('doc-editor-textarea');
     const rawBody = (_rich ? (_rich.innerText || _rich.textContent || '') : (textarea?.value || '')).trim();
-    const body = _sanitizeOutgoingCorreoBody(rawBody);
+    const body = _sanitizeOutgoingEmailBody(rawBody);
     let bodyHtml = _rich ? _rich.innerHTML : null;
     if (_rich && body !== rawBody) bodyHtml = _emailBodyToHtml(body);
     const btn = document.getElementById('doc-email-draft-btn');
@@ -3979,7 +3979,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           body_html: bodyHtml,
           in_reply_to: inReplyTo || null,
           references: references || null,
-          account_id: window.__odysseusActiveCorreoAccount || null,
+          account_id: window.__odysseusActiveEmailAccount || null,
         }),
       });
       const data = await res.json();
@@ -3997,7 +3997,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  function _discardCorreo() {
+  function _discardEmail() {
     if (!activeDocId) return;
     // Just close — the Draft button handles saving explicitly
     _closeWithoutDeleting(true);
@@ -4013,7 +4013,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return ids;
   }
 
-  function _detachActiveCorreoForBackground(docId) {
+  function _detachActiveEmailForBackground(docId) {
     if (!docId || !docs.has(docId)) return null;
     saveCurrentToMap();
     const doc = docs.get(docId);
@@ -4040,7 +4040,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return snapshot;
   }
 
-  function _restoreDetachedCorreoDoc(snapshot) {
+  function _restoreDetachedEmailDoc(snapshot) {
     if (!snapshot || !snapshot.id || !snapshot.doc) return;
     if (!docs.has(snapshot.id)) docs.set(snapshot.id, snapshot.doc);
     _ensureDocPaneMounted();
@@ -4053,7 +4053,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (deleteDoc) {
       fetch(`${API_BASE}/api/document/${activeDocId}`, { method: 'DELETE' }).catch(() => {});
     }
-    // Guardar the current state to the doc first so it persists in the library
+    // Save the current state to the doc first so it persists in the library
     saveCurrentToMap();
     if (!deleteDoc) {
       saveDocument({ silent: true }).catch(() => {});
@@ -4113,7 +4113,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (_docAiReplyChoiceMenu) {
       // Tear down through the menu's registered dismiss (drops its outside-click
       // listener + Escape-stack entry) rather than orphaning them with a raw
-      // remove(); the onCerrar below nulls the ref.
+      // remove(); the onClose below nulls the ref.
       try { dismissOrRemove(_docAiReplyChoiceMenu); } catch (_) {}
       _docAiReplyChoiceMenu = null;
     }
@@ -4149,7 +4149,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     ].join(';');
     menu.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:6px;min-width:200px;">
-        <textarea data-note-input rows="2" placeholder="Agregar context (optional)" style="width:100%;box-sizing:border-box;resize:vertical;min-height:42px;font-family:inherit;font-size:11px;padding:5px 6px;border-radius:5px;border:1px solid var(--border,#333);background:var(--bg-elev,#1a1a1a);color:var(--fg);"></textarea>
+        <textarea data-note-input rows="2" placeholder="Add context (optional)" style="width:100%;box-sizing:border-box;resize:vertical;min-height:42px;font-family:inherit;font-size:11px;padding:5px 6px;border-radius:5px;border:1px solid var(--border,#333);background:var(--bg-elev,#1a1a1a);color:var(--fg);"></textarea>
         <div style="display:flex;align-items:center;gap:4px;">
           <button class="memory-toolbar-btn" data-mode="ai-reply-fast" title="Shorter, faster draft" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:1;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent, var(--red))" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -4175,7 +4175,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     document.body.appendChild(menu);
     _docAiReplyChoiceMenu = menu;
     // Outside-click AND Escape both route through the central esc-stack via
-    // bindMenuDismiss; onCerrar owns the actual teardown (node removal + state).
+    // bindMenuDismiss; onClose owns the actual teardown (node removal + state).
     const close = bindMenuDismiss(menu, () => {
       try { menu.remove(); } catch (_) {}
       if (_docAiReplyChoiceMenu === menu) _docAiReplyChoiceMenu = null;
@@ -4228,10 +4228,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     };
 
     // Use the current chat model
-    let currentModelo = '';
+    let currentModel = '';
     let currentSessionId = '';
     try {
-      currentModelo = sessionModule?.getCurrentModelo() || '';
+      currentModel = sessionModule?.getCurrentModel() || '';
       currentSessionId = sessionModule?.getCurrentSessionId() || '';
     } catch (_) {}
 
@@ -4253,7 +4253,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           to: to,
           subject: subject,
           original_body: bodyForApi,
-          model: currentModelo,
+          model: currentModel,
           session_id: currentSessionId,
           message_id: inReplyTo,
           uid: sourceUid,
@@ -4276,7 +4276,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         // the user can read it, copy parts, or delete it — but their
         // own work and the original quote are untouched.
         const newBody = currentBody ? cleanReply + '\n\n' + currentBody : cleanReply;
-        await _streamCorreoBodyText(textarea, newBody);
+        await _streamEmailBodyText(textarea, newBody);
         _clearDocAiReplyContext(contextKey || _docAiReplyContextKey());
         if (uiModule) uiModule.showToast(`AI draft inserted (${data.model_used || 'AI'})`);
       } else {
@@ -4301,12 +4301,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const inReplyTo = document.getElementById('doc-email-in-reply-to')?.value?.trim();
     const references = document.getElementById('doc-email-references')?.value?.trim();
     const _rich = _emailRichbodyActive();
-    if (_rich) _syncCorreoRichbody(_rich);
+    if (_rich) _syncEmailRichbody(_rich);
     const rawBody = (_rich
       ? (_rich.innerText || _rich.textContent || '')
       : (document.getElementById('doc-editor-textarea')?.value || '')
     ).trim();
-    const body = _sanitizeOutgoingCorreoBody(rawBody);
+    const body = _sanitizeOutgoingEmailBody(rawBody);
     const doc = docs.get(activeDocId);
     const attachments = (doc?._composeAtts || []).map(a => a.token);
 
@@ -4323,7 +4323,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (!proceed) return;
     }
 
-    // Crear a small modal with datetime input and quick presets
+    // Create a small modal with datetime input and quick presets
     const overlay = document.createElement('div');
     overlay.className = 'modal';
     overlay.style.display = 'flex';
@@ -4331,7 +4331,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       <div class="modal-content schedule-send-modal" style="width:400px;max-width:92vw;">
         <div class="modal-header">
           <h4>Schedule Send</h4>
-          <button class="close-btn" id="sched-close" title="Cerrar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="close-btn" id="sched-close" title="Close"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <div class="modal-body schedule-send-body">
           <label class="schedule-send-label">Quick presets</label>
@@ -4345,7 +4345,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           <input type="datetime-local" id="sched-datetime" class="schedule-send-datetime" />
         </div>
         <div class="modal-footer schedule-send-footer">
-          <button class="memory-toolbar-btn" id="sched-cancel">Cancelar</button>
+          <button class="memory-toolbar-btn" id="sched-cancel">Cancel</button>
           <button class="memory-toolbar-btn schedule-send-confirm" id="sched-confirm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Schedule</button>
         </div>
       </div>
@@ -4425,9 +4425,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         const data = await res.json();
         if (data.success) {
           if (uiModule) uiModule.showToast(`Scheduled for ${new Date(localDt).toLocaleString()}`);
-          _clearCurrentCorreoLocalDraft();
+          _clearCurrentEmailLocalDraft();
           cleanup();
-          // Cerrar the document
+          // Close the document
           _closeWithoutDeleting(true);
         } else {
           if (uiModule) uiModule.showError(data.error || 'Failed to schedule');
@@ -4438,7 +4438,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  async function _markUnreadAndCerrar() {
+  async function _markUnreadAndClose() {
     const sourceUid = document.getElementById('doc-email-source-uid')?.value || '';
     const sourceFolder = document.getElementById('doc-email-source-folder')?.value || 'INBOX';
     if (sourceUid) {
@@ -4446,7 +4446,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         await fetch(`${API_BASE}/api/email/mark-unread/${sourceUid}?folder=${encodeURIComponent(sourceFolder)}`, { method: 'POST' });
       } catch (e) { console.error('Failed to mark unread:', e); }
     }
-    _discardCorreo();
+    _discardEmail();
   }
 
   function switchToDoc(docId) {
@@ -4454,7 +4454,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     _hideLoadingOverlay();
     if (_diffModeActive) exitDiffMode(true);
 
-    // Guardar current doc state before switching
+    // Save current doc state before switching
     saveCurrentToMap();
 
     // Auto-delete the doc we're leaving if it's completely empty
@@ -4479,7 +4479,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const badge = document.getElementById('doc-version-badge');
 
     if (titleInput) titleInput.value = doc.title || '';
-    // For email docs, _showCorreoFields will set textarea to body only (not raw header)
+    // For email docs, _showEmailFields will set textarea to body only (not raw header)
     if (textarea && doc.language !== 'email') textarea.value = doc.content || '';
     if (langSelect) langSelect.value = doc.language || 'markdown';
     if (badge) { const _v = doc.version || 1; badge.textContent = `v${_v}`; badge.style.display = _v > 1 ? '' : 'none'; }
@@ -4497,7 +4497,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
 
     // Auto-detect language for docs with no language set
-    if (!doc.userSetIdioma && !doc.language) {
+    if (!doc.userSetLanguage && !doc.language) {
       setTimeout(attemptAutoDetect, 100);
     }
 
@@ -4549,7 +4549,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // hide it on PDFs so the toolbar only shows what actually works.
     const _fsBtn = document.getElementById('doc-fontsize-btn');
     if (_fsBtn) _fsBtn.style.display = isPdf ? 'none' : '';
-    // Salir CSV preview when switching docs, or auto-show for CSV
+    // Exit CSV preview when switching docs, or auto-show for CSV
     const isCsv = doc.language === 'csv';
     const csvPreview = document.getElementById('doc-csv-preview');
     if (!isCsv) {
@@ -4559,18 +4559,18 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       requestAnimationFrame(() => toggleCsvPreview());
     }
 
-    // Salir HTML preview on switch
+    // Exit HTML preview on switch
     exitHtmlPreview();
 
     // Show/hide email fields. Markdown preview uses the same editor wrapper
     // as email source mode, so clear it before showing the rich email body;
     // otherwise the source wrapper can reappear over the composer.
-    const isCorreo = doc.language === 'email';
-    if (isCorreo) {
+    const isEmail = doc.language === 'email';
+    if (isEmail) {
       _setMarkdownPreviewActive(false, { remember: false });
-      _showCorreoFields(doc);
+      _showEmailFields(doc);
     } else {
-      _hideCorreoFields();
+      _hideEmailFields();
       const wantsMarkdownPreview = (doc.language || 'markdown') === 'markdown' && doc._markdownPreviewActive === true;
       _setMarkdownPreviewActive(wantsMarkdownPreview, { remember: false });
     }
@@ -4582,14 +4582,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     renderTabs();
     _syncHeaderActions();
 
-    // Restaurar any persisted suggestions for this doc
+    // Restore any persisted suggestions for this doc
     if (_activeSuggestions.length === 0) {
       _restoreSuggestionsFromStorage(docId);
     }
 
   }
 
-  // Cerrar a doc tab without breaking its chat association. The chat transcript
+  // Close a doc tab without breaking its chat association. The chat transcript
   // can contain durable document links, so detaching a non-empty doc from the
   // session makes it look like the document vanished from that chat.
   function _detachDocFromSession(docId, { toast = false } = {}) {
@@ -4606,7 +4606,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   async function closeTab(docId) {
-    // Guardar current editor content to map so the check below uses fresh data
+    // Save current editor content to map so the check below uses fresh data
     saveCurrentToMap();
     _detachDocFromSession(docId, { toast: true });
     // Find next tab in the current session
@@ -4637,14 +4637,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   // spawn a SECOND untitled doc (the create round-trip hadn't set activeDocId
   // yet, so the input handler thought the editor was empty).
   let _creatingDoc = false;
-  async function _autoCrearFromInput(content) {
+  async function _autoCreateFromInput(content) {
     if (_autoCreating) return;
     _autoCreating = true;
     try {
       let sessionId = _lastSessionId
         || (sessionModule && sessionModule.getCurrentSessionId());
       if (!sessionId) {
-        sessionId = await _autoCrearSession();
+        sessionId = await _autoCreateSession();
       }
       const res = await fetch(`${API_BASE}/api/document`, {
         method: 'POST',
@@ -4660,7 +4660,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const d = docs.get(doc.id);
       if (d) d.content = content;
       activeDocId = doc.id;
-      // Actualizar textarea (keep existing content the user typed)
+      // Update textarea (keep existing content the user typed)
       const textarea = document.getElementById('doc-editor-textarea');
       if (textarea) {
         textarea.placeholder = 'Document content...';
@@ -4671,8 +4671,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       setTimeout(attemptAutoDetect, 100);
       setTimeout(() => autoTitleFromContent(content), 300);
       // Auto-save
-      clearTimeout(_autoGuardarDebounce);
-      _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2000);
+      clearTimeout(_autoSaveDebounce);
+      _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2000);
     } catch (e) {
       console.error('Failed to auto-create document from input:', e);
     } finally {
@@ -4680,7 +4680,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  /** Guardar current editor state back into the docs map */
+  /** Save current editor state back into the docs map */
   function saveCurrentToMap() {
     if (!activeDocId || !docs.has(activeDocId)) return;
     const doc = docs.get(activeDocId);
@@ -4704,8 +4704,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       // the leading '<' on reload and restores it verbatim.
       const _rich = document.getElementById('doc-email-richbody');
       const _emailBody = (_rich && _rich.style.display !== 'none') ? _rich.innerHTML : textarea.value;
-      doc.content = _buildCorreoContent(to, subject, inReplyTo, references, _emailBody, sourceUid, sourceFolder, cc, bcc);
-      _persistCorreoLocalDraftSoon();
+      doc.content = _buildEmailContent(to, subject, inReplyTo, references, _emailBody, sourceUid, sourceFolder, cc, bcc);
+      _persistEmailLocalDraftSoon();
     } else if (textarea) {
       // Don't clobber a PDF/form-backed doc's source when the textarea is empty
       // (it's hidden behind the rendered PDF view, so its value isn't the source
@@ -4719,7 +4719,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   // ---- Panel open/close ----
 
-  function _closeNotasForDocumentOpen() {
+  function _closeNotesForDocumentOpen() {
     try {
       if (Modals.isRegistered('notes-panel')) {
         Modals.close('notes-panel');
@@ -4729,7 +4729,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (!document.getElementById('notes-pane') && !document.getElementById('notes-pane-backdrop')) return;
     import('./notes.js')
       .then(mod => {
-        const close = mod.closeNotas || mod.closePanel || mod.default?.closeNotas || mod.default?.closePanel;
+        const close = mod.closeNotes || mod.closePanel || mod.default?.closeNotes || mod.default?.closePanel;
         if (typeof close === 'function') close();
       })
       .catch(() => {
@@ -4739,11 +4739,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   export function openPanel() {
-    _closeNotasForDocumentOpen();
+    _closeNotesForDocumentOpen();
     if (isOpen) return;
     // Clear any pane/divider still sliding out from a just-fired close so we
     // don't end up with two #doc-editor-pane nodes (and a stale close stripping
-    // doc-view). Paired with the isOpen guard in _finishCerrar above.
+    // doc-view). Paired with the isOpen guard in _finishClose above.
     document.getElementById('doc-editor-pane')?.remove();
     document.getElementById('doc-divider')?.remove();
     // If the doc was minimized as a chip and the user opened the panel via
@@ -4771,7 +4771,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const docInd = document.getElementById('doc-indicator-btn');
     if (docInd) docInd.classList.add('active');
 
-    // Crear divider — grip in the middle (drag-to-resize), swapped for a
+    // Create divider — grip in the middle (drag-to-resize), swapped for a
     // clickable collapse chevron on hover.
     const divider = document.createElement('div');
     divider.className = 'doc-divider';
@@ -4792,7 +4792,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _divHide.addEventListener('click', (e) => { e.stopPropagation(); closePanel('down'); });
     }
 
-    // Crear the editor pane
+    // Create the editor pane
     const pane = document.createElement('div');
     pane.id = 'doc-editor-pane';
     pane.className = 'doc-editor-pane';
@@ -4803,7 +4803,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // the field focused through the press so the tap isn't consumed, then
     // re-dispatch the click on release so the action fires on the first tap.
     // The action handler itself decides whether to then drop the keyboard
-    // (Undo/Export/Cerrar do; Format/Copiar keep it). Touch only — desktop is
+    // (Undo/Export/Close do; Format/Copy keep it). Touch only — desktop is
     // untouched.
     {
       let _kbBtn = null;
@@ -4864,7 +4864,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           <option value="email">email</option>
           <option value="pdf">pdf</option>
         </select>
-        <!-- Cerrar + Copiar/Export moved to the bottom action footer (#doc-actions-footer)
+        <!-- Close + Copy/Export moved to the bottom action footer (#doc-actions-footer)
              so regular docs match the email footer layout. -->
       </div>
       <div class="doc-tab-bar" id="doc-tab-bar"></div>
@@ -4905,12 +4905,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       <input type="file" id="doc-md-image-input" accept="image/*" multiple style="display:none" />
       <div class="doc-md-toolbar" id="doc-md-toolbar" style="display:none">
         <div class="md-toolbar-items" id="md-toolbar-items">
-          <span class="md-view-toggle" id="doc-md-view-toggle" style="display:none" role="group" aria-label="Editar or preview">
-            <button type="button" class="md-view-opt" data-mdview="edit" title="Editar source (Ctrl+Alt+M to toggle)"><span class="md-view-label">Write</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <span class="md-view-toggle" id="doc-md-view-toggle" style="display:none" role="group" aria-label="Edit or preview">
+            <button type="button" class="md-view-opt" data-mdview="edit" title="Edit source (Ctrl+Alt+M to toggle)"><span class="md-view-label">Write</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button type="button" class="md-view-opt" data-mdview="preview" title="Preview (Ctrl+Alt+M to toggle)"><span class="md-view-label">Preview</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </span>
           <span class="md-view-toggle" id="doc-render-view-toggle" style="display:none" role="group" aria-label="Code or run">
-            <button type="button" class="md-view-opt" data-renderview="code" title="Editar code"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+            <button type="button" class="md-view-opt" data-renderview="code" title="Edit code"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
             <button type="button" class="md-view-opt" data-renderview="run" title="Run / Preview"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
           </span>
           <button id="doc-email-ai-reply-btn" class="doc-action-icon-btn md-toolbar-email-only" type="button" title="Draft a reply with AI (Fast / Full + optional context)" style="display:none;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent, var(--red));flex-shrink:0;position:relative;top:-1px;"><path d="M12 0L14.59 8.41L23 12L14.59 15.59L12 24L9.41 15.59L1 12L9.41 8.41Z"/></svg><span style="font-size:11px;">Reply</span></button>
@@ -4930,9 +4930,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           <span class="md-toolbar-sep md-toolbar-edit-only"></span>
           <span id="md-toolbar-emoji-slot" class="md-toolbar-edit-only"></span>
           <span class="md-toolbar-sep md-toolbar-pdf-only" style="display:none"></span>
-          <button type="button" id="doc-pdf-add-text-btn" class="md-toolbar-pdf-only" title="Agregar text box (then click on PDF)" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
-          <button type="button" id="doc-pdf-add-check-btn" class="md-toolbar-pdf-only" title="Agregar checkmark (then click on PDF)" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
-          <button type="button" id="doc-pdf-add-sign-btn" class="md-toolbar-pdf-only" title="Agregar signature (then click on PDF)" style="display:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3l6 6-9 9-3-3z"/><path d="M9 15l-3 1 1-3"/><path d="M4 18l3-3"/><path d="M3 20l3-3"/><path d="M5 22l3-3"/></svg><span class="doc-pdf-sign-label">sign</span></button>
+          <button type="button" id="doc-pdf-add-text-btn" class="md-toolbar-pdf-only" title="Add text box (then click on PDF)" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
+          <button type="button" id="doc-pdf-add-check-btn" class="md-toolbar-pdf-only" title="Add checkmark (then click on PDF)" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+          <button type="button" id="doc-pdf-add-sign-btn" class="md-toolbar-pdf-only" title="Add signature (then click on PDF)" style="display:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3l6 6-9 9-3-3z"/><path d="M9 15l-3 1 1-3"/><path d="M4 18l3-3"/><path d="M3 20l3-3"/><path d="M5 22l3-3"/></svg><span class="doc-pdf-sign-label">sign</span></button>
           <button type="button" id="doc-pdf-refresh-btn" class="md-toolbar-pdf-only" title="Reload PDF view" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
         </div>
         <div class="md-toolbar-overflow-wrapper" id="md-toolbar-overflow-wrapper" style="display:none">
@@ -4947,7 +4947,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         <span id="doc-find-count" class="doc-find-count"></span>
         <button id="doc-find-prev" class="doc-find-nav" title="Previous">&uarr;</button>
         <button id="doc-find-next" class="doc-find-nav" title="Next">&darr;</button>
-        <button id="doc-find-close" class="doc-find-close" title="Cerrar">&times;</button>
+        <button id="doc-find-close" class="doc-find-close" title="Close">&times;</button>
       </div>
       <div id="doc-editor-wrap" class="doc-editor-wrap">
         <div id="doc-line-numbers" class="doc-line-numbers">1</div>
@@ -4960,13 +4960,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
            the existing send/draft/change-detection paths keep working. -->
       <div id="doc-email-richbody" class="doc-email-richbody" contenteditable="true" spellcheck="true" style="display:none" data-no-swipe-dismiss></div>
       <div id="doc-email-actions" class="doc-email-actions" style="display:none">
-        <button id="doc-email-discard-btn" class="email-discard-btn" title="Cerrar email" style="display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>Cerrar</span></button>
+        <button id="doc-email-discard-btn" class="email-discard-btn" title="Close email" style="display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>Close</span></button>
         <span style="flex:1"></span>
         <div class="email-send-split">
           <button id="doc-email-send-btn" class="email-send-btn email-send-main" title="Send email (Ctrl+Enter)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send</button>
           <button id="doc-email-send-caret" class="email-send-btn email-send-caret" title="More send options" aria-haspopup="true" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div id="doc-email-more-menu" class="email-more-menu" style="display:none">
-            <div class="dropdown-item-compact" id="doc-email-draft-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>Guardar Draft</div>
+            <div class="dropdown-item-compact" id="doc-email-draft-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>Save Draft</div>
             <div class="dropdown-item-compact" id="doc-email-schedule-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Schedule Send...</div>
             <div class="dropdown-item-compact" id="doc-email-unread-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></span>Mark Unread</div>
           </div>
@@ -4983,26 +4983,26 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
            csv / html / pdf) is the one growing to fill. -->
       <div id="doc-actions-footer" class="doc-email-actions">
         <span class="email-send-split" id="doc-copy-export-split">
-          <button type="button" id="doc-footer-copy-btn" class="email-send-btn email-send-main" title="Guardar new version" data-mode="save"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar</button>
+          <button type="button" id="doc-footer-copy-btn" class="email-send-btn email-send-main" title="Save new version" data-mode="save"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save</button>
           <button type="button" id="doc-footer-export-btn" class="email-send-btn email-send-caret" title="Export as…" aria-label="Export options"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg></button>
         </span>
       </div>
       <div id="doc-version-panel" class="doc-version-panel hidden">
         <div class="doc-version-header">
           <span>Version History</span>
-          <button id="doc-version-close" class="doc-action-icon-btn" title="Cerrar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button id="doc-version-close" class="doc-action-icon-btn" title="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <div id="doc-version-list" class="doc-version-list"></div>
       </div>
       <div id="doc-mobile-footer" class="doc-mobile-footer">
         <button id="doc-mobile-close" class="doc-mobile-footer-btn" type="button">Unlink</button>
         <span style="flex:1"></span>
-        <button id="doc-mobile-copy" class="doc-mobile-footer-btn" type="button">Copiar</button>
+        <button id="doc-mobile-copy" class="doc-mobile-footer-btn" type="button">Copy</button>
       </div>
     `;
 
     // Consolidate into a SINGLE action bar: move Undo + the type picker out of
-    // the top header into the bottom footer (left side, next to Cerrar) so a
+    // the top header into the bottom footer (left side, next to Close) so a
     // regular doc shows one bar, not two. The rest of the header (run/preview,
     // fullscreen, version, PDF) stays put; the header hides itself when nothing
     // in it is visible — see _syncHeaderBarVisibility().
@@ -5018,7 +5018,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const _exportPdf = pane.querySelector('#doc-export-pdf-btn');
       const _pdfView = pane.querySelector('#doc-pdf-view-btn');
       if (_footer && _split) {
-        // Footer order (left → right): Undo, Run/Preview, Lang, …, Copiar/Export.
+        // Footer order (left → right): Undo, Run/Preview, Lang, …, Copy/Export.
         // The X close was here too but is now redundant with the per-tab close
         // button in the title strip — removed.
         if (_undo) _footer.insertBefore(_undo, _footer.firstChild);
@@ -5106,7 +5106,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         if (isFull) {
           if (_divCollapse.dataset.mode !== 'unfullscreen') {
             _divCollapse.dataset.mode = 'unfullscreen';
-            _divCollapse.title = 'Salir fullscreen';
+            _divCollapse.title = 'Exit fullscreen';
           }
           return;
         }
@@ -5122,8 +5122,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           _divCollapse.title = 'Fullscreen';
         }
       };
-      const _onMover = (ev) => _applyMode(ev);
-      document.addEventListener('pointermove', _onMover, { passive: true });
+      const _onMove = (ev) => _applyMode(ev);
+      document.addEventListener('pointermove', _onMove, { passive: true });
       // Reflect the fullscreen state immediately on toggle (no cursor move).
       const _classObs = new MutationObserver(() => _applyMode());
       _classObs.observe(pane, { attributes: true, attributeFilter: ['class'] });
@@ -5164,7 +5164,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
       const _obs = new MutationObserver(() => {
         if (!document.body.contains(divider)) {
-          document.removeEventListener('pointermove', _onMover);
+          document.removeEventListener('pointermove', _onMove);
           _classObs.disconnect();
           _obs.disconnect();
         }
@@ -5185,11 +5185,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       else saveDocument({ silent: false, forceVersion: true });
     });
     document.getElementById('doc-footer-export-btn')?.addEventListener('click', (e) => showExportMenu(null, e.currentTarget.getBoundingClientRect()));
-    // Mobile footer: Cerrar the current doc + Copiar its content (replaces the
-    // per-tab × on small screens, mirroring the email reader's Cerrar footer).
+    // Mobile footer: Close the current doc + Copy its content (replaces the
+    // per-tab × on small screens, mirroring the email reader's Close footer).
     document.getElementById('doc-mobile-close')?.addEventListener('click', () => { if (activeDocId) closeTab(activeDocId); });
     document.getElementById('doc-mobile-copy')?.addEventListener('click', () => copyDocument());
-    // Guardar, copy, run, export, delete, preview toggles are now in per-tab context menu
+    // Save, copy, run, export, delete, preview toggles are now in per-tab context menu
     document.getElementById('doc-version-badge').addEventListener('click', toggleVersionHistory);
     document.getElementById('doc-version-close').addEventListener('click', _closeVersionPanel);
     // Reflect the current language as a small icon left of the type select.
@@ -5352,9 +5352,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       }
       // Mark user explicitly chose a language — stop auto-detection
       if (activeDocId && docs.has(activeDocId)) {
-        docs.get(activeDocId).userSetIdioma = (val !== '');
+        docs.get(activeDocId).userSetLanguage = (val !== '');
       }
-      updateIdioma();
+      updateLanguage();
       syncHighlighting();
       // Show/hide markdown toolbar
       const lang = document.getElementById('doc-language-select').value;
@@ -5381,15 +5381,15 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       // Show/hide email fields
       if (lang === 'email') {
         const doc = activeDocId && docs.get(activeDocId);
-        if (doc) _showCorreoFields(doc);
+        if (doc) _showEmailFields(doc);
       } else {
-        _hideCorreoFields();
+        _hideEmailFields();
       }
       // Sync header action buttons for new language
       _syncHeaderActions();
     });
 
-    // Correo send/draft buttons
+    // Email send/draft buttons
     // Inject emoji picker button into markdown toolbar
     const emojiSlot = document.getElementById('md-toolbar-emoji-slot');
     if (emojiSlot && !emojiSlot.querySelector('.emoji-picker-btn')) {
@@ -5405,7 +5405,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const _m = document.getElementById('doc-email-more-menu');
       if (_m) _m.style.display = 'none';
       document.getElementById('doc-email-send-caret')?.setAttribute('aria-expanded', 'false');
-      _sendCorreo();
+      _sendEmail();
     });
 
     // Ctrl+Enter / Cmd+Enter sends the email when an email doc is active
@@ -5417,12 +5417,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           const doc = activeDocId && docs.get(activeDocId);
           if (doc && doc.language === 'email' && isOpen) {
             e.preventDefault();
-            _sendCorreo();
+            _sendEmail();
           }
         }
       });
     }
-    // Ctrl+Alt+M (and Cmd+Opt+M on mac) flips Editar ↔ Preview on a markdown
+    // Ctrl+Alt+M (and Cmd+Opt+M on mac) flips Edit ↔ Preview on a markdown
     // doc. Bound once globally; gated on the doc panel being open and the
     // active doc being markdown so it doesn't fire while the user is typing
     // in a non-markdown context.
@@ -5444,10 +5444,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       document.getElementById('doc-email-more-menu').style.display = 'none';
       _saveDraft();
     });
-    document.getElementById('doc-email-discard-btn')?.addEventListener('click', _discardCorreo);
+    document.getElementById('doc-email-discard-btn')?.addEventListener('click', _discardEmail);
     document.getElementById('doc-email-unread-btn')?.addEventListener('click', () => {
       document.getElementById('doc-email-more-menu').style.display = 'none';
-      _markUnreadAndCerrar();
+      _markUnreadAndClose();
     });
     document.getElementById('doc-email-schedule-btn')?.addEventListener('click', (e) => {
       const anchor = document.getElementById('doc-email-send-caret') || e.currentTarget;
@@ -5466,11 +5466,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       collapseBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const focusState = _captureCorreoBodyFocusState();
+        const focusState = _captureEmailBodyFocusState();
         const header = document.getElementById('doc-email-header');
         const nextCollapsed = !header?.classList.contains('doc-email-header-collapsed');
-        _setCorreoHeaderCollapsed(nextCollapsed);
-        if (!nextCollapsed) _restoreCorreoBodyFocusState(focusState);
+        _setEmailHeaderCollapsed(nextCollapsed);
+        if (!nextCollapsed) _restoreEmailBodyFocusState(focusState);
       });
       collapseBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -5479,18 +5479,18 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
     ['doc-email-to', 'doc-email-cc', 'doc-email-bcc', 'doc-email-subject'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', () => {
-        _syncCorreoHeaderSummary();
+        _syncEmailHeaderSummary();
         saveCurrentToMap();
-        _persistCorreoLocalDraftSoon();
-        clearTimeout(_autoGuardarDebounce);
-        _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+        _persistEmailLocalDraftSoon();
+        clearTimeout(_autoSaveDebounce);
+        _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
       });
-      document.getElementById(id)?.addEventListener('focus', () => _setCorreoHeaderCollapsed(false, { manual: false }));
+      document.getElementById(id)?.addEventListener('focus', () => _setEmailHeaderCollapsed(false, { manual: false }));
     });
-    document.getElementById('doc-email-richbody')?.addEventListener('focus', _maybeAutoCollapseCorreoHeader);
-    if (window.visualViewport && !window._docCorreoViewportCollapseBound) {
-      window._docCorreoViewportCollapseBound = true;
-      window.visualViewport.addEventListener('resize', _maybeAutoCollapseCorreoHeader);
+    document.getElementById('doc-email-richbody')?.addEventListener('focus', _maybeAutoCollapseEmailHeader);
+    if (window.visualViewport && !window._docEmailViewportCollapseBound) {
+      window._docEmailViewportCollapseBound = true;
+      window.visualViewport.addEventListener('resize', _maybeAutoCollapseEmailHeader);
     }
 
     // Split-button caret toggles the send-options menu (drops up).
@@ -5529,24 +5529,24 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _showComposeAttachMenu(e.currentTarget);
     });
     document.getElementById('md-toolbar-attach-btn')?.addEventListener('click', (e) => {
-      if (_activeDocIdioma() === 'email') {
+      if (_activeDocLanguage() === 'email') {
         _showComposeAttachMenu(e.currentTarget);
       } else {
         document.getElementById('doc-md-image-input')?.click();
       }
     });
-    document.getElementById('doc-email-file-input')?.addEventListener('change', _handleAttachSubir);
-    document.getElementById('doc-md-image-input')?.addEventListener('change', _handleMarkdownImageSubir);
+    document.getElementById('doc-email-file-input')?.addEventListener('change', _handleAttachUpload);
+    document.getElementById('doc-md-image-input')?.addEventListener('change', _handleMarkdownImageUpload);
 
     // Cc/Bcc toggle
     document.getElementById('doc-email-show-cc')?.addEventListener('click', () => {
-      _setCorreoHeaderCollapsed(false, { manual: false });
+      _setEmailHeaderCollapsed(false, { manual: false });
       const ccRow = document.getElementById('doc-email-cc-row');
       const bccRow = document.getElementById('doc-email-bcc-row');
       if (ccRow) ccRow.style.display = '';
       if (bccRow) bccRow.style.display = '';
       document.getElementById('doc-email-show-cc').style.display = 'none';
-      _syncCorreoHeaderSummary();
+      _syncEmailHeaderSummary();
     });
 
     // Cc/Bcc close — X buttons inside the Cc and Bcc fields hide both
@@ -5564,10 +5564,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         if (bccInput) bccInput.value = '';
         const ccToggle = document.getElementById('doc-email-show-cc');
         if (ccToggle) ccToggle.style.display = '';
-        _syncCorreoHeaderSummary();
+        _syncEmailHeaderSummary();
         saveCurrentToMap();
-        clearTimeout(_autoGuardarDebounce);
-        _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+        clearTimeout(_autoSaveDebounce);
+        _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
       });
     });
 
@@ -5596,7 +5596,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _syncHeaderActions();
     });
 
-    // Markdown Editar/Preview two-icon switch — click a side to go to that view.
+    // Markdown Edit/Preview two-icon switch — click a side to go to that view.
     document.getElementById('doc-md-view-toggle')?.addEventListener('click', (e) => {
       const opt = e.target.closest('.md-view-opt');
       if (!opt) return;
@@ -5645,8 +5645,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     let _fontIdx = parseInt(localStorage.getItem('odysseus-doc-fontsize') || '0', 10);
     if (!(_fontIdx >= 0 && _fontIdx < 3)) _fontIdx = 0;
     function _applyDocFont() {
-      const richCorreoBody = document.getElementById('doc-email-richbody');
-      [editorWrap, richCorreoBody].filter(Boolean).forEach(el => {
+      const richEmailBody = document.getElementById('doc-email-richbody');
+      [editorWrap, richEmailBody].filter(Boolean).forEach(el => {
         el.classList.remove('doc-font-s', 'doc-font-m', 'doc-font-l');
         if (_fontSizes[_fontIdx] !== 's') el.classList.add('doc-font-' + _fontSizes[_fontIdx]);
       });
@@ -5753,7 +5753,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         // Skip while a createDocument POST is in flight — otherwise typing
         // during the round-trip spawns a duplicate untitled doc.
         if (!activeDocId && !_creatingDoc && ta.value.trim()) {
-          _autoCrearFromInput(ta.value);
+          _autoCreateFromInput(ta.value);
           return;
         }
         // Sync text content immediately (prevents visual duplication from scroll desync)
@@ -5774,26 +5774,26 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         _autoDetectDebounce = setTimeout(attemptAutoDetect, AUTO_DETECT_DELAY);
         clearTimeout(_autoTitleDebounce);
         _autoTitleDebounce = setTimeout(() => autoTitleFromContent(ta.value), 600);
-        clearTimeout(_autoGuardarDebounce);
-        _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2000);
+        clearTimeout(_autoSaveDebounce);
+        _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 2000);
         const doc = activeDocId && docs.get(activeDocId);
-        if (doc && doc.language === 'email') _persistCorreoLocalDraftSoon();
+        if (doc && doc.language === 'email') _persistEmailLocalDraftSoon();
       });
       ta.addEventListener('paste', (e) => {
-        if (_activeDocIdioma() !== 'markdown') return;
+        if (_activeDocLanguage() !== 'markdown') return;
         const files = Array.from(e.clipboardData?.files || []).filter(_isMarkdownImageFile);
         if (!files.length) return;
         e.preventDefault();
         _uploadMarkdownImages(files);
       });
       ta.addEventListener('dragover', (e) => {
-        if (_activeDocIdioma() !== 'markdown') return;
+        if (_activeDocLanguage() !== 'markdown') return;
         const items = Array.from(e.dataTransfer?.items || []);
         if (!items.some(item => item.kind === 'file' && /^image\//i.test(item.type || ''))) return;
         e.preventDefault();
       });
       ta.addEventListener('drop', (e) => {
-        if (_activeDocIdioma() !== 'markdown') return;
+        if (_activeDocLanguage() !== 'markdown') return;
         const files = Array.from(e.dataTransfer?.files || []).filter(_isMarkdownImageFile);
         if (!files.length) return;
         e.preventDefault();
@@ -5955,14 +5955,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         }
       });
 
-      // Eliminar (or Backspace) over the doc PANEL itself (not while typing in
-      // a field) deletes the active document. Matches the email-reader Eliminar
+      // Delete (or Backspace) over the doc PANEL itself (not while typing in
+      // a field) deletes the active document. Matches the email-reader Delete
       // behavior so the keyboard shortcut is consistent across surfaces.
       document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Eliminar' && e.key !== 'Backspace') return;
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
         if (!isPanelOpen()) return;
         const t = e.target;
-        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditarable)) return;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
         e.preventDefault();
         deleteActiveDocument();
       });
@@ -5972,7 +5972,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       // dropped get uploaded via the same compose-upload endpoint as the
       // file picker.
       let _dragDepth = 0;
-      const _isCorreoDrag = (e) => {
+      const _isEmailDrag = (e) => {
         const doc = docs.get(activeDocId);
         if (!doc || doc.language !== 'email') return false;
         const dt = e.dataTransfer;
@@ -5981,23 +5981,23 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         return dt.types && Array.from(dt.types).includes('Files');
       };
       pane.addEventListener('dragenter', (e) => {
-        if (!_isCorreoDrag(e)) return;
+        if (!_isEmailDrag(e)) return;
         e.preventDefault();
         _dragDepth++;
         pane.classList.add('email-dragover');
       });
       pane.addEventListener('dragover', (e) => {
-        if (!_isCorreoDrag(e)) return;
+        if (!_isEmailDrag(e)) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
       });
       pane.addEventListener('dragleave', (e) => {
-        if (!_isCorreoDrag(e)) return;
+        if (!_isEmailDrag(e)) return;
         _dragDepth = Math.max(0, _dragDepth - 1);
         if (_dragDepth === 0) pane.classList.remove('email-dragover');
       });
       pane.addEventListener('drop', async (e) => {
-        if (!_isCorreoDrag(e)) return;
+        if (!_isEmailDrag(e)) return;
         e.preventDefault();
         _dragDepth = 0;
         pane.classList.remove('email-dragover');
@@ -6049,7 +6049,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
             '<input type="url" id="doc-link-url" class="styled-prompt-input" placeholder="https://example.com" maxlength="2048" style="margin-top:8px;" />' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button id="doc-link-cancel" class="confirm-btn confirm-btn-secondary">Cancelar</button>' +
+            '<button id="doc-link-cancel" class="confirm-btn confirm-btn-secondary">Cancel</button>' +
             '<button id="doc-link-ok" class="confirm-btn confirm-btn-primary">Insert</button>' +
           '</div>' +
         '</div>';
@@ -6081,7 +6081,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  // Correo WYSIWYG link insertion. We snapshot the Range first (the dialog steals
+  // Email WYSIWYG link insertion. We snapshot the Range first (the dialog steals
   // focus and would otherwise collapse it) and insert via direct DOM ops, since
   // execCommand is unreliable once focus has moved to the modal.
   async function _wysiwygInsertLink(rich) {
@@ -6123,7 +6123,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const s = window.getSelection();
     s.removeAllRanges();
     s.addRange(after);
-    _syncCorreoRichbody(rich);
+    _syncEmailRichbody(rich);
   }
 
   function applyMdFormat(action) {
@@ -6133,7 +6133,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const _now = Date.now();
     if (_lastMdFormat.action === action && _now - _lastMdFormat.t < 350) return;
     _lastMdFormat = { action, t: _now };
-    // Correo WYSIWYG: format the live rich text via execCommand instead of
+    // Email WYSIWYG: format the live rich text via execCommand instead of
     // inserting markdown markers into the (hidden) source textarea.
     const _rich = _emailRichbodyActive();
     if (_rich) {
@@ -6156,7 +6156,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         }
         // quote/check/codeblock have no clean execCommand — skipped in WYSIWYG v1.
       } catch (_) {}
-      _syncCorreoRichbody(_rich);
+      _syncEmailRichbody(_rich);
       if (_rich._syncActive) _rich._syncActive();
       return;
     }
@@ -6374,7 +6374,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         // Remove prefix
         _replaceRange(ta, lineStart, lineStart + prefix.length, '');
       } else {
-        // Agregar prefix at line start
+        // Add prefix at line start
         _replaceRange(ta, lineStart, lineStart, prefix);
       }
     }
@@ -6725,7 +6725,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       e.stopPropagation();
       _menuOpen = !_menuOpen;
       if (_menuOpen) {
-        // Mover to body to escape overflow:hidden on doc-editor-pane
+        // Move to body to escape overflow:hidden on doc-editor-pane
         document.body.appendChild(menu);
         const rect = toggle.getBoundingClientRect();
         menu.style.position = 'fixed';
@@ -6784,7 +6784,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  /** Cerrar the editor panel */
+  /** Close the editor panel */
   // When the doc panel is "tab/chevron down" minimized, it lives as a chip
   // in the bottom dock instead of a red toolbar indicator. We remember which
   // doc was active so the chip can restore it.
@@ -6810,7 +6810,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         // highlighting, etc.). Without switchToDoc, the pane is empty.
         openPanel();
         if (id && docs.has(id)) {
-          try { switchToDoc(id); } catch (e) { console.error('Restaurar doc failed:', e); }
+          try { switchToDoc(id); } catch (e) { console.error('Restore doc failed:', e); }
         }
       },
     });
@@ -6839,7 +6839,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       requestAnimationFrame(_dropKb);
       setTimeout(_dropKb, 80);
     }
-    // Guardar current state
+    // Save current state
     saveCurrentToMap();
 
     // A "down" close means minimize, not close. Register the chip and flip
@@ -6862,7 +6862,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const pane = document.getElementById('doc-editor-pane');
     const divider = document.getElementById('doc-divider');
 
-    const _finishCerrar = () => {
+    const _finishClose = () => {
       // If the panel was reopened during the slide-out animation (close →
       // reopen fast, e.g. close a draft then immediately compose a new one),
       // bail — otherwise this stale close strips doc-view after the new open
@@ -6895,11 +6895,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       pane.style.transform = transform;
       pane.style.opacity = '0';
       if (divider) { divider.style.transition = 'opacity 0.1s ease-in'; divider.style.opacity = '0'; }
-      pane.addEventListener('transitionend', _finishCerrar, { once: true });
+      pane.addEventListener('transitionend', _finishClose, { once: true });
       // Safety fallback
-      setTimeout(_finishCerrar, 200);
+      setTimeout(_finishClose, 200);
     } else {
-      _finishCerrar();
+      _finishClose();
     }
   }
 
@@ -6932,8 +6932,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   // ---- Document CRUD ----
 
-  /** Crear a new document for the current session */
-  // Crear a new blank document, reusing the current/last session or
+  /** Create a new document for the current session */
+  // Create a new blank document, reusing the current/last session or
   // auto-creating one. Same flow as the tab-bar "+" — the single entry point
   // the sidebar Library "+" should use too.
   export async function newDocument() {
@@ -6941,7 +6941,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       || _lastSessionId
       || (sessionModule && sessionModule.getCurrentSessionId());
     if (!sessionId) {
-      try { sessionId = await _autoCrearSession(); }
+      try { sessionId = await _autoCreateSession(); }
       catch (e) { console.error('Failed to auto-create session for document:', e); return; }
     }
     await createDocument(sessionId);
@@ -6987,8 +6987,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         const d = docs.get(doc.id);
         if (d) d.content = typed;
         syncHighlighting();
-        clearTimeout(_autoGuardarDebounce);
-        _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+        clearTimeout(_autoSaveDebounce);
+        _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
       }
       textarea = document.getElementById('doc-editor-textarea');
       if (textarea) textarea.focus();
@@ -7022,11 +7022,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }));
   }
 
-  export async function replaceCorreoReplyBody(docId, replyText, { force = false } = {}) {
+  export async function replaceEmailReplyBody(docId, replyText, { force = false } = {}) {
     const doc = docs.get(docId);
     if (!doc) return;
-    const fields = _parseCorreoHeader(doc.content || '');
-    const oldSplit = _splitCorreoReplyQuote(fields.body || '');
+    const fields = _parseEmailHeader(doc.content || '');
+    const oldSplit = _splitEmailReplyQuote(fields.body || '');
     const quote = oldSplit.quote;
     const ownText = _emailReplyOwnText(fields.body || '');
     if (!force && ownText && !/^(\[AI reply draft will appear here\]|Drafting AI reply)/i.test(ownText)) {
@@ -7034,7 +7034,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       return;
     }
     const body = String(replyText || '').trim() + (quote ? `\n\n${quote}` : '');
-    doc.content = _buildCorreoContent(
+    doc.content = _buildEmailContent(
       fields.to,
       fields.subject,
       fields.inReplyTo,
@@ -7047,10 +7047,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     );
     if (activeDocId === docId) {
       const textarea = document.getElementById('doc-editor-textarea');
-      if (textarea) await _streamCorreoBodyText(textarea, body);
+      if (textarea) await _streamEmailBodyText(textarea, body);
     }
-    clearTimeout(_autoGuardarDebounce);
-    _autoGuardarDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
+    clearTimeout(_autoSaveDebounce);
+    _autoSaveDebounce = setTimeout(() => { saveDocument({ silent: true }); }, 800);
   }
 
   // Force the panel into a genuinely-open state. `isOpen` can be true while the
@@ -7065,7 +7065,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   export async function loadDocument(docId) {
-    _closeNotasForDocumentOpen();
+    _closeNotesForDocumentOpen();
     // If already in tabs, just switch
     if (docs.has(docId)) {
       _ensureDocPaneMounted();
@@ -7105,7 +7105,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       || (sessionModule && sessionModule.getCurrentSessionId());
     if (!sessionId) {
       try {
-        sessionId = await _autoCrearSession();
+        sessionId = await _autoCreateSession();
       } catch (e) {
         console.error('Failed to auto-create session for document:', e);
         openPanel();
@@ -7115,8 +7115,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     await loadSessionDocs(sessionId);
   }
 
-  /** Crear a session and sync it with the sessions module */
-  async function _autoCrearSession() {
+  /** Create a session and sync it with the sessions module */
+  async function _autoCreateSession() {
     // Materialize pending chat first if one exists
     if (sessionModule && sessionModule.hasPendingChat && sessionModule.hasPendingChat()) {
       await sessionModule.materializePendingSession();
@@ -7124,11 +7124,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (id) { _lastSessionId = id; return id; }
     }
     // Preserve the current model when creating a doc session
-    const curModelo = sessionModule?.getCurrentModelo ? sessionModule.getCurrentModelo() : null;
+    const curModel = sessionModule?.getCurrentModel ? sessionModule.getCurrentModel() : null;
     const sessions = sessionModule ? sessionModule.getSessions() : [];
-    const match = curModelo && sessions.find(s => s.model === curModelo && s.endpoint_url);
+    const match = curModel && sessions.find(s => s.model === curModel && s.endpoint_url);
     const fd = new FormData();
-    fd.append('name', `Notas ${new Date().toLocaleTimeString()}`);
+    fd.append('name', `Notes ${new Date().toLocaleTimeString()}`);
     fd.append('skip_validation', 'true');
     if (match) {
       fd.append('endpoint_url', match.endpoint_url);
@@ -7152,8 +7152,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   export async function loadSessionDocs(sessionId, opts = {}) {
     _lastSessionId = sessionId;
     const restoreMode = !!opts.restoreMode;
-    const shouldRestaurarOpen = localStorage.getItem(_docOpenKey(sessionId)) === '1';
-    const shouldRestaurarMinimized = localStorage.getItem(_docMinimizedKey(sessionId)) === '1';
+    const shouldRestoreOpen = localStorage.getItem(_docOpenKey(sessionId)) === '1';
+    const shouldRestoreMinimized = localStorage.getItem(_docMinimizedKey(sessionId)) === '1';
     // Clear docs from other sessions so tabs are per-session,
     // but keep session-less docs (e.g. email compose) — they're independent
     for (const [id, doc] of [...docs]) {
@@ -7172,7 +7172,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const activeDocs = allDocs.filter(d => d.is_active);
       if (activeDocs.length === 0) {
         // No docs yet — show empty editor, doc will be created when user types
-        if (!restoreMode || shouldRestaurarOpen) {
+        if (!restoreMode || shouldRestoreOpen) {
           if (!isOpen) openPanel();
           showEmptyState();
           renderTabs();
@@ -7187,7 +7187,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       _syncDocIndicator();
       // Switch to the most recently active one (or first)
       const target = activeDocs[0];
-      if (restoreMode && shouldRestaurarMinimized && !shouldRestaurarOpen) {
+      if (restoreMode && shouldRestoreMinimized && !shouldRestoreOpen) {
         activeDocId = null;
         _minimizedDocId = target.id;
         _markDocVisibleState(sessionId, 'minimized');
@@ -7195,7 +7195,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         Modals.minimize('doc-panel');
         return;
       }
-      // Removed: the old "if restoreMode && !shouldRestaurarOpen → stay
+      // Removed: the old "if restoreMode && !shouldRestoreOpen → stay
       // closed" branch. Users expect that entering a chat with an
       // attached document opens the panel automatically, not just shows
       // an indicator. The minimised branch above still respects an
@@ -7209,7 +7209,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       }
       // Always open when there are docs — the minimised branch above
       // already returned for users who explicitly docked the panel.
-      // The previous `if (!restoreMode || shouldRestaurarOpen)` gate left
+      // The previous `if (!restoreMode || shouldRestoreOpen)` gate left
       // the panel closed on first entry to a chat with docs, which
       // hides the doc unless the user manually opens the panel.
       _markDocVisibleState(sessionId, 'open');
@@ -7224,7 +7224,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  /** Agregar a document to the tabs map */
+  /** Add a document to the tabs map */
   function addDocToTabs(doc, sessionId) {
     const existing = docs.get(doc.id);
     docs.set(doc.id, {
@@ -7234,18 +7234,18 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       content: doc.current_content || '',
       version: doc.version_count || 1,
       sessionId: sessionId || doc.session_id,
-      userSetIdioma: !!doc.language,
+      userSetLanguage: !!doc.language,
       _composeAtts: existing?._composeAtts,
       // Provenance for the "Send signed reply" flow
-      sourceCorreoUid:       doc.source_email_uid || null,
-      sourceCorreoFolder:    doc.source_email_folder || null,
-      sourceCorreoAccountId: doc.source_email_account_id || null,
-      sourceCorreoMessageId: doc.source_email_message_id || null,
+      sourceEmailUid:       doc.source_email_uid || null,
+      sourceEmailFolder:    doc.source_email_folder || null,
+      sourceEmailAccountId: doc.source_email_account_id || null,
+      sourceEmailMessageId: doc.source_email_message_id || null,
     });
   }
 
   /** Populate the editor with document data (used internally) */
-  function populateEditaror(doc) {
+  function populateEditor(doc) {
     const titleInput = document.getElementById('doc-title-input');
     const textarea = document.getElementById('doc-editor-textarea');
     const langSelect = document.getElementById('doc-language-select');
@@ -7448,11 +7448,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       pre.scrollLeft = textarea.scrollLeft;
     }
 
-    // Actualizar line numbers
+    // Update line numbers
     updateLineNumbers(text);
   }
 
-  /** Actualizar the line number gutter */
+  /** Update the line number gutter */
   let _lineNumberResizeObserver = null;
   let _lineNumberObservedTextarea = null;
   let _lineNumberResizeRaf = null;
@@ -7477,7 +7477,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       style.lineHeight,
       style.letterSpacing,
       style.tabSize,
-      style.fontFeatureConfiguración,
+      style.fontFeatureSettings,
       style.fontVariantLigatures,
       style.fontKerning,
     ].join('|');
@@ -7520,7 +7520,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     probe.style.lineHeight = style.lineHeight;
     probe.style.letterSpacing = style.letterSpacing;
     probe.style.tabSize = style.tabSize;
-    probe.style.fontFeatureConfiguración = style.fontFeatureConfiguración;
+    probe.style.fontFeatureSettings = style.fontFeatureSettings;
     probe.style.fontVariantLigatures = style.fontVariantLigatures;
     probe.style.fontKerning = style.fontKerning;
     probe.style.textRendering = style.textRendering;
@@ -7649,7 +7649,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   function attemptAutoDetect() {
     if (!window.hljs || !activeDocId) return;
     const doc = docs.get(activeDocId);
-    if (!doc || doc.userSetIdioma) return;
+    if (!doc || doc.userSetLanguage) return;
 
     const textarea = document.getElementById('doc-editor-textarea');
     if (!textarea) return;
@@ -7665,7 +7665,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (langSelect && langSelect.value !== 'svg') {
         langSelect.value = 'svg';
         doc.language = 'svg';
-        updateIdioma();
+        updateLanguage();
         syncHighlighting();
         _syncHeaderActions();
       }
@@ -7678,7 +7678,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (langSelect && langSelect.value !== 'markdown') {
         langSelect.value = 'markdown';
         doc.language = 'markdown';
-        updateIdioma();
+        updateLanguage();
         syncHighlighting();
         _syncHeaderActions();
         const mdToolbar = document.getElementById('doc-md-toolbar');
@@ -7700,7 +7700,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     langSelect.value = mapped;
     doc.language = mapped;
-    updateIdioma();
+    updateLanguage();
     syncHighlighting();
     _syncHeaderActions();
 
@@ -7746,7 +7746,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     _selResizeObserver.observe(ta);
   }
 
-  /** Actualizar selection tracking, show badge + persistent highlight.
+  /** Update selection tracking, show badge + persistent highlight.
    *  Each new selection is added (pinned). Click without selecting to clear all. */
   function updateSelectionState() {
     // The mirror measurement below uses the textarea's live computed metrics,
@@ -7920,7 +7920,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const paddingLeft = parseFloat(style.paddingLeft) || 48;
     const lineHeight = parseFloat(style.lineHeight) || (parseFloat(style.fontSize) * 1.45);
 
-    // Compartird mirror for measurement — same box model as the textarea
+    // Shared mirror for measurement — same box model as the textarea
     // so any measurement we take lines up 1:1 with the rendered text.
     let mirror = document.getElementById('doc-selection-mirror');
     if (!mirror) {
@@ -8066,7 +8066,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  /** Restaurar suggestions from localStorage for a doc */
+  /** Restore suggestions from localStorage for a doc */
   function _restoreSuggestionsFromStorage(docId) {
     try {
       const raw = localStorage.getItem('odysseus-suggestions-' + docId);
@@ -8216,7 +8216,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           <span class="doc-suggestion-counter">${num} / ${_suggestionTotal}</span>
           <button class="doc-suggestion-nav-btn doc-suggestion-next" title="Next">&rsaquo;</button>
         </div>
-        <button class="doc-suggestion-close" title="Cerrar all suggestions">&times;</button>
+        <button class="doc-suggestion-close" title="Close all suggestions">&times;</button>
       </div>
       <div class="doc-suggestion-reason">${_esc(sugg.reason)}</div>
       <div class="doc-suggestion-actions">
@@ -8437,7 +8437,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     _renderDiffGutter();
     requestAnimationFrame(() => _scrollToDiffChunk(_diffChunks[0]?.id));
 
-    // Actualizar header button
+    // Update header button
     const diffBtn = document.getElementById('doc-diff-toggle-btn');
     if (diffBtn) diffBtn.classList.add('active');
   }
@@ -8587,7 +8587,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     });
   }
 
-  /** Actualizar the toolbar status text */
+  /** Update the toolbar status text */
   function _updateDiffStatus(statusEl) {
     const el = statusEl || document.getElementById('diff-toolbar-status');
     if (!el) return;
@@ -8645,7 +8645,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   /** Compute current content from old + resolved chunk decisions; unresolved chunks
-   *  default to the original (rejected) until the user decides. Actualizars textarea. */
+   *  default to the original (rejected) until the user decides. Updates textarea. */
   function _applyResolvedChunksToTextarea() {
     const textarea = document.getElementById('doc-editor-textarea');
     if (!textarea) return;
@@ -8688,7 +8688,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     exitDiffMode(false);
   }
 
-  /** Salir diff mode and apply resolved changes */
+  /** Exit diff mode and apply resolved changes */
   function exitDiffMode(discard) {
     if (!_diffModeActive) return;
     _diffModeActive = false;
@@ -8735,7 +8735,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       if (textarea) textarea.value = result.join('\n');
     }
 
-    // Restaurar editor state
+    // Restore editor state
     if (textarea) textarea.readOnly = false;
     if (codeEl) delete codeEl.dataset.hasDiff;
 
@@ -8863,7 +8863,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (old) { if (old._cleanup) old._cleanup(); old.remove(); }
     const container = document.getElementById('doc-suggestions-container');
     if (container) { container.innerHTML = ''; container.style.display = 'none'; }
-    // Restaurar line numbers
+    // Restore line numbers
     const ta = document.getElementById('doc-editor-textarea');
     if (ta) updateLineNumbers(ta.value);
   }
@@ -8974,7 +8974,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     setTimeout(() => { if (outputPanel) outputPanel.style.display = 'none'; }, 5000);
   }
 
-  /** Copiar document content to clipboard */
+  /** Copy document content to clipboard */
   async function copyDocument() {
     const textarea = document.getElementById('doc-editor-textarea');
     if (!textarea || !textarea.value) return;
@@ -9012,13 +9012,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const doc = docs.get(docId);
     if (!doc) return;
 
-    // Crear singleton menu container once
+    // Create singleton menu container once
     if (!_docTabMenu) {
       _docTabMenu = document.createElement('div');
       _docTabMenu.className = 'doc-tab-dropdown';
       _docTabMenu.style.cssText = 'position:fixed;z-index:1000;min-width:0;width:max-content;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.3);backdrop-filter:blur(12px);font-size:12px;display:none;';
       document.body.appendChild(_docTabMenu);
-      // Cerrar on outside click
+      // Close on outside click
       document.addEventListener('click', (e) => {
         if (_docTabMenu && !_docTabMenu.contains(e.target) && !e.target.closest('.doc-tab-menu-btn')) {
           _closeDocTabMenu();
@@ -9043,9 +9043,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const _mdActive = _mdPreview && _mdPreview.style.display !== 'none';
     const _csvActive = _csvPreview && _csvPreview.style.display !== 'none';
     const _htmlActive = _htmlPreview && _htmlPreview.style.display !== 'none';
-    if (lang === 'markdown') { previewIcon = 'MD'; previewLabel = _mdActive ? 'Editar' : 'Preview'; }
-    else if (lang === 'csv') { previewIcon = '⊞'; previewLabel = _csvActive ? 'Editar' : 'Table View'; }
-    else if (_isRenderLang(lang)) { previewIcon = '▶'; previewLabel = _htmlActive ? 'Editar' : 'Run / Preview'; }
+    if (lang === 'markdown') { previewIcon = 'MD'; previewLabel = _mdActive ? 'Edit' : 'Preview'; }
+    else if (lang === 'csv') { previewIcon = '⊞'; previewLabel = _csvActive ? 'Edit' : 'Table View'; }
+    else if (_isRenderLang(lang)) { previewIcon = '▶'; previewLabel = _htmlActive ? 'Edit' : 'Run / Preview'; }
 
     const _di = (svg) => `<span class="dropdown-icon">${svg}</span>`;
     const _saveIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
@@ -9055,8 +9055,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const _deleteIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
 
     let items = '';
-    items += `<div class="dropdown-item-compact doc-tab-action" data-action="save">${_di(_saveIco)}<span>Guardar</span></div>`;
-    items += `<div class="dropdown-item-compact doc-tab-action" data-action="copy">${_di(_copyIco)}<span>Copiar</span></div>`;
+    items += `<div class="dropdown-item-compact doc-tab-action" data-action="save">${_di(_saveIco)}<span>Save</span></div>`;
+    items += `<div class="dropdown-item-compact doc-tab-action" data-action="copy">${_di(_copyIco)}<span>Copy</span></div>`;
     if (canRun) {
       items += `<div class="dropdown-item-compact doc-tab-action" data-action="run">${_di(_runIco)}<span>Run</span></div>`;
     }
@@ -9064,16 +9064,16 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       items += `<div class="dropdown-item-compact doc-tab-action" data-action="preview"><span class="dropdown-icon">${previewIcon}</span><span>${previewLabel}</span></div>`;
     }
     const _downloadIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-    items += `<div class="dropdown-item-compact doc-tab-action" data-action="download">${_di(_downloadIco)}<span>Descargar</span></div>`;
+    items += `<div class="dropdown-item-compact doc-tab-action" data-action="download">${_di(_downloadIco)}<span>Download</span></div>`;
     // "Send signed reply" — only if this doc was opened from an email attachment
-    if (doc.sourceCorreoUid && doc.sourceCorreoFolder) {
+    if (doc.sourceEmailUid && doc.sourceEmailFolder) {
       const _sendBackIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
       items += `<div class="dropdown-item-compact doc-tab-action" data-action="signed-reply">${_di(_sendBackIco)}<span>Send signed reply</span></div>`;
     }
     const _closeIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    items += `<div class="dropdown-item-compact doc-tab-action" data-action="close">${_di(_closeIco)}<span>Cerrar</span></div>`;
+    items += `<div class="dropdown-item-compact doc-tab-action" data-action="close">${_di(_closeIco)}<span>Close</span></div>`;
     items += `<div class="dropdown-divider"></div>`;
-    items += `<div class="dropdown-item-compact doc-tab-action doc-tab-action-delete" data-action="delete">${_di(_deleteIco)}<span>Eliminar</span></div>`;
+    items += `<div class="dropdown-item-compact doc-tab-action doc-tab-action-delete" data-action="delete">${_di(_deleteIco)}<span>Delete</span></div>`;
 
     _docTabMenu.innerHTML = items;
     _docTabMenu.style.display = 'block';
@@ -9142,7 +9142,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
    */
   async function _sendSignedReply(docId) {
     const doc = docs.get(docId);
-    if (!doc || !doc.sourceCorreoUid) return;
+    if (!doc || !doc.sourceEmailUid) return;
     if (uiModule) uiModule.showToast('Preparing signed reply…');
     let result;
     try {
@@ -9164,7 +9164,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     const att = result.attachment;
     const reply = result.reply || {};
-    const mid = reply.source_message_id || doc.sourceCorreoMessageId || '';
+    const mid = reply.source_message_id || doc.sourceEmailMessageId || '';
 
     // 1) Already have a draft tab open for this source thread? Append.
     for (const [, d] of docs) {
@@ -9172,7 +9172,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         d._composeAtts = (d._composeAtts || []).concat([att]);
         await loadDocument(d.id);
         _renderComposeAttachments();
-        if (uiModule) uiModule.showToast(`Agregared "${att.filename}" to the reply draft`);
+        if (uiModule) uiModule.showToast(`Added "${att.filename}" to the reply draft`);
         return;
       }
     }
@@ -9195,7 +9195,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         || _lastSessionId
         || (sessionModule && sessionModule.getCurrentSessionId());
       if (!sessionId) {
-        try { sessionId = await _autoCrearSession(); } catch (_) {}
+        try { sessionId = await _autoCreateSession(); } catch (_) {}
       }
       const cRes = await fetch(`${API_BASE}/api/document`, {
         method: 'POST',
@@ -9238,7 +9238,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (uiModule) uiModule.showToast(`Reply draft ready — "${att.filename}" attached`);
   }
 
-  /** Guardar manual edits */
+  /** Save manual edits */
   export async function saveDocument({ silent = false, forceVersion = false } = {}) {
     if (!activeDocId) return;
     const textarea = document.getElementById('doc-editor-textarea');
@@ -9246,7 +9246,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const savingDocId = activeDocId;
     saveCurrentToMap();
     const localDoc = docs.get(savingDocId);
-    const contentToGuardar = localDoc?.content ?? textarea.value;
+    const contentToSave = localDoc?.content ?? textarea.value;
 
     try {
       const res = await fetch(`${API_BASE}/api/document/${savingDocId}`, {
@@ -9254,9 +9254,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          content: contentToGuardar,
+          content: contentToSave,
           force_version: !!forceVersion,
-          summary: forceVersion ? 'Guardard version' : undefined,
+          summary: forceVersion ? 'Saved version' : undefined,
         }),
       });
       if (res.status === 404) {
@@ -9279,19 +9279,19 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       const doc = await res.json();
       const badge = document.getElementById('doc-version-badge');
       if (badge) { const _v = doc.version_count || 1; badge.textContent = `v${_v}`; badge.style.display = _v > 1 ? '' : 'none'; }
-      // Actualizar map
+      // Update map
       if (docs.has(savingDocId)) {
         docs.get(savingDocId).version = doc.version_count || 1;
-        docs.get(savingDocId).content = contentToGuardar;
+        docs.get(savingDocId).content = contentToSave;
       }
       _syncDocIndicator();
       if (!silent && uiModule) uiModule.showToast(forceVersion ? 'New version saved' : 'Document saved');
     } catch (e) {
       console.error('Failed to save document:', e);
       const now = Date.now();
-      if (uiModule && (!silent || now - _lastAutoGuardarErrorAt > 10000)) {
+      if (uiModule && (!silent || now - _lastAutoSaveErrorAt > 10000)) {
         uiModule.showError(silent ? 'Autosave failed' : 'Failed to save document');
-        _lastAutoGuardarErrorAt = now;
+        _lastAutoSaveErrorAt = now;
       }
     }
   }
@@ -9524,7 +9524,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       menu.style.bottom = (window.innerHeight - rect.top + 2) + 'px';
     }
     // Outside-click AND Escape both route through the central esc-stack via
-    // bindMenuDismiss; onCerrar owns the actual node removal.
+    // bindMenuDismiss; onClose owns the actual node removal.
     const close = bindMenuDismiss(menu, () => { menu.remove(); });
   }
 
@@ -9634,18 +9634,18 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (uiModule) uiModule.showToast('Exported as DOCX');
   }
 
-  /** Eliminar the active document */
+  /** Delete the active document */
   async function deleteActiveDocument() {
     if (!activeDocId) return;
     const doc = docs.get(activeDocId);
     const name = doc ? doc.title : 'this document';
-    const ok = uiModule && uiModule.styledConfirmar
-      ? await uiModule.styledConfirmar(`Eliminar "${name}"?`, { confirmText: 'Eliminar', danger: true })
-      : confirm(`Eliminar "${name}"?`);
+    const ok = uiModule && uiModule.styledConfirm
+      ? await uiModule.styledConfirm(`Delete "${name}"?`, { confirmText: 'Delete', danger: true })
+      : confirm(`Delete "${name}"?`);
     if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/api/document/${activeDocId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Eliminar failed');
+      if (!res.ok) throw new Error('Delete failed');
       // Remove tab
       const tab = document.querySelector(`.doc-tab[data-doc-id="${activeDocId}"]`);
       if (tab) tab.remove();
@@ -9678,7 +9678,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     // Hide the tab bar during the layout shift so any in-flight smooth
     // scroll / reflow doesn't visibly "fly" the active tab across the
-    // pane as it expands. Restaurard after the layout settles.
+    // pane as it expands. Restored after the layout settles.
     const tabBar = document.getElementById('doc-tab-bar');
     if (tabBar) {
       tabBar.style.visibility = 'hidden';
@@ -9725,9 +9725,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     } else {
       preview.style.display = 'none';
       preview.innerHTML = '';
-      const isCorreoDoc = docs.get(activeDocId)?.language === 'email';
-      const richCorreoBody = document.getElementById('doc-email-richbody');
-      if (!(isCorreoDoc && richCorreoBody && richCorreoBody.style.display !== 'none')) {
+      const isEmailDoc = docs.get(activeDocId)?.language === 'email';
+      const richEmailBody = document.getElementById('doc-email-richbody');
+      if (!(isEmailDoc && richEmailBody && richEmailBody.style.display !== 'none')) {
         wrap.style.display = '';
       }
     }
@@ -9846,7 +9846,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           table.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              // Mover to next row, same column
+              // Move to next row, same column
               const cell = e.target.closest('td,th');
               if (!cell) return;
               const colIdx = [...cell.parentElement.children].indexOf(cell);
@@ -9864,7 +9864,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           });
         }
 
-        // Agregar row button
+        // Add row button
         const addBtn = preview.querySelector('.csv-add-row-btn');
         if (addBtn && table) {
           addBtn.addEventListener('click', () => {
@@ -9872,7 +9872,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
             const tr = document.createElement('tr');
             for (let j = 0; j < colCount; j++) {
               const td = document.createElement('td');
-              td.contentEditarable = 'true';
+              td.contentEditable = 'true';
               tr.appendChild(td);
             }
             tbody.appendChild(tr);
@@ -9887,9 +9887,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       preview.style.display = 'none';
       wrap.style.display = '';
     }
-    // Actualizar the segmented Code/Run toggle's active class so the icon
+    // Update the segmented Code/Run toggle's active class so the icon
     // highlights match the new state — without this, opening a CSV that
-    // auto-shows the table view left the Editar (code) side wrongly marked
+    // auto-shows the table view left the Edit (code) side wrongly marked
     // active and the user had to flip the toggle to resync.
     _syncHeaderActions();
   }
@@ -9916,7 +9916,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  /** Salir HTML preview back to code view */
+  /** Exit HTML preview back to code view */
   function exitHtmlPreview() {
     const iframe = document.getElementById('doc-html-preview');
     const wrap = document.getElementById('doc-editor-wrap');
@@ -10000,7 +10000,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   async function animateDocChange(oldText, newText) {
-    if (_animationCancelar) _animationCancelar();
+    if (_animationCancel) _animationCancel();
 
     const textarea = document.getElementById('doc-editor-textarea');
     const wrap = document.getElementById('doc-editor-wrap');
@@ -10017,7 +10017,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     _animationInProgress = true;
     let cancelled = false;
-    _animationCancelar = () => { cancelled = true; };
+    _animationCancel = () => { cancelled = true; };
 
     textarea.readOnly = true;
     if (wrap) wrap.classList.add('animating');
@@ -10105,7 +10105,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     } finally {
       textarea.readOnly = false;
       _animationInProgress = false;
-      _animationCancelar = null;
+      _animationCancel = null;
       if (wrap) wrap.classList.remove('animating');
     }
   }
@@ -10114,7 +10114,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   let _streamDocId = null;
 
   /** Sync the markdown toolbar + header actions for a streaming doc, so the
-   *  Editar/Preview toggle and formatting tools appear without a manual refresh. */
+   *  Edit/Preview toggle and formatting tools appear without a manual refresh. */
   function _syncStreamDocChrome(doc) {
     if (!doc) return;
     const lang = (doc.language || 'markdown').toLowerCase();
@@ -10145,20 +10145,20 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // stale diff isn't cleared first, a later exitDiffMode applies the old doc's
     // content to the new one and overwrites it (issue #2467). activeDocId still
     // points at the previously-active doc here, so exitDiffMode(true) restores
-    // and saves THAT doc — same guard handleDocActualizar/switchToDoc use.
+    // and saves THAT doc — same guard handleDocUpdate/switchToDoc use.
     if (_diffModeActive) exitDiffMode(true);
     // If already streaming a doc, reuse it (don't create a second temp doc)
     if (_streamDocId && docs.has(_streamDocId)) {
       const existing = docs.get(_streamDocId);
       if (title) existing.title = title;
       if (language) existing.language = language;
-      // Actualizar UI fields
+      // Update UI fields
       const titleInput = document.getElementById('doc-title-input');
       const langSelect = document.getElementById('doc-language-select');
       if (title && titleInput) titleInput.value = title;
       if (langSelect) langSelect.value = existing.language || 'markdown';
       if (language === 'email') {
-        _showCorreoFields(existing);
+        _showEmailFields(existing);
       }
       _syncStreamDocChrome(existing);
       renderTabs();
@@ -10224,9 +10224,9 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     // doesn't have to refresh for the editor to flip into email mode.
     if (language === 'email') {
       const streamDoc = docs.get(_streamDocId);
-      if (streamDoc) _showCorreoFields(streamDoc);
+      if (streamDoc) _showEmailFields(streamDoc);
     } else {
-      _hideCorreoFields();
+      _hideEmailFields();
     }
 
     syncHighlighting();
@@ -10236,7 +10236,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   /** Simulate streaming effect for doc edits */
   let _editAnimFrame = null;
-  function _animateDocEditar(textarea, newContent) {
+  function _animateDocEdit(textarea, newContent) {
     if (_editAnimFrame) cancelAnimationFrame(_editAnimFrame);
     const indicator = document.getElementById('doc-stream-indicator');
     if (indicator) indicator.style.display = '';
@@ -10321,7 +10321,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     if (_streamDocId === activeDocId) {
       if ((doc?.language || '').toLowerCase() === 'email') {
-        _syncStreamingCorreoFields(doc);
+        _syncStreamingEmailFields(doc);
         return;
       }
       const textarea = document.getElementById('doc-editor-textarea');
@@ -10330,7 +10330,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         // Auto-scroll to bottom as content streams in
         textarea.scrollTop = textarea.scrollHeight;
       }
-      // Actualizar text and line numbers immediately, debounce expensive highlighting
+      // Update text and line numbers immediately, debounce expensive highlighting
       const codeEl = document.getElementById('doc-editor-code');
       if (codeEl) codeEl.textContent = content + '\n';
       updateLineNumbers(content);
@@ -10349,13 +10349,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   /** Finalize streaming — called when doc_update arrives with the real ID.
-   *  Returns the old _streamDocId so handleDocActualizar can migrate temp→real. */
+   *  Returns the old _streamDocId so handleDocUpdate can migrate temp→real. */
   export function streamDocFinalize() {
     const oldId = _streamDocId;
     const finishingDoc = oldId ? docs.get(oldId) : null;
     if (oldId === activeDocId && (finishingDoc?.language || '').toLowerCase() === 'email') {
-      const fields = _parseCorreoHeader(finishingDoc.content || '');
-      _renderStreamingCorreoBody(fields.body || '', { immediate: true });
+      const fields = _parseEmailHeader(finishingDoc.content || '');
+      _renderStreamingEmailBody(fields.body || '', { immediate: true });
     }
     _streamDocId = null;
     // Hide streaming indicator + cursor
@@ -10409,7 +10409,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   /** Handle SSE doc_update event from AI */
-  export function handleDocActualizar(data) {
+  export function handleDocUpdate(data) {
     const streamingId = streamDocFinalize();
     // Discard any pending AI-edit diff before this update changes the active
     // document. The diff state (_diffModeActive/_diffOldContent/...) is a
@@ -10442,15 +10442,15 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (!docs.has(docId)) {
       const curSession = sessionModule?.getCurrentSessionId() || '';
       let reuseId = null;
-      const incomingFields = _parseCorreoHeader(newContent || '');
+      const incomingFields = _parseEmailHeader(newContent || '');
 
-      // Correo subjects repeat constantly ("test", "Re: ..."). Match open
+      // Email subjects repeat constantly ("test", "Re: ..."). Match open
       // compose docs by source email identity first; never let a same-title
       // draft steal an update meant for a different open email.
       if (incomingFields.sourceUid) {
         const wantFolder = (incomingFields.sourceFolder || 'INBOX').trim();
         for (const [existingId, existingDoc] of docs) {
-          const existingFields = _parseCorreoHeader(existingDoc.content || '');
+          const existingFields = _parseEmailHeader(existingDoc.content || '');
           if (
             String(existingFields.sourceUid || '') === String(incomingFields.sourceUid)
             && ((existingFields.sourceFolder || 'INBOX').trim() === wantFolder)
@@ -10497,19 +10497,19 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (isExistingDoc) {
       const existingDoc = docs.get(docId);
       const existingLang = ((existingDoc?.language || data.language || '') + '').toLowerCase();
-      const oldFields = _parseCorreoHeader(existingDoc?.content || '');
-      const newFields = _parseCorreoHeader(newContent || '');
+      const oldFields = _parseEmailHeader(existingDoc?.content || '');
+      const newFields = _parseEmailHeader(newContent || '');
       if (
         existingLang === 'email'
         && oldFields.body
         && newFields.body
         && (oldFields.inReplyTo || oldFields.sourceUid || newFields.inReplyTo || newFields.sourceUid)
       ) {
-        const oldSplit = _splitCorreoReplyQuote(oldFields.body);
+        const oldSplit = _splitEmailReplyQuote(oldFields.body);
         if (oldSplit.quote) {
-          const newSplit = _splitCorreoReplyQuote(newFields.body);
+          const newSplit = _splitEmailReplyQuote(newFields.body);
           const nextBody = `${(newSplit.body || newFields.body || '').trim()}\n\n${oldSplit.quote}`.trim();
-          newContent = _buildCorreoContent(
+          newContent = _buildEmailContent(
             newFields.to || oldFields.to,
             newFields.subject || oldFields.subject,
             newFields.inReplyTo || oldFields.inReplyTo,
@@ -10524,7 +10524,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       }
     }
 
-    // Agregar or update in docs map
+    // Add or update in docs map
     if (isExistingDoc) {
       const doc = docs.get(docId);
       doc.content = newContent;
@@ -10577,12 +10577,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     const docLang = data.language || (docs.has(docId) && docs.get(docId).language) || '';
     if (docLang && langSelect) langSelect.value = docLang;
     if (!docLang) attemptAutoDetect();
-    const isCorreoActualizar = (docLang || '').toLowerCase() === 'email';
+    const isEmailUpdate = (docLang || '').toLowerCase() === 'email';
     const markdownPreviewWasVisible = _isMarkdownPreviewVisible();
 
     // Animate content update for edits; apply directly for creates/streaming
-    const isEditar = !isCorreoActualizar && isExistingDoc && oldContent && oldContent !== newContent && !streamingId;
-    if (isEditar && textarea) {
+    const isEdit = !isEmailUpdate && isExistingDoc && oldContent && oldContent !== newContent && !streamingId;
+    if (isEdit && textarea) {
       // Count changed lines to decide between animation and diff mode
       const oldLines = oldContent.split('\n');
       const newLines = newContent.split('\n');
@@ -10597,16 +10597,16 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
       } else if (markdownPreviewWasVisible && _refreshMarkdownPreviewIfVisible(docId, newContent)) {
         // Preview is the visible surface, so refresh it instead of animating a hidden editor.
       } else {
-        _animateDocEditar(textarea, newContent);
+        _animateDocEdit(textarea, newContent);
       }
     } else {
-      if (isCorreoActualizar) {
-        const updatedDocForCorreo = docs.get(docId);
-        if (updatedDocForCorreo) {
-          const updatedFields = _parseCorreoHeader(updatedDocForCorreo.content || '');
-          _clearCorreoLocalDraft(updatedFields.sourceUid, updatedFields.sourceFolder, updatedFields.inReplyTo);
+      if (isEmailUpdate) {
+        const updatedDocForEmail = docs.get(docId);
+        if (updatedDocForEmail) {
+          const updatedFields = _parseEmailHeader(updatedDocForEmail.content || '');
+          _clearEmailLocalDraft(updatedFields.sourceUid, updatedFields.sourceFolder, updatedFields.inReplyTo);
           _setMarkdownPreviewActive(false, { remember: false });
-          _showCorreoFields(updatedDocForCorreo, { applyLocalDraft: false });
+          _showEmailFields(updatedDocForEmail, { applyLocalDraft: false });
         }
       } else {
         if (textarea) textarea.value = newContent;
@@ -10617,7 +10617,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     // Flash the editor wrap to indicate content was updated
     const wrap = document.getElementById('doc-editor-wrap');
-    if (wrap && !isEditar) {
+    if (wrap && !isEdit) {
       wrap.classList.remove('doc-updated-flash');
       void wrap.offsetWidth; // force reflow
       wrap.classList.add('doc-updated-flash');
@@ -10626,14 +10626,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
     // Auto-detect language for docs with no language set
     const updatedDoc = docs.get(docId);
-    if (isCorreoActualizar && updatedDoc) {
+    if (isEmailUpdate && updatedDoc) {
       updatedDoc.language = 'email';
       if (langSelect) langSelect.value = 'email';
-      const updatedFields = _parseCorreoHeader(updatedDoc.content || '');
-      _clearCorreoLocalDraft(updatedFields.sourceUid, updatedFields.sourceFolder, updatedFields.inReplyTo);
-      _showCorreoFields(updatedDoc, { applyLocalDraft: false });
+      const updatedFields = _parseEmailHeader(updatedDoc.content || '');
+      _clearEmailLocalDraft(updatedFields.sourceUid, updatedFields.sourceFolder, updatedFields.inReplyTo);
+      _showEmailFields(updatedDoc, { applyLocalDraft: false });
     }
-    if (updatedDoc && !updatedDoc.userSetIdioma && !updatedDoc.language) {
+    if (updatedDoc && !updatedDoc.userSetLanguage && !updatedDoc.language) {
       setTimeout(attemptAutoDetect, 100);
     }
 
@@ -10670,7 +10670,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
   /** Toggle version history panel */
   let _versionClickOutside = null;
-  let _versionGuardardContent = null;  // stash current content for preview/revert
+  let _versionSavedContent = null;  // stash current content for preview/revert
   async function toggleVersionHistory() {
     const panel = document.getElementById('doc-version-panel');
     if (!panel || !activeDocId) return;
@@ -10678,7 +10678,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (panel.classList.contains('hidden')) {
       // Stash current content so we can restore on close
       const ta = document.getElementById('doc-editor-textarea');
-      _versionGuardardContent = ta ? ta.value : null;
+      _versionSavedContent = ta ? ta.value : null;
 
       // Position next to sidebar on desktop
       const sidebar = document.getElementById('sidebar');
@@ -10701,14 +10701,14 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         panel.style.top = '';
       }
 
-      // Mover panel to body so it's not clipped by doc pane overflow
+      // Move panel to body so it's not clipped by doc pane overflow
       if (panel.parentElement !== document.body) {
         document.body.appendChild(panel);
       }
 
       panel.classList.remove('hidden');
       await loadVersionHistory();
-      // Cerrar on click outside
+      // Close on click outside
       setTimeout(() => {
         _versionClickOutside = (e) => {
           if (!panel.contains(e.target) && e.target.id !== 'doc-version-badge') {
@@ -10725,12 +10725,12 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   function _closeVersionPanel() {
     const panel = document.getElementById('doc-version-panel');
     if (panel) panel.classList.add('hidden');
-    // Restaurar to latest (stashed) content
-    if (_versionGuardardContent !== null) {
+    // Restore to latest (stashed) content
+    if (_versionSavedContent !== null) {
       const ta = document.getElementById('doc-editor-textarea');
-      if (ta) ta.value = _versionGuardardContent;
+      if (ta) ta.value = _versionSavedContent;
       syncHighlighting();
-      _versionGuardardContent = null;
+      _versionSavedContent = null;
     }
     if (_versionClickOutside) {
       document.removeEventListener('click', _versionClickOutside, true);
@@ -10796,7 +10796,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
           </div>
           ${v.summary ? `<div class="doc-version-summary">${v.summary}</div>` : ''}
           ${diffs[i] ? `<div class="doc-version-diff">${diffs[i]}</div>` : ''}
-          ${i > 0 ? `<button class="doc-version-restore" data-version="${v.version_number}">Restaurar</button>` : ''}
+          ${i > 0 ? `<button class="doc-version-restore" data-version="${v.version_number}">Restore</button>` : ''}
         </div>
       `).join('');
 
@@ -10837,7 +10837,7 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     }
   }
 
-  /** Restaurar an old version (creates new version) */
+  /** Restore an old version (creates new version) */
   async function restoreVersion(num) {
     if (!activeDocId) return;
     try {
@@ -10845,24 +10845,24 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
         method: 'POST',
       });
       const doc = await res.json();
-      populateEditaror(doc);
+      populateEditor(doc);
       // Clear stash — restored content IS the new latest
-      _versionGuardardContent = null;
-      // Actualizar map
+      _versionSavedContent = null;
+      // Update map
       if (docs.has(activeDocId)) {
         const d = docs.get(activeDocId);
         d.content = doc.current_content || '';
         d.version = doc.version_count || 1;
       }
       await loadVersionHistory();
-      if (uiModule) uiModule.showToast(`Restaurard to v${num}`);
+      if (uiModule) uiModule.showToast(`Restored to v${num}`);
     } catch (e) {
       console.error('Failed to restore version:', e);
       if (uiModule) uiModule.showError('Failed to restore version');
     }
   }
 
-  /** Actualizar document title via PATCH */
+  /** Update document title via PATCH */
   async function updateTitle(overrideDocId, overrideTitle) {
     const docId = overrideDocId || activeDocId;
     if (!docId) return;
@@ -10930,8 +10930,8 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     if (titleInput && id === activeDocId) titleInput.value = title;
   }
 
-  /** Actualizar document language via PATCH */
-  async function updateIdioma() {
+  /** Update document language via PATCH */
+  async function updateLanguage() {
     if (!activeDocId) return;
     const select = document.getElementById('doc-language-select');
     if (!select) return;
@@ -10967,11 +10967,11 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     return activeDocId;
   }
 
-  export function getActiveCorreoComposerContext() {
+  export function getActiveEmailComposerContext() {
     if (!activeDocId) return null;
     const doc = docs.get(activeDocId);
     if (!doc || doc.language !== 'email') return null;
-    const fields = _parseCorreoHeader(doc.content || '');
+    const fields = _parseEmailHeader(doc.content || '');
     return {
       docId: activeDocId,
       sourceUid: fields.sourceUid || '',
@@ -10983,13 +10983,13 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
   }
 
   /** Find an open email tab by source UID + folder. Returns docId or null. */
-  export function findCorreoDocId(uid, folder) {
+  export function findEmailDocId(uid, folder) {
     if (uid == null) return null;
     const wantUid = String(uid);
     const wantFolder = (folder || '').trim();
     for (const [id, d] of docs) {
       if (d.language !== 'email') continue;
-      const fields = _parseCorreoHeader(d.content || '');
+      const fields = _parseEmailHeader(d.content || '');
       if (fields.sourceUid && String(fields.sourceUid) === wantUid &&
           (!wantFolder || (fields.sourceFolder || '').trim() === wantFolder)) {
         return id;
@@ -11009,12 +11009,12 @@ const documentModule = {
   newDocument,
   loadDocument,
   injectFreshDoc,
-  replaceCorreoReplyBody,
+  replaceEmailReplyBody,
   ensurePaneMounted: _ensureDocPaneMounted,
   loadSessionDocs,
   ensureDocPanel,
   saveDocument,
-  handleDocActualizar,
+  handleDocUpdate,
   handleDocSuggestions,
   streamDocOpen,
   streamDocDelta,
@@ -11024,8 +11024,8 @@ const documentModule = {
   exitDiffMode,
   isDiffModeActive,
   getCurrentDocId,
-  getActiveCorreoComposerContext,
-  findCorreoDocId,
+  getActiveEmailComposerContext,
+  findEmailDocId,
   getSelectionContext,
   clearSelection,
   clearAll,

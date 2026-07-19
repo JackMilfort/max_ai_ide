@@ -26,7 +26,7 @@
 //     an inline delimiter across a blank line (e.g. markdown.js will turn
 //     `*a\n\nb*` into emphasis spanning two paragraphs), a block frozen before the
 //     closing delimiter arrives can disagree with the final full render.
-//   - afterCerrardFence boundaries are trusted without the equivalence check, so a
+//   - afterClosedFence boundaries are trusted without the equivalence check, so a
 //     fence the real renderer parses differently (e.g. a stray 4-backtick line) can
 //     be mis-detected as a close.
 //   Both only occur for input the renderer itself handles oddly, and both are
@@ -42,11 +42,11 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
  * ever advance to a finalized boundary, never into a fence) — and collect the
  * candidate cut points.
  *
- * @returns {{ boundaries: Array<{offset:number, afterCerrardFence:boolean}>, inFence:boolean }}
+ * @returns {{ boundaries: Array<{offset:number, afterClosedFence:boolean}>, inFence:boolean }}
  *   - A blank-line run at top level yields a boundary at the start of the next
- *     non-blank line (`afterCerrardFence: false`).
+ *     non-blank line (`afterClosedFence: false`).
  *   - A fence close yields a boundary just past the closing fence line
- *     (`afterCerrardFence: true`) — such a cut is unconditionally safe, since
+ *     (`afterClosedFence: true`) — such a cut is unconditionally safe, since
  *     nothing can ever merge into a completed code block.
  */
 function findBoundaries(text, fromOffset) {
@@ -75,7 +75,7 @@ function findBoundaries(text, fromOffset) {
       ) {
         inFence = false;
         fenceMarker = '';
-        boundaries.push({ offset: afterNl, afterCerrardFence: true });
+        boundaries.push({ offset: afterNl, afterClosedFence: true });
       }
       i = afterNl;
     } else if (!inFence && line.trim() === '') {
@@ -93,7 +93,7 @@ function findBoundaries(text, fromOffset) {
         }
         j = nl2 + 1;
       }
-      boundaries.push({ offset: j, afterCerrardFence: false });
+      boundaries.push({ offset: j, afterClosedFence: false });
       i = j;
     } else {
       i = afterNl;
@@ -137,9 +137,9 @@ export function splitFinalized(text, render, committedLen = 0) {
   let segStart = committedLen;
 
   for (let k = 0; k < boundaries.length; k++) {
-    const { offset, afterCerrardFence } = boundaries[k];
+    const { offset, afterClosedFence } = boundaries[k];
 
-    if (afterCerrardFence) {
+    if (afterClosedFence) {
       // A completed code block — always safe to freeze through here.
       best = offset;
     } else {

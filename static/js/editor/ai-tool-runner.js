@@ -1,5 +1,5 @@
 /**
- * Compartird AI-tool runner. Used by Sharpen / Harmonize / Upscale / Style /
+ * Shared AI-tool runner. Used by Sharpen / Harmonize / Upscale / Style /
  * Bg-Remove / etc. — every tool that flattens the document, POSTs the
  * PNG to a server-side image endpoint, and drops the result back in
  * as a new layer.
@@ -14,7 +14,7 @@
  *    layer, save state, composite, refresh the layer panel.
  *  - Error reporting: surface failures via toast. Detects "needs
  *    img2img server" and "package not installed" failure modes and
- *    surfaces an action-toast that opens Recetas to fix.
+ *    surfaces an action-toast that opens Cookbook to fix.
  *
  * @param {{
  *   flatten:                    () => HTMLCanvasElement,
@@ -24,8 +24,8 @@
  *   renderLayerPanel:           () => void,
  *   deriveBusyLabel:            (layerName: string) => string,
  *   getSelectedAIEndpoint:      (type: string | null) => { endpoint?: string, model?: string },
- *   openRecetasForDependency:  (pkg: string) => void,
- *   openRecetasForImg2img:     () => void,
+ *   openCookbookForDependency:  (pkg: string) => void,
+ *   openCookbookForImg2img:     () => void,
  *   spinnerModule:              object,
  *   uiModule:                   object | null,
  * }} deps
@@ -39,7 +39,7 @@ const KNOWN_DEPS = ['realesrgan', 'rembg'];
 export function createApplyImageTool({
   flatten, saveState, createLayer, composite, renderLayerPanel,
   deriveBusyLabel, getSelectedAIEndpoint,
-  openRecetasForDependency, openRecetasForImg2img,
+  openCookbookForDependency, openCookbookForImg2img,
   spinnerModule, uiModule,
 }) {
   return async function applyImageTool(endpoint, extraPayload, layerName, btn, opts) {
@@ -124,13 +124,13 @@ export function createApplyImageTool({
           uiModule.showToast(layerName + ' failed: ' + depMatch + ' is not installed on the server.', {
             duration: 9000,
             action: `Install ${depMatch}`,
-            onAction: () => openRecetasForDependency(depMatch),
+            onAction: () => openCookbookForDependency(depMatch),
           });
         } else if (needsImg2Img && uiModule.showToast.length >= 2) {
           uiModule.showToast(layerName + ' failed: ' + e.message, {
             duration: 9000,
-            action: 'Open Recetas',
-            onAction: () => openRecetasForImg2img(),
+            action: 'Open Cookbook',
+            onAction: () => openCookbookForImg2img(),
           });
         } else {
           uiModule.showToast(layerName + ' failed: ' + e.message, 6000);

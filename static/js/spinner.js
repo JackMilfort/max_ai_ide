@@ -24,7 +24,7 @@ class Spinner {
   }
 
   /**
-   * Crear and return the spinner HTML element
+   * Create and return the spinner HTML element
    */
   createElement() {
     if (this.animation === 'sinewave') {
@@ -173,7 +173,7 @@ class Spinner {
 
     // Colors from CSS vars — read ONCE and cache. Calling getComputedStyle every
     // frame forces a full style recalc per frame, which janks/freezes the canvas
-    // animation badly when it's painting over a heavy photo. (Tema changes are
+    // animation badly when it's painting over a heavy photo. (Theme changes are
     // rare; the spinner is short-lived, so a stale cache is fine.)
     if (!this._wpColors) {
       const s = getComputedStyle(document.documentElement);
@@ -260,7 +260,7 @@ class Spinner {
   }
 
   /**
-   * Actualizar the spinner display
+   * Update the spinner display
    */
   updateDisplay() {
     if (!this.element) return;
@@ -321,7 +321,7 @@ class Spinner {
   }
 
   /**
-   * Actualizar the message while spinner is running
+   * Update the message while spinner is running
    */
   updateMessage(newMessage) {
     this.message = newMessage;
@@ -333,7 +333,7 @@ class Spinner {
   }
 
   /**
-   * Actualizar the spinner label text
+   * Update the spinner label text
    */
   updateLabel(newMessage) {
     this.message = newMessage;
@@ -357,14 +357,14 @@ class Spinner {
 }
 
 /**
- * Crear a new spinner instance
+ * Create a new spinner instance
  */
 export function create(message, style = "right", animation = "wave") {
   return new Spinner(message, style, animation);
 }
 
 /**
- * Crear a standalone whirlpool circle spinner (replaces CSS .spinner)
+ * Create a standalone whirlpool circle spinner (replaces CSS .spinner)
  * Returns { element, start(), stop(), destroy() }
  */
 export function createWhirlpool(size = 24) {

@@ -13,19 +13,19 @@
  * only sees image+mask edit models, and the per-tool dropdowns get
  * everything img2img-capable.
  *
- * Every picker ends with a "+ Serve a model in Recetas…" sentinel —
- * choosing it opens Recetas → Serve filtered to image models, then
+ * Every picker ends with a "+ Serve a model in Cookbook…" sentinel —
+ * choosing it opens Cookbook → Serve filtered to image models, then
  * reverts the picker to its prior value (so it's an action, not a
  * selectable model).
  *
  * @param {{
  *   container:              HTMLElement,
  *   apiBase:                string,
- *   openRecetasForImg2img: () => void,
+ *   openCookbookForImg2img: () => void,
  * }} deps
  */
 import { state } from './state.js';
-import { sortModeloIds } from '../modelSort.js';
+import { sortModelIds } from '../modelSort.js';
 
 // Heuristic classifier on a model id + endpoint name. A model can be:
 //   - gen: text-to-image generation
@@ -45,8 +45,8 @@ function modelCaps(modelId, endpointName, endpointType) {
   // Diffusion families — most generic SD/SDXL/Flux base models
   // support both via diffusers.
   if (/(?:^|[/\-_])(?:sd-?xl|sdxl|sd3|sd-|stable[\s-]*diffusion|flux|playground|pixart|kandinsky)/i.test(id)) {
-    const isInpaintModelo = /inpaint|edit|fill/i.test(id) || /inpaint|edit|fill/i.test(name);
-    return { gen: !isInpaintModelo || /base/i.test(id), inpaint: true };
+    const isInpaintModel = /inpaint|edit|fill/i.test(id) || /inpaint|edit|fill/i.test(name);
+    return { gen: !isInpaintModel || /base/i.test(id), inpaint: true };
   }
   // Self-hosted diffusion server: model id often matches the repo
   // name; trust the endpoint name hint.
@@ -56,14 +56,14 @@ function modelCaps(modelId, endpointName, endpointType) {
   }
   if (/inpaint|edit|fill/i.test(name)) return { gen: false, inpaint: true };
   if (/diffus|flux|sd|image/i.test(name)) return { gen: true, inpaint: true };
-  // Editaror image tools should be conservative. Unknown LLM/chat models
+  // Editor image tools should be conservative. Unknown LLM/chat models
   // do not belong in image generation or inpaint pickers.
   return { gen: false, inpaint: false };
 }
 
-export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2img }) {
-  // Delegated handler for the "+ Serve a model in Recetas…" sentinel
-  // option — catches clicks regardless of whether loadAIModelos has
+export function wireAIModelSelectors({ container, apiBase, openCookbookForImg2img }) {
+  // Delegated handler for the "+ Serve a model in Cookbook…" sentinel
+  // option — catches clicks regardless of whether loadAIModels has
   // rewired the individual select yet and survives any innerHTML
   // reset later.
   container.addEventListener('change', (e) => {
@@ -73,7 +73,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
     // Revert to the previous selection so the sentinel isn't "stuck".
     const prev = sel._prevServeValue ?? '';
     sel.value = prev;
-    openRecetasForImg2img();
+    openCookbookForImg2img();
   });
   // Track prior value so we can restore it after the sentinel fires.
   container.addEventListener('focus', (e) => {
@@ -89,7 +89,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
   if (!aiGenSelect && !aiInpaintSelect &&
       !document.querySelector('select.ge-tool-model')) return;
 
-  async function loadAIModelos(opts = {}) {
+  async function loadAIModels(opts = {}) {
     try {
       const selectBaseUrl = opts.selectBaseUrl || '';
       const prevGenValue = aiGenSelect?.value || '';
@@ -106,21 +106,21 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
       let selectedInpaint = null;
       for (const ep of endpoints) {
         if (!ep.is_enabled) continue;
-        const hasListedModelos = Array.isArray(ep.models) && ep.models.length;
-        const models = hasListedModelos ? sortModeloIds(ep.models) : [''];
+        const hasListedModels = Array.isArray(ep.models) && ep.models.length;
+        const models = hasListedModels ? sortModelIds(ep.models) : [''];
         const isImageEndpoint = (ep.model_type || '').toLowerCase() === 'image';
         // Image/inpaint endpoints can be called by URL even when their
         // /models cache is still empty, so don't strand a freshly served
-        // Recetas model as "(offline)" in the editor picker.
+        // Cookbook model as "(offline)" in the editor picker.
         const epUsable = !!ep.online || isImageEndpoint;
         for (const modelId of models) {
           const caps = modelCaps(modelId || ep.name, ep.name, ep.model_type);
           if (!caps.gen && !caps.inpaint) continue;
           // Encode "<base_url>::<model_id>" so the value carries both pieces.
           const value = `${ep.base_url}::${modelId}`;
-          const shortModelo = modelId ? String(modelId).split('/').pop() : (ep.name || ep.base_url);
+          const shortModel = modelId ? String(modelId).split('/').pop() : (ep.name || ep.base_url);
           const epHint = modelId && ep.name && ep.name !== modelId ? ` · ${ep.name}` : '';
-          const label = `${shortModelo}${epHint}${epUsable ? '' : ' (offline)'}`;
+          const label = `${shortModel}${epHint}${epUsable ? '' : ' (offline)'}`;
           if (caps.gen && aiGenSelect) {
             const opt = document.createElement('option');
             opt.value = value;
@@ -167,7 +167,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
         else if (hasValue(aiInpaintSelect, prevInpaintValue)) aiInpaintSelect.value = prevInpaintValue;
         else if (firstInpaint) aiInpaintSelect.value = firstInpaint;
       }
-      // Append the "Serve a model in Recetas…" sentinel at the
+      // Append the "Serve a model in Cookbook…" sentinel at the
       // bottom of every model dropdown.
       const appendServeSentinel = (sel) => {
         const sep = document.createElement('option');
@@ -176,7 +176,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
         sel.appendChild(sep);
         const serveOpt = document.createElement('option');
         serveOpt.value = '__serve_cookbook__';
-        serveOpt.textContent = '+ Serve a model in Recetas…';
+        serveOpt.textContent = '+ Serve a model in Cookbook…';
         sel.appendChild(serveOpt);
       };
       for (const ts of perToolSelects) appendServeSentinel(ts);
@@ -189,7 +189,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
         sel.addEventListener('change', () => {
           if (sel.value === '__serve_cookbook__') {
             sel.value = prev;
-            openRecetasForImg2img();
+            openCookbookForImg2img();
             return;
           }
           prev = sel.value;
@@ -197,9 +197,9 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
       };
       wireServeSentinel(aiGenSelect);
       wireServeSentinel(aiInpaintSelect);
-      // Restaurar each per-tool selection from localStorage.
+      // Restore each per-tool selection from localStorage.
       for (const ts of perToolSelects) {
-        const key = 'ge-tool-model-' + ts.dataset.geToolModelo;
+        const key = 'ge-tool-model-' + ts.dataset.geToolModel;
         try {
           const saved = localStorage.getItem(key);
           if (saved && [...ts.options].some(o => o.value === saved)) {
@@ -210,7 +210,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
         ts.addEventListener('change', () => {
           if (ts.value === '__serve_cookbook__') {
             ts.value = prevValue;
-            openRecetasForImg2img();
+            openCookbookForImg2img();
             return;
           }
           prevValue = ts.value;
@@ -221,7 +221,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
       // Fetch failed — still give the user the affordance to set up
       // a model. Otherwise the dropdown shows only "Auto" with no
       // hint about what to do next.
-      const fallback = '<option value="">Auto</option><option value="" disabled>──────────</option><option value="__serve_cookbook__">+ Serve a model in Recetas…</option>';
+      const fallback = '<option value="">Auto</option><option value="" disabled>──────────</option><option value="__serve_cookbook__">+ Serve a model in Cookbook…</option>';
       if (aiGenSelect) aiGenSelect.innerHTML = fallback;
       if (aiInpaintSelect) aiInpaintSelect.innerHTML = fallback;
       document.querySelectorAll('select.ge-tool-model').forEach(ts => { ts.innerHTML = fallback; });
@@ -231,7 +231,7 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
         sel.addEventListener('change', () => {
           if (sel.value === '__serve_cookbook__') {
             sel.value = prev;
-            openRecetasForImg2img();
+            openCookbookForImg2img();
             return;
           }
           prev = sel.value;
@@ -242,30 +242,30 @@ export function wireAIModeloSelectors({ container, apiBase, openRecetasForImg2im
       document.querySelectorAll('select.ge-tool-model').forEach(wireServe);
     }
   }
-  loadAIModelos();
-  const onModeloEndpointsActualizard = (e) => {
+  loadAIModels();
+  const onModelEndpointsUpdated = (e) => {
     if (!container.isConnected) {
-      window.removeEventListener('ge:model-endpoints-updated', onModeloEndpointsActualizard);
+      window.removeEventListener('ge:model-endpoints-updated', onModelEndpointsUpdated);
       return;
     }
-    loadAIModelos({ selectBaseUrl: e.detail?.baseUrl || '' });
+    loadAIModels({ selectBaseUrl: e.detail?.baseUrl || '' });
   };
-  window.addEventListener('ge:model-endpoints-updated', onModeloEndpointsActualizard);
+  window.addEventListener('ge:model-endpoints-updated', onModelEndpointsUpdated);
   // Re-fetch the model list when the user opens the inpaint dropdown,
-  // so a model served via Recetas mid-edit shows up without having to
+  // so a model served via Cookbook mid-edit shows up without having to
   // close and reopen the editor. Debounced to one refresh per 3s so
   // rapid open/close doesn't hammer the endpoint. Preserves the
   // current selection across the reload.
-  let _lastModeloRefresh = 0;
+  let _lastModelRefresh = 0;
   const refreshOnOpen = (e) => {
     const sel = e.target.closest('#ge-ai-inpaint, select.ge-tool-model');
     if (!sel) return;
     const now = Date.now();
-    if (now - _lastModeloRefresh < 3000) return;
-    _lastModeloRefresh = now;
+    if (now - _lastModelRefresh < 3000) return;
+    _lastModelRefresh = now;
     const keep = sel.value;
-    loadAIModelos().then(() => {
-      // Restaurar the prior selection if it still exists.
+    loadAIModels().then(() => {
+      // Restore the prior selection if it still exists.
       if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
     });
   };

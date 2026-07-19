@@ -1,4 +1,4 @@
-// Recetas Schedule — opens a small inline form (styled with the app's
+// Cookbook Schedule — opens a small inline form (styled with the app's
 // existing .cookbook-* classes) that creates a ScheduledTask with
 // action=cookbook_serve. Mounted from two places:
 //
@@ -8,7 +8,7 @@
 //      single source of truth).
 //
 // Feedback uses uiModule.showToast() — the same toast the rest of the
-// app uses for "Guardard", "Favorited", etc. — so the success message
+// app uses for "Saved", "Favorited", etc. — so the success message
 // doesn't introduce a parallel notification style.
 //
 // To remove: delete this file + the <script> tag in index.html + the
@@ -51,19 +51,19 @@ try { (function () {
   }
 
   // Cached handle to the tasks module so the success toast's "Open"
-  // action can jump straight to the new task in the Tareas tab.
+  // action can jump straight to the new task in the Tasks tab.
   let _tasksMod = null;
-  async function _getTareasMod() {
+  async function _getTasksMod() {
     if (_tasksMod) return _tasksMod;
     try { _tasksMod = await import("/static/js/tasks.js"); } catch (_) {}
     return _tasksMod;
   }
-  async function openTaskInTareasTab(taskId) {
-    const m = await _getTareasMod();
-    if (m && typeof m.openTareas === "function") {
-      try { m.openTareas(taskId); return; } catch (_) {}
+  async function openTaskInTasksTab(taskId) {
+    const m = await _getTasksMod();
+    if (m && typeof m.openTasks === "function") {
+      try { m.openTasks(taskId); return; } catch (_) {}
     }
-    // Last-resort fallback: click the sidebar Tareas button.
+    // Last-resort fallback: click the sidebar Tasks button.
     document.getElementById("tool-tasks-btn")?.click();
   }
 
@@ -120,8 +120,8 @@ try { (function () {
           </svg>
           <span class="hwfit-schedule-title-text">Schedule serve: <strong>${esc(cfg.title)}</strong></span>
           <span class="hwfit-schedule-title-spacer"></span>
-          <label class="hwfit-schedule-mirror-toggle" title="Also create a calendar event on the Recetas calendar">
-            <span class="hwfit-schedule-mirror-label">Crear event in calendar</span>
+          <label class="hwfit-schedule-mirror-toggle" title="Also create a calendar event on the Cookbook calendar">
+            <span class="hwfit-schedule-mirror-label">Create event in calendar</span>
             <span class="admin-switch hwfit-schedule-mirror-switch">
               <input type="checkbox" class="hwfit-sched-calendar-mirror" />
               <span class="admin-slider"></span>
@@ -147,13 +147,13 @@ try { (function () {
             </div>
           </label>
           <div class="hwfit-schedule-actions-inline">
-            <button type="button" class="cookbook-btn hwfit-sched-cancel" title="Cancelar">
+            <button type="button" class="cookbook-btn hwfit-sched-cancel" title="Cancel">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span>Cancelar</span>
+              <span>Cancel</span>
             </button>
-            <button type="button" class="cookbook-btn hwfit-sched-save" title="Guardar schedule" aria-label="Guardar schedule">
+            <button type="button" class="cookbook-btn hwfit-sched-save" title="Save schedule" aria-label="Save schedule">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <span>Guardar</span>
+              <span>Save</span>
             </button>
           </div>
         </div>
@@ -195,7 +195,7 @@ try { (function () {
       const startTime = form.querySelector(".hwfit-sched-start").value;
       const endTime = form.querySelector(".hwfit-sched-end").value;
       const days = Array.from(form.querySelectorAll(".hwfit-sched-day-chip.is-on")).map(c => c.dataset.day);
-      const mirrorToCalendario = !!form.querySelector(".hwfit-sched-calendar-mirror")?.checked;
+      const mirrorToCalendar = !!form.querySelector(".hwfit-sched-calendar-mirror")?.checked;
       const errEl = form.querySelector(".hwfit-sched-err");
       errEl.textContent = "";
       errEl.classList.remove("is-visible");
@@ -283,12 +283,12 @@ try { (function () {
         if (!r.ok || data.error) {
           fail(data.error || data.detail || `HTTP ${r.status}`);
           saveBtn.disabled = false;
-          saveBtn.textContent = "Guardar schedule";
+          saveBtn.textContent = "Save schedule";
           toast(`Schedule save failed: ${data.error || data.detail || r.status}`);
           return;
         }
-        if (mirrorToCalendario) {
-          // Mirror onto a dedicated "Recetas" calendar so the user can
+        if (mirrorToCalendar) {
+          // Mirror onto a dedicated "Cookbook" calendar so the user can
           // toggle the whole set on/off as a unit in the calendar UI.
           // Best-effort: if anything here fails, we still consider the
           // task creation a success (the task itself works regardless).
@@ -297,7 +297,7 @@ try { (function () {
             const calsBody = calsRes.ok ? await calsRes.json() : {};
             let cookbookCal = (calsBody.calendars || []).find(c => (c.name || "").toLowerCase() === "cookbook");
             if (!cookbookCal) {
-              const mk = await fetch("/api/calendar/calendars?name=Recetas&color=%233b82f6", {
+              const mk = await fetch("/api/calendar/calendars?name=Cookbook&color=%233b82f6", {
                 method: "POST", credentials: "same-origin",
               });
               if (mk.ok) {
@@ -310,7 +310,7 @@ try { (function () {
             }
             // The `cookbook_task_id:` marker on its own line lets
             // calendar.js's event-form code detect that this event was
-            // created from a Recetas schedule and render an
+            // created from a Cookbook schedule and render an
             // "Open task" button alongside the description, so the user
             // can jump straight to the source task from the calendar UI.
             const evBody = {
@@ -318,8 +318,8 @@ try { (function () {
               dtstart: new Date().toISOString(),
               dtend: new Date(Date.now() + dur * 60 * 1000).toISOString(),
               all_day: false,
-              description: `Auto-mirrored from Recetas schedule task ${data.id || ""}.\n`
-                + `Editar/delete the task in the Tareas tab — this event will follow.\n`
+              description: `Auto-mirrored from Cookbook schedule task ${data.id || ""}.\n`
+                + `Edit/delete the task in the Tasks tab — this event will follow.\n`
                 + `cookbook_task_id: ${data.id || ""}`,
               rrule: weekdaysOnly
                 ? "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
@@ -361,16 +361,16 @@ try { (function () {
         }
         form.remove();
         const newTaskId = data.id || data.task_id || "";
-        toast(`Creard task: Serve: ${fullName}`, {
+        toast(`Created task: Serve: ${fullName}`, {
           leadingIcon: "check",
           action: "Open",
           duration: 5000,
-          onAction: () => openTaskInTareasTab(newTaskId),
+          onAction: () => openTaskInTasksTab(newTaskId),
         });
       } catch (e) {
         fail(String(e));
         saveBtn.disabled = false;
-        saveBtn.textContent = "Guardar schedule";
+        saveBtn.textContent = "Save schedule";
         toast(`Schedule save failed: ${e}`);
       }
     }));

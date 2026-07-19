@@ -4,7 +4,7 @@
 // no shared state — safe to import anywhere and to unit-test under node.
 
 // Extract the bare email from "Name <email@x>" or a plain "email@x".
-export function extractCorreo(addr) {
+export function extractEmail(addr) {
   const m = (addr || '').match(/<([^>]+)>/);
   return (m ? m[1] : (addr || '')).trim().toLowerCase();
 }
@@ -22,6 +22,6 @@ export function buildReplyAllCc(data, mine) {
   const me = new Set(list.map((a) => (a || '').toLowerCase()).filter(Boolean));
   const split = (s) => (typeof s === 'string' ? s : '').split(',').map((x) => x.trim()).filter(Boolean);
   return [...split(data && data.to), ...split(data && data.cc)]
-    .filter((addr) => !me.has(extractCorreo(addr)))
+    .filter((addr) => !me.has(extractEmail(addr)))
     .join(', ');
 }

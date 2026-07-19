@@ -72,7 +72,7 @@ export function showScoreboard() {
 
   // Mode tabs
   const modes = ['chat', 'agent', 'search', 'research'];
-  const modeLabels = { chat: 'Chat', agent: 'Agent', search: 'Buscar', research: 'Investigación' };
+  const modeLabels = { chat: 'Chat', agent: 'Agent', search: 'Search', research: 'Research' };
   const tabBar = document.createElement('div');
   tabBar.className = 'compare-mode-tabs';
   tabBar.style.marginBottom = '12px';
@@ -127,7 +127,7 @@ export function showScoreboard() {
       const table = document.createElement('table');
       table.className = 'scoreboard-table';
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Modelo</th><th>Win%</th><th>W</th><th>L</th><th>T</th><th>Games</th><th>$/1k</th></tr>';
+      thead.innerHTML = '<tr><th>Model</th><th>Win%</th><th>W</th><th>L</th><th>T</th><th>Games</th><th>$/1k</th></tr>';
       table.appendChild(thead);
       const tbody = document.createElement('tbody');
       for (const [name, s] of sorted) {
@@ -152,7 +152,7 @@ export function showScoreboard() {
     total.textContent = filtered.length + ' vote' + (filtered.length !== 1 ? 's' : '') + ' recorded';
     wrap.appendChild(total);
 
-    // Mover clear button into wrap so it stays at bottom
+    // Move clear button into wrap so it stays at bottom
     const existingClear = body.querySelector('.scoreboard-clear-btn');
     if (existingClear) wrap.appendChild(existingClear);
 
@@ -198,7 +198,7 @@ export function showScoreboard() {
       showScoreboard();
     });
     const noBtn = document.createElement('button');
-    noBtn.textContent = 'Cancelar';
+    noBtn.textContent = 'Cancel';
     noBtn.className = 'cmp-btn-secondary';
     noBtn.style.cssText = 'padding:4px 12px;border-radius:4px;font-size:12px;';
     noBtn.addEventListener('click', () => confirmRow.remove());

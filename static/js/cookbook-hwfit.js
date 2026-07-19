@@ -9,9 +9,9 @@ import {
   esc,
   modelLogo,
   _detectBackend,
-  _runModeloDescargar,
+  _runModelDownload,
   _runPanelCmd,
-  _buildDescargarCmd,
+  _buildDownloadCmd,
   _addTask,
   _renderRunningTab,
   _detectToolParser,
@@ -34,15 +34,15 @@ import {
 } from './cookbook.js';
 import uiModule from './ui.js';
 import spinnerModule from './spinner.js';
-import { _loadTareas, _tmuxGracefulKill, _nextAvailablePort, _taskPort } from './cookbookRunning.js';
-import { openRecetasDependencies } from './cookbook-diagnosis.js';
+import { _loadTasks, _tmuxGracefulKill, _nextAvailablePort, _taskPort } from './cookbookRunning.js';
+import { openCookbookDependencies } from './cookbook-diagnosis.js';
 
 // Map a serve-backend code (vllm / sglang / llamacpp / mlx) → the package name
 // the Dependencies API reports. Used to look up "is this backend installed
 // on the target server" before firing a launch.
 const _BACKEND_PKG = { vllm: 'vllm', sglang: 'sglang', llamacpp: 'llama_cpp', mlx: 'mlx_lm' };
 
-function _normalizeRecetasModeloDir(dir) {
+function _normalizeCookbookModelDir(dir) {
   const d = String(dir || '').replaceAll('\u2715', '').replaceAll('\u2716', '').trim();
   return /^(home|mnt|media|data|opt|srv|var)\//.test(d) ? `/${d}` : d;
 }
@@ -98,7 +98,7 @@ async function _ensureBackendInstalled(runBackend, host, port, envPath, modelNam
   const pkgName = _BACKEND_PKG[runBackend];
   if (!pkgName) return true; // unknown backend — don't block
   try {
-    const params = new URLBuscarParams();
+    const params = new URLSearchParams();
     if (host) {
       params.set('host', host);
       if (port) params.set('ssh_port', String(port));
@@ -118,7 +118,7 @@ async function _ensureBackendInstalled(runBackend, host, port, envPath, modelNam
     `${pkgName} not installed on ${targetLabel}. Opening Dependencies — pick your model and click Run.`,
     6000
   );
-  openRecetasDependencies(pkgName, { expandRecipe: pkgName, model: modelName });
+  openCookbookDependencies(pkgName, { expandRecipe: pkgName, model: modelName });
   return false;
 }
 
@@ -126,7 +126,7 @@ async function _ensureBackendInstalled(runBackend, host, port, envPath, modelNam
 
 export let _hwfitCache = null;
 export let _hwfitDebounce = null;
-export let _cachedModeloIds = null; // repo IDs already downloaded
+export let _cachedModelIds = null; // repo IDs already downloaded
 // Bumped on every _hwfitFetch; a slow scan (remote SSH probe can take ~10s)
 // checks this before rendering so a stale response can't clobber a newer one
 // after the user has switched servers.
@@ -217,7 +217,7 @@ export function _renderGpuToggles(system) {
     _gpuToggleTotal = 0;
     return;
   }
-  // Actualizar on every scan that returns a positive total — previously this
+  // Update on every scan that returns a positive total — previously this
    // only set on the first scan, so switching servers (e.g. local 1-GPU
    // first, then a 4-GPU remote) left the Run-panel GPU buttons stuck on
    // the original count. Zero/missing totals still don't clobber a known
@@ -579,9 +579,9 @@ function _olParseSize(s) {
   if (m) return parseFloat(m[1]) / 1000;
   return null;
 }
-function _ollamaToHwfitRows(libModelos, vramAvail, ramAvail) {
+function _ollamaToHwfitRows(libModels, vramAvail, ramAvail) {
   const out = [];
-  if (!Array.isArray(libModelos)) return out;
+  if (!Array.isArray(libModels)) return out;
   const _ramFitLevel = (need, budget) => {
     if (!need || !budget || need > budget) return 'too_tight';
     const ratio = need / budget;
@@ -589,7 +589,7 @@ function _ollamaToHwfitRows(libModelos, vramAvail, ramAvail) {
     if (ratio <= 0.78) return 'good';
     return 'marginal';
   };
-  for (const m of libModelos) {
+  for (const m of libModels) {
     const sizes = (Array.isArray(m.sizes) && m.sizes.length) ? m.sizes : ['latest'];
     for (const sz of sizes) {
       const params = _olParseSize(sz);
@@ -725,10 +725,10 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
   }
   // Only fetch cached model IDs when server changes, not on every search/sort
   const remoteKey = _currentServerValue();
-  if (!_cachedModeloIds || _lastCacheHost() !== remoteKey) {
+  if (!_cachedModelIds || _lastCacheHost() !== remoteKey) {
     const _cacheSrv = _serverByVal(_envState.remoteServerKey || remoteHost);
     const _cachePort = _cacheSrv?.port || '';
-    const _cacheParams = new URLBuscarParams();
+    const _cacheParams = new URLSearchParams();
     if (remoteHost) {
       _cacheParams.set('host', remoteHost);
       if (_cachePort) _cacheParams.set('ssh_port', _cachePort);
@@ -739,16 +739,16 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
       .then(d => {
         if (d && d.error) throw new Error(d.error);
         // Exclude stalled (download-shell) entries — a 12 KB README-only
-        // folder shouldn't count as "downloaded" in the Scan/Descargar list.
-        _cachedModeloIds = new Set((d.models || []).filter(m => m.status !== 'stalled').map(m => m.repo_id));
+        // folder shouldn't count as "downloaded" in the Scan/Download list.
+        _cachedModelIds = new Set((d.models || []).filter(m => m.status !== 'stalled').map(m => m.repo_id));
         _setLastCacheHost(remoteKey);
         // Re-mark rows if already rendered
         list.querySelectorAll('.hwfit-row[data-model]').forEach(row => {
           const name = row.dataset.model;
-          if (_cachedModeloIds.has(name) || [..._cachedModeloIds].some(id => id.endsWith('/' + name?.split('/').pop()))) {
+          if (_cachedModelIds.has(name) || [..._cachedModelIds].some(id => id.endsWith('/' + name?.split('/').pop()))) {
             const nameEl = row.querySelector('.hwfit-name');
             if (nameEl && !nameEl.querySelector('.hwfit-dl-dot')) {
-              nameEl.insertAdjacentHTML('beforeend', '<span class="hwfit-dl-dot" title="Descargared">\u25CF</span>');
+              nameEl.insertAdjacentHTML('beforeend', '<span class="hwfit-dl-dot" title="Downloaded">\u25CF</span>');
             }
           }
         });
@@ -775,7 +775,7 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
     // Sorting is a table operation, not a different backend query. Fetch a
     // broad candidate set once, then sort it client-side so VRAM/Params/etc.
     // do not appear to "filter out" rows by returning a different top-80 slice.
-    const params = new URLBuscarParams({ limit: '2500', sort: 'score' });
+    const params = new URLSearchParams({ limit: '2500', sort: 'score' });
     if (fresh) params.set('fresh', '1');   // bypass the hardware-scan cache
     if (search) params.set('search', search);
     if (remoteHost) {
@@ -827,7 +827,7 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
     let data = await res.json();
     if (_tk !== _hwfitFetchToken) { try { wp.destroy(); } catch {} return; }
     if (!isImageMode && quantPref && !data.error && Array.isArray(data.models) && data.models.length === 0) {
-      const fallbackParams = new URLBuscarParams(params);
+      const fallbackParams = new URLSearchParams(params);
       fallbackParams.delete('quant');
       const fallbackRes = await fetch(`/api/hwfit/models?${fallbackParams}`);
       if (_tk !== _hwfitFetchToken) { try { wp.destroy(); } catch {} return; }
@@ -871,7 +871,7 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
       const _ramAvail = data.system?.total_ram_gb || 0;
       const _lib = await _ensureOllamaLib();
       const _olRows = _ollamaToHwfitRows(_lib, _vramAvail, _ramAvail);
-      // Buscar filter on Ollama rows: HF API already filters by search; do the
+      // Search filter on Ollama rows: HF API already filters by search; do the
       // same client-side over Ollama name + description so the search box
       // works consistently across both sources.
       const _s = (search || '').trim().toLowerCase();
@@ -948,9 +948,9 @@ export async function _hwfitFetch(fresh = false, opts = {}) {
   }
 }
 
-// Renders a non-blocking hardware visibility warning when Recetas is using
+// Renders a non-blocking hardware visibility warning when Cookbook is using
 // container-visible hardware that may not match the user's actual host machine.
-function _renderHwVisibilityAdvertencia(sys) {
+function _renderHwVisibilityWarning(sys) {
   const row = document.getElementById('hwfit-hw-row');
   if (!row) return;
 
@@ -976,9 +976,9 @@ function _renderHwVisibilityAdvertencia(sys) {
     <div class="hwfit-hw-visibility-warning-title">${esc(warning.title || 'Hardware visibility note')}</div>
     <div class="hwfit-hw-visibility-warning-body">${esc(warning.message || '')}</div>
     <div class="hwfit-hw-visibility-warning-actions">
-      <button type="button" class="hwfit-gpu-btn" data-hw-action="manual">Editar manual hardware</button>
+      <button type="button" class="hwfit-gpu-btn" data-hw-action="manual">Edit manual hardware</button>
       <button type="button" class="hwfit-gpu-btn" data-hw-action="rescan">Rescan</button>
-      <button type="button" class="hwfit-gpu-btn" data-hw-action="copy">Copiar diagnostics</button>
+      <button type="button" class="hwfit-gpu-btn" data-hw-action="copy">Copy diagnostics</button>
     </div>
   `;
 
@@ -1002,7 +1002,7 @@ function _renderHwVisibilityAdvertencia(sys) {
   box.querySelector('[data-hw-action="copy"]')?.addEventListener('click', () => {
     // Keep diagnostics copy/paste friendly for GitHub issues and Docker support.
     const text = [
-      'Odysseus Recetas hardware diagnostics',
+      'Odysseus Cookbook hardware diagnostics',
       `probe_scope=${sys?.probe_scope || ''}`,
       `containerized=${sys?.containerized === true}`,
       `backend=${sys?.backend || ''}`,
@@ -1112,7 +1112,7 @@ export function _hwfitRenderHw(el, sys) {
     + chip('cores', cores)
     + chip('backend', esc(sys.backend || ''))
     + manualChip;
-  _renderHwVisibilityAdvertencia(sys);
+  _renderHwVisibilityWarning(sys);
   // Body click → toggle "off" (dimmed, still visible). Membership of
   // _dismissedHwChips is what the ranker reads, so both add+remove
   // here also flips the model list. The manual chip is excluded —
@@ -1253,7 +1253,7 @@ function _modeLabel(model) {
 
 export const _hwfitColumns = [
   { key: 'fit', label: 'Fit',    cls: 'hwfit-fit' },
-  { key: 'newest', label: 'Modelo (latest)',  cls: 'hwfit-name' },
+  { key: 'newest', label: 'Model (latest)',  cls: 'hwfit-name' },
   { key: 'vram',  label: 'VRAM',   cls: 'hwfit-c-vram' },
   { key: 'params',label: 'Param', cls: 'hwfit-c-params' },
   { key: null,    label: 'Quant',  cls: 'hwfit-c-quant' },
@@ -1312,12 +1312,12 @@ export function _hwfitRenderList(el, models) {
       // (Budget tag removed — the GPU/RAM/N-GPU suffix next to "Fit" was noise;
       // the toggle row already shows which budget is active.)
     }
-    // The Modelo column's "(newest)" / "(oldest)" suffix flips with the sort
+    // The Model column's "(newest)" / "(oldest)" suffix flips with the sort
     // direction so the user can see at a glance which way they're sorted.
     if (col.key === 'newest' && col.key === currentSort) {
-      label = isReversed ? 'Modelo (oldest)' : 'Modelo (latest)';
+      label = isReversed ? 'Model (oldest)' : 'Model (latest)';
     } else if (col.key === 'newest') {
-      label = 'Modelo (latest)';
+      label = 'Model (latest)';
     }
     html += `<span class="hwfit-col ${col.cls}${sortable}${active}"${dataAttr}>${label}${arrow}</span>`;
   }
@@ -1335,7 +1335,7 @@ export function _hwfitRenderList(el, models) {
     const vramLabel = m.required_gb ? m.required_gb.toFixed(1) + 'G' : '?';
     const moeBadge = m.is_moe ? '<span class="hwfit-badge hwfit-moe">MoE</span>' : '';
     const imgBadge = m.is_image_gen ? '<span class="hwfit-badge" style="background:color-mix(in srgb, var(--red) 20%, transparent);color:var(--red);font-size:8px;padding:1px 4px;border-radius:3px;margin-left:4px;">IMG</span>' : '';
-    const dlDot = (_cachedModeloIds && (_cachedModeloIds.has(m.name) || [..._cachedModeloIds].some(id => id === m.name?.split('/').pop()))) ? '<span class="hwfit-dl-dot" title="Descargared">\u25CF</span>' : '';
+    const dlDot = (_cachedModelIds && (_cachedModelIds.has(m.name) || [..._cachedModelIds].some(id => id === m.name?.split('/').pop()))) ? '<span class="hwfit-dl-dot" title="Downloaded">\u25CF</span>' : '';
     html += `<div class="hwfit-row" data-model="${esc(m.name)}">`;
     html += `<span class="hwfit-col hwfit-fit" style="color:${fitColor}">${esc(fitLabel)}</span>`;
     // Append quant to the title when it's not already in the repo name. The
@@ -1372,7 +1372,7 @@ export function _hwfitRenderList(el, models) {
   }
   el.innerHTML = html;
   // Click row → expand inline action panel. Exception: Ollama rows skip the
-  // expand panel (no HF metadata to power it) and just fill the Descargar
+  // expand panel (no HF metadata to power it) and just fill the Download
   // input with the `<name>:<size>` tag — one click → ready to pull.
   el.querySelectorAll('.hwfit-row:not(.hwfit-header)').forEach(row => {
     row.addEventListener('click', () => {
@@ -1381,7 +1381,7 @@ export function _hwfitRenderList(el, models) {
       const modelData = (_hwfitCache?.models || []).find(m => m.name === name);
       if (!modelData) return;
       if (modelData._isOllama) {
-        // Force-open the Descargar card if it's been collapsed — otherwise
+        // Force-open the Download card if it's been collapsed — otherwise
         // filling the (hidden) input silently swallows the click.
         const dlBody = document.getElementById('cookbook-download-card-body');
         const dlArrow = document.getElementById('cookbook-download-card-arrow');
@@ -1401,7 +1401,7 @@ export function _hwfitRenderList(el, models) {
         }
         return;
       }
-      _expandModeloRow(row, modelData);
+      _expandModelRow(row, modelData);
     });
   });
   // Clickable header columns → sort (click again to toggle direction)
@@ -1540,7 +1540,7 @@ function _sglangHashFor(modelData) {
   return '#' + parts.join('&');
 }
 
-export function _expandModeloRow(row, modelData) {
+export function _expandModelRow(row, modelData) {
   const list = row.closest('.hwfit-list');
   if (!list) return;
 
@@ -1569,9 +1569,9 @@ export function _expandModeloRow(row, modelData) {
   html += `<a href="${esc(hfUrl)}" target="_blank" rel="noopener" class="hwfit-panel-hf-link" title="View download source on HuggingFace">HF \u2197</a>`;
   html += `</div>`;
   html += `<div class="hwfit-panel-actions">`;
-  html += `<button class="cookbook-btn hwfit-dl-btn">Descargar</button>`;
+  html += `<button class="cookbook-btn hwfit-dl-btn">Download</button>`;
   if (!modelData.is_image_gen) {
-    html += `<button class="cookbook-btn cookbook-run-btn hwfit-quickrun-btn" title="Descargar + launch with smart defaults">Run</button>`;
+    html += `<button class="cookbook-btn cookbook-run-btn hwfit-quickrun-btn" title="Download + launch with smart defaults">Run</button>`;
     html += `<button class="cookbook-btn hwfit-serve-expand-btn" title="Configure & serve">Configure</button>`;
   }
   html += `</div>`;
@@ -1600,9 +1600,9 @@ export function _expandModeloRow(row, modelData) {
     dlBtn.addEventListener('click', () => {
       const host = _syncHostFromScanDropdown();   // host the user picked, passed explicitly
       if (backend === 'ollama') {
-        _runPanelCmd(panel, _buildDescargarCmd(modelData, backend), { timeout: 0 });
+        _runPanelCmd(panel, _buildDownloadCmd(modelData, backend), { timeout: 0 });
       } else {
-        _runModeloDescargar(panel, modelData, backend, host);
+        _runModelDownload(panel, modelData, backend, host);
       }
     });
   }
@@ -1618,19 +1618,19 @@ export function _expandModeloRow(row, modelData) {
       // the Running tab while nothing is actually served (and llama.cpp just
       // errors "No GGUF found"). The Configure button and the Serve tab already
       // gate on the cached-model list — mirror that here. When the model isn't
-      // present, honor the button's "Descargar" half by kicking off the download
+      // present, honor the button's "Download" half by kicking off the download
       // instead, then the user can Run again to serve once it finishes.
       const _short = modelData.name.split('/').pop();
-      const _downloaded = _cachedModeloIds && (
-        _cachedModeloIds.has(modelData.name)
-        || [..._cachedModeloIds].some(id => id === modelData.name || id.endsWith('/' + _short))
+      const _downloaded = _cachedModelIds && (
+        _cachedModelIds.has(modelData.name)
+        || [..._cachedModelIds].some(id => id === modelData.name || id.endsWith('/' + _short))
       );
-      if (_cachedModeloIds && !_downloaded) {
-        uiModule.showToast('Modelo not downloaded yet — starting download. Run again to serve once it finishes.');
+      if (_cachedModelIds && !_downloaded) {
+        uiModule.showToast('Model not downloaded yet — starting download. Run again to serve once it finishes.');
         if (backend === 'ollama') {
-          _runPanelCmd(panel, _buildDescargarCmd(modelData, backend), { timeout: 0 });
+          _runPanelCmd(panel, _buildDownloadCmd(modelData, backend), { timeout: 0 });
         } else {
-          _runModeloDescargar(panel, modelData, backend, _qrHost);
+          _runModelDownload(panel, modelData, backend, _qrHost);
         }
         return;
       }
@@ -1645,7 +1645,7 @@ export function _expandModeloRow(row, modelData) {
       // with a running serve. (Issue #4507)
       try {
         const _qrHostStr = _envState.remoteHost || '';
-        const _allServes = _loadTareas().filter(t =>
+        const _allServes = _loadTasks().filter(t =>
           t && t.type === 'serve'
           && (t.remoteHost || '') === _qrHostStr
           && (t.status === 'running' || t.status === 'ready' || t._serveReady)
@@ -1653,9 +1653,9 @@ export function _expandModeloRow(row, modelData) {
         const _clashing = _allServes.filter(t => _taskPort(t) === _qrPort);
         if (_clashing.length) {
           const _names = _clashing.map(t => t.payload?.repo_id || t.repo || t.name || '?').filter(Boolean);
-          const _ok = await window.styledConfirmar?.(
+          const _ok = await window.styledConfirm?.(
             `${_clashing.length} model${_clashing.length === 1 ? '' : 's'} on port ${_qrPort} (${_names.join(', ')}). Stop it and launch this one?`,
-            { confirmText: 'Stop & launch', cancelText: 'Cancelar' }
+            { confirmText: 'Stop & launch', cancelText: 'Cancel' }
           );
           if (!_ok) return;
           quickRunBtn.disabled = true;
@@ -1899,19 +1899,19 @@ export function _expandModeloRow(row, modelData) {
     configBtn.addEventListener('click', async () => {
       const repo = modelData.name;
       const short = repo?.split('/').pop();
-      // Use the same "downloaded" source as the dl-dot (_cachedModeloIds), NOT a
+      // Use the same "downloaded" source as the dl-dot (_cachedModelIds), NOT a
       // DOM lookup for .hwfit-cached-item — those only exist on the Serve tab, so
       // from the What-Fits tab the old check always failed and falsely said
       // "download first" even for models that ARE downloaded.
-      const downloaded = _cachedModeloIds && (
-        _cachedModeloIds.has(repo)
-        || [..._cachedModeloIds].some(id => id === repo || id.endsWith('/' + short))
+      const downloaded = _cachedModelIds && (
+        _cachedModelIds.has(repo)
+        || [..._cachedModelIds].some(id => id === repo || id.endsWith('/' + short))
       );
-      if (_cachedModeloIds && !downloaded) {
-        uiModule.showToast('Descargar the model first, then configure from Serve tab');
+      if (_cachedModelIds && !downloaded) {
+        uiModule.showToast('Download the model first, then configure from Serve tab');
         return;
       }
-      // Descargared (or cache state unknown) — open the Serve panel, which switches
+      // Downloaded (or cache state unknown) — open the Serve panel, which switches
       // to the Serve tab, fetches the cached list, and expands this model's card.
       try {
         const { openServePanelForRepo } = await import('./cookbookServe.js');
@@ -2142,7 +2142,7 @@ export function _hwfitInit() {
       const dirTags = entry.querySelectorAll('.cookbook-modeldir-tag');
       const modelDirs = [];
       dirTags.forEach(tag => {
-        const d = _normalizeRecetasModeloDir(tag.dataset.dir || '');
+        const d = _normalizeCookbookModelDir(tag.dataset.dir || '');
         if (d) modelDirs.push(d);
       });
       if (!modelDirs.length) modelDirs.push('~/.cache/huggingface/hub');
@@ -2234,7 +2234,7 @@ export function _hwfitInit() {
     return `ssh -o StrictHostKeyChecking=accept-new ${pf}${host} ${_singleQuote(remote)}`;
   }
 
-  async function _fetchRecetasSshKey(generate = false) {
+  async function _fetchCookbookSshKey(generate = false) {
     const res = await fetch('/api/cookbook/ssh-key', {
       method: generate ? 'POST' : 'GET',
       credentials: 'same-origin',
@@ -2264,11 +2264,11 @@ export function _hwfitInit() {
     }
     if (genBtn) {
       genBtn.disabled = true;
-      genBtn.textContent = generate ? 'Generating...' : 'Cargando...';
+      genBtn.textContent = generate ? 'Generating...' : 'Loading...';
     }
     try {
-      let publicKey = await _fetchRecetasSshKey(generate);
-      if (!publicKey && !generate) publicKey = await _fetchRecetasSshKey(true);
+      let publicKey = await _fetchCookbookSshKey(generate);
+      if (!publicKey && !generate) publicKey = await _fetchCookbookSshKey(true);
       cmdBox.value = _serverKeyCommand(host, port, publicKey);
       if (copyBtn) copyBtn.disabled = false;
       if (genBtn) genBtn.textContent = 'Key ready';
@@ -2316,7 +2316,7 @@ export function _hwfitInit() {
       });
     }
     // Default-server toggle: exclusive checkmark in the entry title. The chosen
-    // server is what Recetas lands on (all dropdowns) on the next open.
+    // server is what Cookbook lands on (all dropdowns) on the next open.
     const _defBtn = entry.querySelector('.cookbook-srv-default');
     if (_defBtn && !_defBtn.dataset.bound) {
       _defBtn.dataset.bound = '1';
@@ -2330,7 +2330,7 @@ export function _hwfitInit() {
           const on = !!_envState.defaultServer && b.dataset.srvKey === _envState.defaultServer;
           b.classList.toggle('active', on);
           b.innerHTML = _serverDefaultHtml(on);
-          b.title = on ? 'Default server — Recetas opens here' : 'Make this the default server';
+          b.title = on ? 'Default server — Cookbook opens here' : 'Make this the default server';
         });
         // Apply immediately so the dropdowns reflect it without reopening
         // (inline — _applyServerSelection lives in cookbook.js and isn't imported here).
@@ -2366,10 +2366,10 @@ export function _hwfitInit() {
       keyGenBtn.dataset.bound = '1';
       keyGenBtn.addEventListener('click', () => _populateServerKeyPanel(entry, true));
     }
-    const keyCopiarBtn = entry.querySelector('.cookbook-server-key-copy');
-    if (keyCopiarBtn && !keyCopiarBtn.dataset.bound) {
-      keyCopiarBtn.dataset.bound = '1';
-      keyCopiarBtn.addEventListener('click', async () => {
+    const keyCopyBtn = entry.querySelector('.cookbook-server-key-copy');
+    if (keyCopyBtn && !keyCopyBtn.dataset.bound) {
+      keyCopyBtn.dataset.bound = '1';
+      keyCopyBtn.addEventListener('click', async () => {
         const cmd = entry.querySelector('.cookbook-server-key-command')?.value?.trim() || '';
         if (!cmd || cmd.startsWith('Enter ')) return;
         await _copyText(cmd);
@@ -2410,17 +2410,17 @@ export function _hwfitInit() {
         const saveBtn = entry.querySelector('.cookbook-server-save-btn.saved');
         if (saveBtn) {
           saveBtn.classList.remove('saved');
-          saveBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;flex-shrink:0;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar';
+          saveBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;flex-shrink:0;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save';
         }
       });
     });
     // Manual connectivity test after editing host or port. Existing saved
     // servers are not auto-tested on panel open; unreachable hosts can stall the
-    // Recetas UI and make opening the panel feel blocked.
+    // Cookbook UI and make opening the panel feel blocked.
     entry.querySelectorAll('.cookbook-srv-host, .cookbook-srv-port').forEach(el => {
       el.addEventListener('blur', () => _testServerConnection(entry));
     });
-    // Cancelar button on a brand-new server entry: discard it (no confirm — it's
+    // Cancel button on a brand-new server entry: discard it (no confirm — it's
     // unsaved) and re-sync so the dropped blank server doesn't linger.
     const cancelBtn = entry.querySelector('.cookbook-server-cancel-btn');
     if (cancelBtn && !cancelBtn.dataset.bound) {
@@ -2433,7 +2433,7 @@ export function _hwfitInit() {
         _hwfitFetch();
       });
     }
-    // Guardar button: persist + confirm with a check.
+    // Save button: persist + confirm with a check.
     const saveBtn = entry.querySelector('.cookbook-server-save-btn');
     if (saveBtn && !saveBtn.dataset.bound) {
       saveBtn.dataset.bound = '1';
@@ -2450,7 +2450,7 @@ export function _hwfitInit() {
           }));
         } catch (_) {}
         saveBtn.classList.add('saved');
-        saveBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#50fa7b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>Guardard';
+        saveBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#50fa7b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>Saved';
         uiModule.showToast('Server saved');
       });
     }
@@ -2460,8 +2460,8 @@ export function _hwfitInit() {
                 || entry.querySelector('.cookbook-srv-host')?.value?.trim()
                 || 'this server';
       let ok = true;
-      if (uiModule && uiModule.styledConfirmar) {
-        ok = await uiModule.styledConfirmar(`Remove "${name}"?`, { confirmText: 'Remove', danger: true });
+      if (uiModule && uiModule.styledConfirm) {
+        ok = await uiModule.styledConfirm(`Remove "${name}"?`, { confirmText: 'Remove', danger: true });
       } else {
         ok = confirm(`Remove "${name}"?`);
       }
@@ -2477,7 +2477,7 @@ export function _hwfitInit() {
       _hwfitCache = null;
       _hwfitFetch();
     });
-    // Setup is owned by cookbook.js's delegated handler (Configuración behavior:
+    // Setup is owned by cookbook.js's delegated handler (Settings behavior:
     // select server + open the Dependencies tab). Don't bind the inline-install
     // handler here too, or one click would do two conflicting things.
     const setupBtn = null;
@@ -2545,10 +2545,10 @@ export function _hwfitInit() {
         setTimeout(() => { setupBtn.disabled = false; setupBtn.textContent = origText; setupBtn.style.color = ''; }, 3000);
       });
     }
-    // Modelo dir add/remove
+    // Model dir add/remove
     const addDirBtn = entry.querySelector('.cookbook-modeldir-add');
     if (addDirBtn) addDirBtn.addEventListener('click', () => {
-      const raw = prompt('Modelo directory path:', '/data/models');
+      const raw = prompt('Model directory path:', '/data/models');
       if (!raw) return;
       const dir = raw.replaceAll('\u2715', '').replaceAll('\u2716', '').trim();
       if (!dir) return;
@@ -2562,22 +2562,22 @@ export function _hwfitInit() {
       tag.dataset.dir = dir;
       tag.innerHTML = `<span class="cookbook-modeldir-dl" title="Send downloads here" data-dl-dir="${uiModule.esc(dir)}">${_MODELDIR_CHECK_OFF}</span> ${uiModule.esc(dir)} <span class="cookbook-modeldir-rm" title="Remove">\u2716</span>`;
       tag.querySelector('.cookbook-modeldir-rm').addEventListener('click', () => { tag.remove(); _syncServers(); });
-      _wireModeloDirTarget(entry, tag.querySelector('.cookbook-modeldir-dl'));
+      _wireModelDirTarget(entry, tag.querySelector('.cookbook-modeldir-dl'));
       container.insertBefore(tag, addDirBtn);
       _syncServers();
     });
     entry.querySelectorAll('.cookbook-modeldir-rm').forEach(rm => {
       rm.addEventListener('click', () => { rm.closest('.cookbook-modeldir-tag').remove(); _syncServers(); });
     });
-    // Descargar-target toggles: clicking one makes that dir the sole target for
+    // Download-target toggles: clicking one makes that dir the sole target for
     // this server (or the default HF cache if it's the default dir).
-    entry.querySelectorAll('.cookbook-modeldir-dl').forEach(dl => _wireModeloDirTarget(entry, dl));
+    entry.querySelectorAll('.cookbook-modeldir-dl').forEach(dl => _wireModelDirTarget(entry, dl));
   }
 
   // Mark a model-dir tag as this server's download target (exclusive), then
   // persist. Clicking ANYWHERE on the tag (not just the check) selects it \u2014
   // except the remove \u2716, which has its own handler.
-  function _wireModeloDirTarget(entry, dlEl) {
+  function _wireModelDirTarget(entry, dlEl) {
     if (!dlEl) return;
     const tag = dlEl.closest('.cookbook-modeldir-tag');
     if (!tag || tag.dataset.dlBound) return;
@@ -2595,9 +2595,9 @@ export function _hwfitInit() {
       dlEl.classList.add('active');
       dlEl.innerHTML = _MODELDIR_CHECK_ON;           // check the chosen one
       tag.classList.add('cookbook-modeldir-target');
-      dlEl.title = 'Descargars go here';
+      dlEl.title = 'Downloads go here';
       _syncServers();
-      uiModule.showToast((dlEl.dataset.dlDir ? 'Descargars \u2192 ' + dlEl.dataset.dlDir : 'Descargars \u2192 default HF cache'));
+      uiModule.showToast((dlEl.dataset.dlDir ? 'Downloads \u2192 ' + dlEl.dataset.dlDir : 'Downloads \u2192 default HF cache'));
     });
   }
 
@@ -2610,9 +2610,9 @@ export function _hwfitInit() {
       const list = document.getElementById('cookbook-servers-list');
       if (!list) return;
       const idx = list.children.length;
-      // Build the new entry with the SAME template as existing servers (Modelo
+      // Build the new entry with the SAME template as existing servers (Model
       // Directory header, default checkmark, platform icon) \u2014 isNew swaps the
-      // delete button for a Guardar button. forceRemote keeps it editable.
+      // delete button for a Save button. forceRemote keeps it editable.
       const blank = { host: '', name: '', port: '', env: 'none', envPath: '', color: '', platform: '', modelDirs: ['~/.cache/huggingface/hub'] };
       const wrap = document.createElement('div');
       wrap.innerHTML = _serverEntryHtml(blank, idx, _envState.defaultServer || '', true, true);
@@ -2648,7 +2648,7 @@ export function _hwfitInit() {
       }
       _persistEnvState();
       _applyServerSelectColor(serverSelect);
-      // Keep the other server dropdowns (Descargar / Cache / Deps) in sync. The
+      // Keep the other server dropdowns (Download / Cache / Deps) in sync. The
       // download-input button reads #hwfit-dl-server *directly*, so without this
       // it kept its old value and downloads went to the wrong host even
       // though the scan here correctly switched to the selected server.

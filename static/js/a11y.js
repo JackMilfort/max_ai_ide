@@ -1,9 +1,9 @@
 // Accessibility enhancements for keyboard + screen-reader users.
 //
 // Several primary controls in Odysseus are authored as click-only <div>s
-// (most notably the whole sidebar navigation: Nuevo chat, Buscar, Brain,
-// Calendario, Compare, Recetas, Deep Investigación, Galería, Library, Notas,
-// Tareas, Tema, plus the account row). <div>s are not in the tab order and
+// (most notably the whole sidebar navigation: New Chat, Search, Brain,
+// Calendar, Compare, Cookbook, Deep Research, Gallery, Library, Notes,
+// Tasks, Theme, plus the account row). <div>s are not in the tab order and
 // are not announced as buttons, so keyboard and screen-reader users cannot
 // reach or operate them.
 //
@@ -64,7 +64,7 @@
   var titleSeq = 0;
   // Each modal "kind" is a container selector plus where to find its title
   // heading. Standard modals use .modal-content/.modal-header; the docked
-  // Notas pane uses its own markup.
+  // Notes pane uses its own markup.
   var MODAL_KINDS = [
     {
       sel: '.modal-content',
@@ -139,7 +139,7 @@
       }).observe(sidebar, { childList: true, subtree: true });
     }
 
-    // Some modals (Notas, Tareas, …) are injected at runtime, usually as
+    // Some modals (Notes, Tasks, …) are injected at runtime, usually as
     // direct children of <body>. Catch those without paying for a deep
     // subtree observer over the whole document.
     if ('MutationObserver' in window) {

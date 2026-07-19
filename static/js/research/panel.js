@@ -1,11 +1,11 @@
 /**
- * Deep Investigación side panel — open/close, form, job rendering, library.
+ * Deep Research side panel — open/close, form, job rendering, library.
  */
 import * as jobs from './jobs.js?v=20260630researchthumb';
 import themeModule from '../theme.js';
-import createInvestigaciónSynapse from '../researchSynapse.js';
+import createResearchSynapse from '../researchSynapse.js';
 import spinnerModule from '../spinner.js';
-import { sortModeloIds } from '../modelSort.js';
+import { sortModelIds } from '../modelSort.js';
 
 // Rotating research textarea placeholders — pick one at random each
 // time the panel is rendered so the example keeps feeling fresh.
@@ -21,7 +21,7 @@ const _RESEARCH_HINTS = [
   "e.g. How does end-to-end encryption work in Signal, step by step",
   "e.g. The history of the printing press in East Asia, 700 CE → 1600 CE",
 ];
-function _pickInvestigaciónHint() {
+function _pickResearchHint() {
   const i = Math.floor(Math.random() * _RESEARCH_HINTS.length);
   // Escape double-quotes so we can safely splice into a placeholder="…" attribute.
   return _RESEARCH_HINTS[i].replace(/"/g, '&quot;');
@@ -67,7 +67,7 @@ const _COLLAPSE_KEY = 'odysseus-research-settings-collapsed';
 
 try { _settingsCollapsed = localStorage.getItem(_COLLAPSE_KEY) === '1'; } catch {}
 
-function _saveConfiguraciónToStorage() {
+function _saveSettingsToStorage() {
   try {
     localStorage.setItem(_SETTINGS_KEY, JSON.stringify({
       max_rounds: document.getElementById('research-rounds')?.value || '0',
@@ -79,7 +79,7 @@ function _saveConfiguraciónToStorage() {
   } catch {}
 }
 
-function _loadConfiguraciónFromStorage() {
+function _loadSettingsFromStorage() {
   try {
     const raw = localStorage.getItem(_SETTINGS_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -103,7 +103,7 @@ function _clearBadge() {
 // research jobs are running, the rail button pulses; errors flag red;
 // nothing running clears it. Panel-independent so it works with the
 // modal closed. Called from _renderJobs on every job-state change.
-function _syncInvestigaciónRail() {
+function _syncResearchRail() {
   let running = 0, errored = 0, runningJob = null;
   try {
     for (const j of jobs.getJobs()) {
@@ -116,7 +116,7 @@ function _syncInvestigaciónRail() {
   const railBtn = document.getElementById('rail-research');
   const toolBtn = document.getElementById('tool-research-btn');
   const active = running > 0 || errored > 0;
-  // Compartird flag so sessions.js:_updateRailNotifs (which lights the same
+  // Shared flag so sessions.js:_updateRailNotifs (which lights the same
   // rail button for INLINE research mode) ORs with us instead of
   // clobbering — otherwise a session re-render would clear our dot.
   window._researchJobsActive = active;
@@ -130,7 +130,7 @@ function _syncInvestigaciónRail() {
     toolBtn.classList.toggle('research-notif-active', active);
     toolBtn.style.opacity = active ? '1' : '';
     // Sidebar feedback while running — a small pulsing dot + round text,
-    // same style as Recetas's running indicator (no glow).
+    // same style as Cookbook's running indicator (no glow).
     let wrap = toolBtn.querySelector('.research-sb-running');
     if (running > 0) {
       if (!wrap) {
@@ -183,7 +183,7 @@ function _ensureOrbit() {
 }
 
 /** Fetch the count of saved research items and populate the header chip. */
-async function _updateInvestigaciónCount() {
+async function _updateResearchCount() {
   const el = document.getElementById('research-stats');
   if (!el) return;
   try {
@@ -287,16 +287,16 @@ export function openPanel(focusJobId) {
   };
   document.addEventListener('keydown', _onDocKeydown);
 
-  // Make the pane draggable by its header — same pattern as Library/Calendario.
+  // Make the pane draggable by its header — same pattern as Library/Calendar.
   const paneHeader = pane.querySelector('.research-pane-header');
   if (themeModule && themeModule.makeDraggable && paneHeader) {
     themeModule.makeDraggable(pane, paneHeader);
   }
 
   _wireEvents(pane);
-  _loadEndpoints().then(_restoreGuardardConfiguración);
+  _loadEndpoints().then(_restoreSavedSettings);
   _clearBadge();
-  _updateInvestigaciónCount();
+  _updateResearchCount();
   jobs.refreshLibrary?.({ force: true });
 
   if ('Notification' in window && Notification.permission === 'default') {
@@ -358,24 +358,24 @@ function _buildPanelHTML() {
 
   return `
     <div class="modal-header research-pane-header">
-      <h4><span style="position:relative;top:-1px;left:6px;display:inline-flex;vertical-align:middle;">${_searchIcon}</span><span style="margin-left:6px;">Deep Investigación</span></h4>
+      <h4><span style="position:relative;top:-1px;left:6px;display:inline-flex;vertical-align:middle;">${_searchIcon}</span><span style="margin-left:6px;">Deep Research</span></h4>
       <div class="research-pane-header-actions">
         <button id="research-panel-minimize" class="modal-minimize-btn" type="button" title="Minimize"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="18" x2="19" y2="18"/></svg></button>
-        <button id="research-panel-close" class="close-btn" title="Cerrar">&#x2716;</button>
+        <button id="research-panel-close" class="close-btn" title="Close">&#x2716;</button>
       </div>
     </div>
     <div class="modal-body research-pane-body" data-no-swipe-dismiss>
       <div class="research-new-job">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-          <h2 style="margin:0;padding:0;line-height:1;display:inline-flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent, var(--red))" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h4v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>Investigación <span id="research-stats" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal"></span></h2>
+          <h2 style="margin:0;padding:0;line-height:1;display:inline-flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent, var(--red))" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h4v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>Research <span id="research-stats" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal"></span></h2>
         </div>
         <p class="memory-desc doclib-desc" style="margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span>Multi-step web research with an LLM-in-the-loop agent</span>
-          <span id="research-no-past-hint" style="display:none;font:inherit;opacity:1;position:static;">All past research found in: <button type="button" class="research-library-link" style="background:none;border:none;padding:0;font:inherit;color:var(--accent, var(--red));cursor:pointer;text-decoration:underline;">Library, Investigación</button></span>
+          <span id="research-no-past-hint" style="display:none;font:inherit;opacity:1;position:static;">All past research found in: <button type="button" class="research-library-link" style="background:none;border:none;padding:0;font:inherit;color:var(--accent, var(--red));cursor:pointer;text-decoration:underline;">Library, Research</button></span>
         </p>
-        <textarea id="research-query" class="research-query" placeholder="${_pickInvestigaciónHint()}" rows="4"></textarea>
+        <textarea id="research-query" class="research-query" placeholder="${_pickResearchHint()}" rows="4"></textarea>
         <button id="research-settings-toggle" class="research-settings-toggle${chevronCls}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;opacity:0.85;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configuración<span class="research-settings-chevron">${_chevronIcon}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;opacity:0.85;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings<span class="research-settings-chevron">${_chevronIcon}</span>
         </button>
         <div id="research-settings-body" class="research-settings-row"${settingsHidden}>
           <label class="research-setting">
@@ -393,7 +393,7 @@ function _buildPanelHTML() {
             </select>
           </label>
           <label class="research-setting">
-            <span class="research-setting-label">Buscar engine</span>
+            <span class="research-setting-label">Search engine</span>
             <select id="research-search-provider">${providerOpts}</select>
           </label>
           <label class="research-setting">
@@ -401,7 +401,7 @@ function _buildPanelHTML() {
             <select id="research-endpoint"><option value="">Default</option></select>
           </label>
           <label class="research-setting">
-            <span class="research-setting-label">Modelo</span>
+            <span class="research-setting-label">Model</span>
             <select id="research-model"><option value="">Default</option></select>
           </label>
         </div>
@@ -453,7 +453,7 @@ function _wireEvents(pane) {
     if (btn) btn.classList.add('minimized');
   });
   pane.querySelector('#research-start-btn').addEventListener('click', _handleStart);
-  pane.querySelector('#research-add-btn').addEventListener('click', _handleAgregar);
+  pane.querySelector('#research-add-btn').addEventListener('click', _handleAdd);
 
   pane.querySelector('#research-settings-toggle').addEventListener('click', () => {
     const body = document.getElementById('research-settings-body');
@@ -474,12 +474,12 @@ function _wireEvents(pane) {
   });
 
   const endpointSelect = pane.querySelector('#research-endpoint');
-  endpointSelect.addEventListener('change', () => _populateModelos(endpointSelect.value));
+  endpointSelect.addEventListener('change', () => _populateModels(endpointSelect.value));
 
   _renderJobs();
 }
 
-function _readConfiguración() {
+function _readSettings() {
   const category = document.getElementById('research-category')?.value || undefined;
   const settings = {
     max_rounds: parseInt(document.getElementById('research-rounds')?.value || '0', 10),
@@ -499,17 +499,17 @@ function _readConfiguración() {
   return settings;
 }
 
-function _handleAgregar() {
+function _handleAdd() {
   const queryEl = document.getElementById('research-query');
   const query = (queryEl?.value || '').trim();
   if (!query) { queryEl?.focus(); return; }
-  _saveConfiguraciónToStorage();
-  jobs.addToQueue(query, _readConfiguración());
+  _saveSettingsToStorage();
+  jobs.addToQueue(query, _readSettings());
   queryEl.value = '';
   queryEl.focus();
 }
 
-// Mover a job's data back into the compose form so user can edit and re-queue
+// Move a job's data back into the compose form so user can edit and re-queue
 function _editJob(job) {
   const queryEl = document.getElementById('research-query');
   if (queryEl) {
@@ -517,11 +517,11 @@ function _editJob(job) {
     queryEl.focus();
     queryEl.setSelectionRange(queryEl.value.length, queryEl.value.length);
   }
-  // Restaurar category
+  // Restore category
   const cat = job.category || '';
   const catSel = document.getElementById('research-category');
   if (catSel) catSel.value = cat;
-  // Restaurar settings
+  // Restore settings
   const s = job.settings || {};
   const roundsEl = document.getElementById('research-rounds');
   if (roundsEl && s.max_rounds) roundsEl.value = s.max_rounds;
@@ -547,7 +547,7 @@ async function _handleStart() {
   // it joins the batch, then open the picker anchored to this button.
   const queuedCount = jobs.getJobs().filter(j => j.status === 'queued').length;
   if (queuedCount > 1) {
-    if (query) { _saveConfiguraciónToStorage(); jobs.addToQueue(query, _readConfiguración()); queryEl.value = ''; }
+    if (query) { _saveSettingsToStorage(); jobs.addToQueue(query, _readSettings()); queryEl.value = ''; }
     _resetCategoryToAuto();
     if (window.innerWidth <= 768) _dismissKeyboard(queryEl);
     const total = jobs.getJobs().filter(j => j.status === 'queued').length;
@@ -591,8 +591,8 @@ async function _handleStart() {
     if (_mobile) _dismissKeyboard(queryEl);
     return;
   }
-  _saveConfiguraciónToStorage();
-  const settings = _readConfiguración();
+  _saveSettingsToStorage();
+  const settings = _readSettings();
   queryEl.value = '';
   // Mobile: drop the keyboard after sending; desktop: keep focus for fast follow-ups.
   if (_mobile) _dismissKeyboard(queryEl); else queryEl.focus();
@@ -603,8 +603,8 @@ async function _handleStart() {
   });
 }
 
-function _restoreGuardardConfiguración() {
-  const saved = _loadConfiguraciónFromStorage();
+function _restoreSavedSettings() {
+  const saved = _loadSettingsFromStorage();
   if (!saved) return;
   if (saved.category !== undefined) {
     const catSel = document.getElementById('research-category');
@@ -617,7 +617,7 @@ function _restoreGuardardConfiguración() {
   const ep = document.getElementById('research-endpoint');
   if (ep && saved.endpoint_id) {
     ep.value = saved.endpoint_id;
-    _populateModelos(saved.endpoint_id);
+    _populateModels(saved.endpoint_id);
     if (saved.model) {
       setTimeout(() => {
         const model = document.getElementById('research-model');
@@ -643,14 +643,14 @@ async function _loadEndpoints() {
   } catch {}
 }
 
-function _populateModelos(endpointId) {
+function _populateModels(endpointId) {
   const sel = document.getElementById('research-model');
   if (!sel) return;
   sel.innerHTML = '<option value="">Default</option>';
   if (!endpointId) return;
   const ep = _endpoints.find(e => e.id === endpointId);
   if (!ep || !ep.models) return;
-  sortModeloIds(ep.models).forEach(m => {
+  sortModelIds(ep.models).forEach(m => {
     const opt = document.createElement('option');
     opt.value = m;
     opt.textContent = m;
@@ -663,7 +663,7 @@ function _populateModelos(endpointId) {
 function _renderJobs() {
   // Keep the rail/sidebar indicator in sync on every job-state change,
   // even when the panel is closed (no container yet).
-  _syncInvestigaciónRail();
+  _syncResearchRail();
   const container = document.getElementById('research-jobs-list');
   if (!container) return;
 
@@ -671,7 +671,7 @@ function _renderJobs() {
   if (!allJobs.length) {
     // No empty-state text in the body — the query box above is the call to
     // action. But still surface the "All past research found in: Library,
-    // Investigación" hint under the main title, since the Past section won't
+    // Research" hint under the main title, since the Past section won't
     // render to host it (this is exactly the case the dynamic hint targets).
     container.innerHTML = '';
     const noPastHint = document.getElementById('research-no-past-hint');
@@ -698,7 +698,7 @@ function _renderJobs() {
   const recentDone = allJobs.filter(j => j.status === 'done' && !j._fromLibrary).reverse();
 
   // Keep the header "(N research)" chip in sync with the Past-section count.
-  // _updateInvestigaciónCount fetches the library total only, which under-counts
+  // _updateResearchCount fetches the library total only, which under-counts
   // when there's a session-completed job not yet persisted to the library.
   const statsEl = document.getElementById('research-stats');
   if (statsEl) {
@@ -719,8 +719,8 @@ function _renderJobs() {
   }
 
   // Dynamic Past hint: when the Past section won't render (no past items),
-  // surface the "All past research found in: Library, Investigación" line under
-  // the main Investigación title instead, so the link is always discoverable.
+  // surface the "All past research found in: Library, Research" line under
+  // the main Research title instead, so the link is always discoverable.
   const noPastHint = document.getElementById('research-no-past-hint');
   if (noPastHint) {
     const hasPast = past.length + recentDone.length > 0;
@@ -784,10 +784,10 @@ function _renderJobs() {
     if (key === 'past') {
       const hint = document.createElement('span');
       hint.className = 'research-library-hint';
-      hint.innerHTML = '<span>All past research found in:</span> <button type="button" class="research-library-link">Library, Investigación</button>';
+      hint.innerHTML = '<span>All past research found in:</span> <button type="button" class="research-library-link">Library, Research</button>';
       hint.querySelector('.research-library-link').addEventListener('click', (e) => {
         e.stopPropagation();
-        // Cerrar the research panel first so the Library opens ABOVE it on mobile
+        // Close the research panel first so the Library opens ABOVE it on mobile
         // (otherwise it stacks under the full-screen panel).
         closePanel();
         if (window.documentModule && window.documentModule.openLibrary) {
@@ -909,7 +909,7 @@ function _buildJobCard(job) {
       <div class="research-job-queued-meta">${_esc(meta)}</div>
       <div class="research-job-actions">
         <button class="research-job-action" data-action="start" title="Start">${_playIcon} Start</button>
-        <button class="research-job-action" data-action="edit" title="Editar query">${_editIcon} Editar</button>
+        <button class="research-job-action" data-action="edit" title="Edit query">${_editIcon} Edit</button>
         <button class="research-job-action research-job-action-dim" data-action="remove" title="Remove">${_cancelIcon}</button>
       </div>
     `;
@@ -938,7 +938,7 @@ function _buildJobCard(job) {
         ${modelTag}
         <span class="research-job-time">${elapsed}</span>
         <button class="research-synapse-toggle${_synapseMinimized ? ' active' : ''}" title="${_synapseMinimized ? 'Show visualization' : 'Minimize visualization'}">${_synapseMinimized ? _vizExpandIcon : _vizCollapseIcon}</button>
-        <button class="research-job-cancel" title="Cancelar research">${_cancelIcon}</button>
+        <button class="research-job-cancel" title="Cancel research">${_cancelIcon}</button>
       </div>
       <div class="research-job-phase">${phase}</div>
       <div class="research-job-synapse-host${_synapseMinimized ? ' synapse-collapsed' : ''}" data-synapse-host="${job.id}"></div>
@@ -957,13 +957,13 @@ function _buildJobCard(job) {
       _runHdr.style.cursor = 'pointer';
       _runHdr.addEventListener('click', () => _toggleSynapseMinimized());
     }
-    // Attach (or re-attach) the live synapse visualization. Creard once per
+    // Attach (or re-attach) the live synapse visualization. Created once per
     // job so animations/state persist across the _renderJobs() rebuilds that
     // fire on every progress event.
     const host = card.querySelector('.research-job-synapse-host');
     let entry = _jobSynapses.get(job.id);
     if (!entry) {
-      const synapse = createInvestigaciónSynapse(host, {
+      const synapse = createResearchSynapse(host, {
         query: job.query || '',
         startedAt: job.startedAt || (Date.now() - (job.elapsed || 0) * 1000),
         compact: true,
@@ -971,7 +971,7 @@ function _buildJobCard(job) {
       entry = { synapse, status: 'running' };
       _jobSynapses.set(job.id, entry);
     } else {
-      // Mover the existing element into the freshly-rendered host
+      // Move the existing element into the freshly-rendered host
       host.appendChild(entry.synapse.element);
     }
     // Push the current progress state
@@ -992,7 +992,7 @@ function _buildJobCard(job) {
       ? `<span class="research-cat-badge research-cat-failed">${_cancelIcon} no results</span>`
       : (job.category ? `<span class="research-cat-badge">${_esc(job.category)}</span>` : `<span class="research-cat-badge research-cat-standard">standard</span>`);
     const failNote = failed
-      ? `<div class="research-job-failnote">Couldn't extract anything — try rephrasing the question, or switch the search engine in Configuración.</div>`
+      ? `<div class="research-job-failnote">Couldn't extract anything — try rephrasing the question, or switch the search engine in Settings.</div>`
       : '';
     const thumbSource = (job.sources || []).find(s => s && (s.image || s.og_image));
     const thumbUrl = job.thumbnail || thumbSource?.image || thumbSource?.og_image || '';
@@ -1010,9 +1010,9 @@ function _buildJobCard(job) {
         ${thumbnail}
         <button class="research-job-action research-job-action-report" data-action="report" title="Visual report">${_externalIcon} Visual Report</button>
         <button class="research-job-action" data-action="chat" title="Open follow-up chat with this research as context">${_chatIcon} Discuss</button>
-        <button class="research-job-action research-job-action-dim" data-action="copy" title="Copiar report to clipboard">${_copyIcon}</button>
+        <button class="research-job-action research-job-action-dim" data-action="copy" title="Copy report to clipboard">${_copyIcon}</button>
         <button class="research-job-action research-job-action-dim" data-action="dismiss" title="Clear from list">${_cancelIcon}</button>
-        <button class="research-job-action research-job-action-dim" data-action="delete" title="Eliminar from disk">${_trashIcon} Eliminar</button>
+        <button class="research-job-action research-job-action-dim" data-action="delete" title="Delete from disk">${_trashIcon} Delete</button>
       </div>
       ${isExpanded ? `<div class="research-job-result">${_renderResult(job)}</div>` : ''}
     `;
@@ -1034,12 +1034,12 @@ function _buildJobCard(job) {
     });
     card.querySelector('[data-action="chat"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      _chatAcerca deInvestigación(job.id, e.currentTarget);
+      _chatAboutResearch(job.id, e.currentTarget);
     });
     card.querySelector('[data-action="delete"]').addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (window.styledConfirmar) {
-        const ok = await window.styledConfirmar('Eliminar this research? This permanently removes it from disk.', { confirmText: 'Eliminar', danger: true });
+      if (window.styledConfirm) {
+        const ok = await window.styledConfirm('Delete this research? This permanently removes it from disk.', { confirmText: 'Delete', danger: true });
         if (!ok) return;
       }
       try { await fetch(`${_apiBase}/api/research/${job.id}`, { method: 'DELETE', credentials: 'same-origin' }); } catch {}
@@ -1060,7 +1060,7 @@ function _buildJobCard(job) {
       ${errMsg}
       <div class="research-job-actions">
         <button class="research-job-action" data-action="retry" title="Retry">${_retryIcon} Retry</button>
-        <button class="research-job-action" data-action="edit" title="Editar and retry">${_editIcon} Editar</button>
+        <button class="research-job-action" data-action="edit" title="Edit and retry">${_editIcon} Edit</button>
         <button class="research-job-action research-job-action-dim" data-action="dismiss" title="Dismiss">${_cancelIcon}</button>
       </div>
     `;
@@ -1178,7 +1178,7 @@ async function _copyResult(job, btn) {
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.readOnly = false;
-    ta.contentEditarable = 'true';
+    ta.contentEditable = 'true';
     ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;';
     document.body.appendChild(ta);
     ta.focus();
@@ -1212,7 +1212,7 @@ async function _copyResult(job, btn) {
 
 // ── Chat about this research (server-side spinoff) ──
 
-async function _chatAcerca deInvestigación(researchId, btn) {
+async function _chatAboutResearch(researchId, btn) {
   if (!researchId) return;
   const origLabel = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = `${_chatIcon} Creating…`; }

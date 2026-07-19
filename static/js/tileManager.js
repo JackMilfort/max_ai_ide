@@ -126,7 +126,7 @@ function _zoneForContent(content, x, y) {
   const modal = content && content.closest && content.closest('.modal, .research-overlay');
   const zone = _zoneForPointer(x, y);
   if (!zone) return null;
-  // Configuración has a dense two-column layout; the full-height sidebar-style dock
+  // Settings has a dense two-column layout; the full-height sidebar-style dock
   // crushes it. Let it tile only into the normal right half, where the nav can
   // flip to top tabs via CSS when the window gets narrow.
   if (modal && modal.id === 'settings-modal' && zone.name !== 'right-half') return null;
@@ -147,10 +147,10 @@ function _clearEdgeDockResidue(modal, content) {
     modal.classList.remove('modal-left-docked', 'modal-right-docked');
     if (hadLeft) _clearDockSide('left', modal);
     if (hadRight) _clearDockSide('right', modal);
-    if (modal._dockCerrarWatcher) {
-      try { modal._dockCerrarWatcher.obs && modal._dockCerrarWatcher.obs.disconnect(); } catch (_) {}
-      try { modal._dockCerrarWatcher.parentObs && modal._dockCerrarWatcher.parentObs.disconnect(); } catch (_) {}
-      delete modal._dockCerrarWatcher;
+    if (modal._dockCloseWatcher) {
+      try { modal._dockCloseWatcher.obs && modal._dockCloseWatcher.obs.disconnect(); } catch (_) {}
+      try { modal._dockCloseWatcher.parentObs && modal._dockCloseWatcher.parentObs.disconnect(); } catch (_) {}
+      delete modal._dockCloseWatcher;
     }
   }
   if (!content) return;

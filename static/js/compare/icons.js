@@ -54,9 +54,9 @@ export const EVAL_PROMPTS = {
     { sub: 'Refactoring',  label: 'Clean up',        prompt: 'Refactor this code to be more idiomatic and efficient:\n\nresults = []\nfor i in range(len(data)):\n    if data[i]["status"] == "active":\n        if data[i]["score"] > 50:\n            results.append(data[i]["name"].upper())' },
   ],
   agent: [
-    { sub: 'Web tasks',  label: 'Multi-step',     prompt: 'Buscar the web for the current population of the 3 largest cities in the world, then calculate what percentage of the world\'s total population lives in those cities.', toggles: ['web'] },
+    { sub: 'Web tasks',  label: 'Multi-step',     prompt: 'Search the web for the current population of the 3 largest cities in the world, then calculate what percentage of the world\'s total population lives in those cities.', toggles: ['web'] },
     { sub: 'Web tasks',  label: 'Fact check',     prompt: 'Fact-check these claims: 1) The Great Wall of China is visible from space. 2) Humans only use 10% of their brains. 3) Lightning never strikes the same place twice. Cite sources.', toggles: ['web'] },
-    { sub: 'Web tasks',  label: 'Compare prices', prompt: 'Find and compare the pricing, features, and limitations of the top 3 cloud GPU providers for machine learning training. Crear a markdown comparison table.', toggles: ['web'] },
+    { sub: 'Web tasks',  label: 'Compare prices', prompt: 'Find and compare the pricing, features, and limitations of the top 3 cloud GPU providers for machine learning training. Create a markdown comparison table.', toggles: ['web'] },
     { sub: 'Code tasks', label: 'Script + run',   prompt: 'Write a Python script that generates a bar chart of the 5 most common programming languages in 2025 and save it as chart.png. Then run it.' },
     { sub: 'Math',       label: 'Proof + verify', prompt: 'Prove that the square root of 2 is irrational. Then write a Python program that approximates it using Newton\'s method to 50 decimal places and verify.' },
   ],
@@ -70,7 +70,7 @@ export const EVAL_PROMPTS = {
   search: [
     { sub: 'Factual',    label: 'Current events', prompt: 'latest AI regulation news 2025' },
     { sub: 'Technical',  label: 'Programming',    prompt: 'Rust vs Go performance benchmarks 2025' },
-    { sub: 'Investigación',   label: 'Academic',       prompt: 'transformer architecture improvements since attention is all you need' },
+    { sub: 'Research',   label: 'Academic',       prompt: 'transformer architecture improvements since attention is all you need' },
     { sub: 'Comparison', label: 'GPU providers',  prompt: 'cloud GPU providers pricing comparison 2025' },
     { sub: 'Factual',    label: 'Science',        prompt: 'CRISPR gene therapy breakthroughs' },
   ],

@@ -199,11 +199,11 @@ export function wireAIToolsMisc({
     btn.disabled = false; btn.textContent = 'Apply Style';
   });
 
-  // ── Agregar empty layer (used by the layer-panel header button + the
+  // ── Add empty layer (used by the layer-panel header button + the
   // Ctrl+Alt+J keyboard shortcut). Returned so keyboard-shortcuts.js
   // can call it through the same path. ──
   function addEmptyLayer() {
-    saveState('Agregar layer');
+    saveState('Add layer');
     const layer = createLayer('Layer ' + state.layers.length, state.imgWidth, state.imgHeight);
     state.layers.push(layer);
     state.activeLayerId = layer.id;

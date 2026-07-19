@@ -1,5 +1,5 @@
 /**
- * Galería Editaror — canvas-based image editor with layers, brush, eraser, text, crop, inpaint mask.
+ * Gallery Editor — canvas-based image editor with layers, brush, eraser, text, crop, inpaint mask.
  */
 
 import uiModule from './ui.js';
@@ -70,7 +70,7 @@ import {
   canvasSizePromptHTML as _canvasSizePromptHTML,
 } from './editor/build/popups.js';
 import { state } from './editor/state.js';
-import { createMoverTool } from './editor/tools/move.js';
+import { createMoveTool } from './editor/tools/move.js';
 import { createCropTool } from './editor/tools/crop.js';
 import { createLassoTool } from './editor/tools/lasso.js';
 import { createWandTool } from './editor/tools/wand.js';
@@ -95,7 +95,7 @@ import { wireSliderUx } from './editor/slider-ux.js';
 import { createShortcutsPopover } from './editor/shortcuts-popover.js';
 import { wireKeyboardShortcuts } from './editor/keyboard-shortcuts.js';
 import { wireClipboardAndDrop } from './editor/clipboard-and-drop.js';
-import { wireAIModeloSelectors } from './editor/ai-models.js';
+import { wireAIModelSelectors } from './editor/ai-models.js';
 import { wireInpaintButtons } from './editor/ai-inpaint.js';
 import { wireAIToolsMisc } from './editor/ai-tools-misc.js';
 import { wireRembgAndSharpen } from './editor/ai-rembg.js';
@@ -126,15 +126,15 @@ function _syncTransformOverlay() { _syncTransformOverlayImpl(_TRANSFORM_OVERLAY_
 // the slider to this value (without touching other tools).
 const _INPAINT_DEFAULT_BRUSH = 100;
 
-function _galleryEditarMounted() {
+function _galleryEditMounted() {
   return !!document.querySelector('#gallery-editor-container .gallery-editor');
 }
 
-if (!window.__galleryEditarEscHardGuardInstalled) {
-  window.__galleryEditarEscHardGuardInstalled = true;
+if (!window.__galleryEditEscHardGuardInstalled) {
+  window.__galleryEditEscHardGuardInstalled = true;
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (window.__galleryEditarLive || _galleryEditarMounted()) {
+    if (window.__galleryEditLive || _galleryEditMounted()) {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -143,9 +143,9 @@ if (!window.__galleryEditarEscHardGuardInstalled) {
 }
 
 // Document-level click-away handlers for topbar dropdowns. Each
-// openEditaror invocation adds 6 of these (save / edge / image / filter /
+// openEditor invocation adds 6 of these (save / edge / image / filter /
 // resize / more), and without removal they accumulated across reopens.
-// Tracked here and removed wholesale in closeEditaror.
+// Tracked here and removed wholesale in closeEditor.
 function _registerDocClickAway(handler) {
   document.addEventListener('click', handler);
   state.editorDocClickHandlers.push(handler);
@@ -153,7 +153,7 @@ function _registerDocClickAway(handler) {
 
 // Drawing state
 
-// Mover tool state
+// Move tool state
 // Crop state
 // Persistent mode toggle for wand clicks. 'replace' = a new click
 // replaces the selection (default); 'add' = always union; 'subtract' =
@@ -227,7 +227,7 @@ function _getSelectedAIEndpoint(type) {
   return { endpoint: raw.slice(0, idx), model: raw.slice(idx + 2) };
 }
 
-/** Compartird helper: flatten layers → POST to API → add result as new layer. */
+/** Shared helper: flatten layers → POST to API → add result as new layer. */
 // Maps a layer-name (the past-participle returned from each AI tool —
 // "BG Removed", "Sharpened", etc.) into a present-progressive label for
 // the busy button state ("Removing…", "Sharpening…"). Falls back to a
@@ -259,8 +259,8 @@ const _applyImageTool = createApplyImageTool({
   renderLayerPanel: () => _renderLayerPanel(),
   deriveBusyLabel: (name) => _deriveBusyLabel(name),
   getSelectedAIEndpoint: (type) => _getSelectedAIEndpoint(type),
-  openRecetasForDependency: (pkg) => _openRecetasForDependency(pkg),
-  openRecetasForImg2img: () => _openRecetasForImg2img(),
+  openCookbookForDependency: (pkg) => _openCookbookForDependency(pkg),
+  openCookbookForImg2img: () => _openCookbookForImg2img(),
   spinnerModule,
   uiModule,
 });
@@ -295,7 +295,7 @@ function _buildAiCommandBox() {
   wrap.innerHTML = `
     <button type="button" class="ge-ai-command-toggle" id="ge-ai-command-toggle" aria-expanded="false">
       <span class="ge-btn-ai-mark" aria-hidden="true">✦</span>
-      <span>AI Editar</span>
+      <span>AI Edit</span>
     </button>
     <form class="ge-ai-command-form" id="ge-ai-command-form">
       <input type="text" class="ge-ai-command-input" id="ge-ai-command-input" autocomplete="off" />
@@ -305,7 +305,7 @@ function _buildAiCommandBox() {
           <polyline points="5 12 12 5 19 12"></polyline>
         </svg>
       </button>
-      <button type="button" class="ge-ai-command-close" id="ge-ai-command-close" title="Cerrar AI edit" aria-label="Cerrar AI edit">
+      <button type="button" class="ge-ai-command-close" id="ge-ai-command-close" title="Close AI edit" aria-label="Close AI edit">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -357,13 +357,13 @@ function _wireAiCommandBox() {
       if (/\b(denoise|noise|grain|grainy|clean\s*up)\b/.test(p)) {
         _setAiCommandStatus('Denoising image...', 'running');
         await _applyImageTool('/api/image/denoise', { strength: 0.55 }, 'Denoised', runBtn, { busyLabel: 'Denoising...' });
-        _setAiCommandStatus('Agregared denoised layer.', 'done');
+        _setAiCommandStatus('Added denoised layer.', 'done');
         return;
       }
       if (/\b(face|portrait|skin|selfie|restore)\b/.test(p)) {
         _setAiCommandStatus('Enhancing face/portrait...', 'running');
         await _applyImageTool('/api/image/enhance-face', {}, 'Enhanced Face', runBtn, { busyLabel: 'Enhancing...' });
-        _setAiCommandStatus('Agregared enhanced layer.', 'done');
+        _setAiCommandStatus('Added enhanced layer.', 'done');
         return;
       }
       if (/\b(sharpen|sharp|crisp|clearer|make it look better|enhance|improve|better)\b/.test(p)) {
@@ -753,7 +753,7 @@ function _drawSnapGuides() {
 }
 
 // Draw the dim-everything-else + cleared-crop-window overlay for the
-// current `state.cropRect`. Compartird by _continueCrop (live preview during drag)
+// current `state.cropRect`. Shared by _continueCrop (live preview during drag)
 // and composite() (re-draw after canvas redraws while the crop is held).
 function _drawCropOverlay() {
   if (!state.cropRect || !state.mainCtx || !state.mainCanvas) return;
@@ -858,7 +858,7 @@ function _saveState(label) {
   // step) rather than kill the user's action.
   try {
     const snap = _snapshotState();
-    snap._label = label || 'Editar';
+    snap._label = label || 'Edit';
     snap._ts = Date.now();
     state.undoStack.push(snap);
     if (state.undoStack.length > MAX_HISTORY) state.undoStack.shift();
@@ -1045,8 +1045,8 @@ function _restoreDraft(draft) {
   });
 }
 
-// Used both by the fresh openEditaror path and by _restoreDraft. The full
-// _initCanvas in openEditaror is closure-scoped, so factored out here.
+// Used both by the fresh openEditor path and by _restoreDraft. The full
+// _initCanvas in openEditor is closure-scoped, so factored out here.
 function _initCanvasFromDims(w, h) {
   state.imgWidth = w;
   state.imgHeight = h;
@@ -1061,7 +1061,7 @@ function _initCanvasFromDims(w, h) {
 }
 
 function _restoreState(snap) {
-  // Restaurar canvas dimensions first so layer imageData fits cleanly. This
+  // Restore canvas dimensions first so layer imageData fits cleanly. This
   // is what makes Ctrl+Z work for crops (which change the main canvas
   // size) in addition to paint strokes.
   const dimsChanged = snap.imgWidth && snap.imgHeight &&
@@ -1083,7 +1083,7 @@ function _restoreState(snap) {
   // restore deleted layers (previously the loop only updated existing
   // ones and silently dropped any layer the snapshot still knew about).
   // Layers absent from the snapshot are dropped — that's the desired
-  // behavior for undoing an "+Agregar" or a paste.
+  // behavior for undoing an "+Add" or a paste.
   const _existingById = new Map(state.layers.map(l => [l.id, l]));
   const _rebuilt = [];
   for (const s of layerStates) {
@@ -1109,11 +1109,11 @@ function _restoreState(snap) {
     }
     try { if (s.imageData) layer.ctx.putImageData(s.imageData, 0, 0); } catch (_) {}
     state.layerOffsets.set(layer.id, { ...s.offset });
-    // Restaurar adjustment sub-layers + invalidate the composite cache
+    // Restore adjustment sub-layers + invalidate the composite cache
     // so the live render reflects the rolled-back FX state.
     layer.adjLayers = s.adjLayers ? JSON.parse(JSON.stringify(s.adjLayers)) : [];
     if (s.isBase !== undefined) layer.isBase = s.isBase;
-    // Restaurar mask sub-layers — rebuild each mask's canvas from the
+    // Restore mask sub-layers — rebuild each mask's canvas from the
     // snapshot's imageData. We don't reuse old mask canvases (snapshot
     // dims might differ after a transform) so a fresh canvas is safer.
     layer.masks = (s.masks || []).map(ms => {
@@ -1143,7 +1143,7 @@ function _restoreState(snap) {
     const m = _getActiveMaskLayer();
     if (m) { state.maskCanvas = m.canvas; state.maskCtx = m.ctx; }
   }
-  // Restaurar wand selection (or clear it if the snapshot had none).
+  // Restore wand selection (or clear it if the snapshot had none).
   if (snap.wand && snap.wand.imageData) {
     const mc = document.createElement('canvas');
     mc.width = snap.wand.w;
@@ -1164,8 +1164,8 @@ function _restoreState(snap) {
   // user sees the full restored image, not the zoomed-in upper-left
   // corner left over from the previous fit.
   if (dimsChanged) _fitZoom();
-  // Actualizar the topbar canvas-size badge directly (the helper is scoped
-  // inside _buildEditaror, so we touch the DOM here).
+  // Update the topbar canvas-size badge directly (the helper is scoped
+  // inside _buildEditor, so we touch the DOM here).
   const sizeLabel = document.getElementById('ge-canvas-size');
   if (sizeLabel) sizeLabel.textContent = `${state.imgWidth}×${state.imgHeight}`;
 }
@@ -1217,7 +1217,7 @@ function _beginDraw(e) {
   // editor/tools/transform-drag.js.
   if (_transformDragTool.tryBegin(e)) return;
   // Magic wand is selection-only — works even on locked layers because
-  // it doesn't mutate the layer until an action (Erase/Copiar) is taken.
+  // it doesn't mutate the layer until an action (Erase/Copy) is taken.
   // Full implementation in editor/tools/wand.js.
   if (state.tool === 'wand') return _wandTool.click(e);
   // Inpaint can create its own layer + mask on the fly, so skip the
@@ -1225,7 +1225,7 @@ function _beginDraw(e) {
   if (state.tool !== 'inpaint' && (!layer || layer.locked)) return;
   // Keep activeLayerId in sync so downstream lookups resolve.
   if (layer && state.activeLayerId !== layer.id) state.activeLayerId = layer.id;
-  if (state.tool === 'move') return _beginMover(e);
+  if (state.tool === 'move') return _beginMove(e);
   if (state.tool === 'crop') return _beginCrop(e);
   if (state.tool === 'lasso') return _beginLasso(e);
   // Clone-stamp — source pick + stroke start. Full implementation in
@@ -1256,7 +1256,7 @@ function _continueDraw(e) {
   if (_transformDragTool.tryContinue(e)) return;
   if (state.lassoActive) return _continueLasso(e);
   if (!state.drawing) {
-    if (state.moving) return _continueMover(e);
+    if (state.moving) return _continueMove(e);
     if (state.cropping || state.cropMoving) return _continueCrop(e);
     return;
   }
@@ -1269,7 +1269,7 @@ function _endDraw() {
   // Transform-tool drag end — handler in editor/tools/transform-drag.js.
   if (_transformDragTool.tryEnd()) return;
   if (state.lassoActive) return _endLasso();
-  if (state.moving) return _endMover();
+  if (state.moving) return _endMove();
   if (state.cropping || state.cropMoving) return _endCrop();
   // Stroke end (brush / eraser / inpaint / clone) — handler in
   // editor/tools/stroke.js.
@@ -1363,16 +1363,16 @@ function _updateBrushCursor(e) {
   }
 }
 
-// ── Mover tool ──
+// ── Move tool ──
 
-// Mover tool — full implementation lives in editor/tools/move.js. Wrap
-// `_beginMover` / `_continueMover` / `_endMover` to the factory output so
+// Move tool — full implementation lives in editor/tools/move.js. Wrap
+// `_beginMove` / `_continueMove` / `_endMove` to the factory output so
 // the existing dispatcher (_beginDraw / _continueDraw / _endDraw) keeps
 // working without changes.
-const _moveTool = createMoverTool({ activeLayer, saveState: _saveState, composite });
-const _beginMover    = _moveTool.begin;
-const _continueMover = _moveTool.drag;
-const _endMover      = _moveTool.end;
+const _moveTool = createMoveTool({ activeLayer, saveState: _saveState, composite });
+const _beginMove    = _moveTool.begin;
+const _continueMove = _moveTool.drag;
+const _endMove      = _moveTool.end;
 
 // ── Crop tool ──
 
@@ -1401,7 +1401,7 @@ function _showCropApply() {
   area.appendChild(pop);
 
   pop.querySelector('.ge-crop-apply-btn').addEventListener('click', () => _applyCrop());
-  // Editaring W/H updates the crop rect anchored at its top-left so the
+  // Editing W/H updates the crop rect anchored at its top-left so the
   // user sees the dimensions live in the overlay.
   const wInput = pop.querySelector('.ge-crop-w');
   const hInput = pop.querySelector('.ge-crop-h');
@@ -1539,7 +1539,7 @@ const _cloneTool = createCloneTool({
 // in editor/tools/transform-drag.js. The dispatcher calls
 // `tryBegin/tryContinue/tryEnd` and short-circuits when they return true.
 const _transformDragTool = createTransformDragTool({
-  beginMover: (e) => _beginMover(e),
+  beginMove: (e) => _beginMove(e),
   composite,
   drawTransformHandles: () => _drawTransformHandles(),
   reapplyTransform: () => _reapplyTransform(),
@@ -1547,7 +1547,7 @@ const _transformDragTool = createTransformDragTool({
   cursorForHandle: _cursorForHandle,
 });
 
-// Compartird stroke pipeline (brush / eraser / inpaint) in
+// Shared stroke pipeline (brush / eraser / inpaint) in
 // editor/tools/stroke.js. Clone reuses tryContinue / tryEnd via the
 // shared drawing flag; clone's own begin is in editor/tools/clone.js.
 const _strokeTool = createStrokeTool({
@@ -1833,7 +1833,7 @@ function _hideLayerThumb() {
 
 // Shift+click on a layer row → use that layer's opaque pixels as a
 // wand-style selection. Lifts pixel alpha > 0 into the wand mask so the
-// user can immediately Bg-Remove / Erase / Copiar through the layer.
+// user can immediately Bg-Remove / Erase / Copy through the layer.
 function _loadLayerAlphaAsSelection(layer) {
   if (!layer || !layer.canvas) return;
   const w = layer.canvas.width, h = layer.canvas.height;
@@ -1991,7 +1991,7 @@ function _wandToMask() {
 // anywhere selection state mutates (wand click, lasso close, undo, etc.).
 function _syncToolClearIndicators() {
   // Selection state drives:
-  //   (1) the "from-selection" highlight on each layer's Agregar-mask btn
+  //   (1) the "from-selection" highlight on each layer's Add-mask btn
   //   (2) the visibility of the post-selection refine rows (Feather +
   //       Edge stroke) on the lasso / wand panels.
   //   (3) the topbar Fill button — visible whenever lasso/wand/active
@@ -2043,7 +2043,7 @@ function _hasMaskPixels() {
   return false;
 }
 
-function _wandEliminarSelection() {
+function _wandDeleteSelection() {
   if (!state.wandMask) return;
   const layer = state.layers.find(l => l.id === state.wandLayerId);
   if (!layer || layer.locked) return;
@@ -2056,7 +2056,7 @@ function _wandEliminarSelection() {
   _wandClear();
 }
 
-function _wandCopiarToNewLayer() {
+function _wandCopyToNewLayer() {
   if (!state.wandMask) return;
   const src = state.layers.find(l => l.id === state.wandLayerId);
   if (!src) return;
@@ -2082,7 +2082,7 @@ function _wandCopiarToNewLayer() {
   if (uiModule) uiModule.showToast('Copied to new layer');
 }
 
-function _lassoEliminarSelection() {
+function _lassoDeleteSelection() {
   const layer = activeLayer();
   if (!layer || state.lassoPoints.length < 3) return;
   const feather = parseInt(document.getElementById('ge-lasso-feather')?.value || '0');
@@ -2109,7 +2109,7 @@ function _lassoEliminarSelection() {
   uiModule.showToast('Selection deleted');
 }
 
-function _lassoCopiarToLayer() {
+function _lassoCopyToLayer() {
   const layer = activeLayer();
   if (!layer || state.lassoPoints.length < 3) return;
   const feather = parseInt(document.getElementById('ge-lasso-feather')?.value || '0');
@@ -2121,7 +2121,7 @@ function _lassoCopiarToLayer() {
   const mask = _buildLassoMask(w, h, off.x, off.y, feather, grow);
   const newLayer = createLayer('Selection', state.imgWidth, state.imgHeight);
 
-  // Copiar layer pixels masked by the selection
+  // Copy layer pixels masked by the selection
   const srcData = layer.ctx.getImageData(0, 0, w, h);
   const maskData = mask.getContext('2d').getImageData(0, 0, w, h);
   const outData = newLayer.ctx.createImageData(w, h);
@@ -2185,13 +2185,13 @@ function _lassoToMask() {
 
 // ── Edge feather ──
 
-// Temad slider modal for filter parameters. Builds a single in-line
+// Themed slider modal for filter parameters. Builds a single in-line
 // overlay anchored to the canvas-area's centre. `params` is an array
 // of `{ key, label, min, max, step, value, suffix }`. As the user
 // drags any slider the `onPreview(values)` callback fires for live
 // rendering; clicking Apply commits and resolves the returned Promise
-// with the final values; Cancelar / Esc resolves with null. The caller
-// is responsible for snapshotting state BEFORE opening (so Cancelar can
+// with the final values; Cancel / Esc resolves with null. The caller
+// is responsible for snapshotting state BEFORE opening (so Cancel can
 // restore the layer's pixels).
 function _filterSliderPrompt(title, params, onPreview) {
   return new Promise((resolve) => {
@@ -2215,7 +2215,7 @@ function _filterSliderPrompt(title, params, onPreview) {
         <div class="ge-filter-modal-head">${title}</div>
         ${rows}
         <div class="ge-filter-modal-actions">
-          <button type="button" class="ge-btn ge-btn-sm" data-action="cancel">Cancelar</button>
+          <button type="button" class="ge-btn ge-btn-sm" data-action="cancel">Cancel</button>
           <button type="button" class="ge-btn ge-btn-sm ge-btn-primary" data-action="apply">Apply</button>
         </div>
       </div>
@@ -2253,11 +2253,11 @@ function _filterSliderPrompt(title, params, onPreview) {
   });
 }
 
-// Generic helper for live-preview blur filters. Guardars the PRE-blur
+// Generic helper for live-preview blur filters. Saves the PRE-blur
 // state to the undo stack first (so Ctrl-Z reverts cleanly), snapshots
 // the layer for re-rendering, applies `renderer(snap, values)` into
 // the layer on every slider change for instant feedback. Apply keeps
-// the result; Cancelar / Esc restores the snapshot AND pops the undo
+// the result; Cancel / Esc restores the snapshot AND pops the undo
 // entry we pre-saved so the canceled run leaves no trace.
 async function _applyLiveBlur({ title, params, label, renderer }) {
   const layer = activeLayer();
@@ -2266,8 +2266,8 @@ async function _applyLiveBlur({ title, params, label, renderer }) {
   const snap = document.createElement('canvas');
   snap.width = w; snap.height = h;
   snap.getContext('2d').drawImage(layer.canvas, 0, 0);
-  // Guardar state BEFORE any preview — the undo stack now holds the
-  // pre-blur pixels. Apply leaves it; Cancelar pops it.
+  // Save state BEFORE any preview — the undo stack now holds the
+  // pre-blur pixels. Apply leaves it; Cancel pops it.
   _saveState(label);
   const draw = (values) => {
     layer.ctx.clearRect(0, 0, w, h);
@@ -2321,11 +2321,11 @@ function _applyMotionBlur() {
   });
 }
 
-function _applyEdgeFeather(layer, width, hardEliminar) {
+function _applyEdgeFeather(layer, width, hardDelete) {
   const w = layer.canvas.width;
   const h = layer.canvas.height;
   const imgData = layer.ctx.getImageData(0, 0, w, h);
-  _edgeFeather(imgData, width, hardEliminar);
+  _edgeFeather(imgData, width, hardDelete);
   layer.ctx.putImageData(imgData, 0, 0);
 }
 
@@ -2377,7 +2377,7 @@ function _syncZoomControls() {
 function _positionInpaintPanel(anchorBtn) {
   const panel = document.getElementById('ge-inpaint-section');
   if (!panel || window.innerWidth <= 820) return;
-  if (panel.dataset.userMoverd === '1') {
+  if (panel.dataset.userMoved === '1') {
     panel.classList.add('ge-inpaint-popover');
     return;
   }
@@ -2447,29 +2447,29 @@ function _wireInpaintPopoverWindow() {
     const r0 = panel.getBoundingClientRect();
     head.setPointerCapture(e.pointerId);
     head.style.cursor = 'grabbing';
-    const onMover = (ev) => {
+    const onMove = (ev) => {
       const w = panel.offsetWidth || r0.width;
       const h = panel.offsetHeight || r0.height;
       const nx = Math.max(8, Math.min(window.innerWidth - w - 8, r0.left + ev.clientX - startX));
       const ny = Math.max(8, Math.min(window.innerHeight - h - 8, r0.top + ev.clientY - startY));
-      panel.dataset.userMoverd = '1';
+      panel.dataset.userMoved = '1';
       panel.style.left = `${nx}px`;
       panel.style.top = `${ny}px`;
     };
     const onUp = () => {
       try { head.releasePointerCapture(e.pointerId); } catch {}
       head.style.cursor = '';
-      head.removeEventListener('pointermove', onMover);
+      head.removeEventListener('pointermove', onMove);
       head.removeEventListener('pointerup', onUp);
     };
-    head.addEventListener('pointermove', onMover);
+    head.addEventListener('pointermove', onMove);
     head.addEventListener('pointerup', onUp);
   });
 }
 
 // ── Build DOM ──
 
-function _buildEditaror(container) {
+function _buildEditor(container) {
   container.innerHTML = '';
   container.className = 'gallery-editor';
 
@@ -2626,7 +2626,7 @@ function _buildEditaror(container) {
       // pick a cursor that matches the tool's affordance.
       const useCircle = state.tool === 'brush' || state.tool === 'eraser' || state.tool === 'inpaint' || state.tool === 'lasso' || state.tool === 'clone';
       if (state.mainCanvas) {
-        // Custom SVG cursor for the Mover tool — white fill with black
+        // Custom SVG cursor for the Move tool — white fill with black
         // stroke so it reads on both light and dark canvases.
         const moveCursorSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
           '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L9 5 H11 V11 H5 V9 L2 12 L5 15 V13 H11 V19 H9 L12 22 L15 19 H13 V13 H19 V15 L22 12 L19 9 V11 H13 V5 H15 Z"/></svg>'
@@ -2646,7 +2646,7 @@ function _buildEditaror(container) {
   const topBar = _buildTopbar();
   container.appendChild(topBar);
 
-  // Editaror body (toolbar + canvas + panel)
+  // Editor body (toolbar + canvas + panel)
   const editorBody = document.createElement('div');
   editorBody.className = 'ge-editor-body';
   editorBody.appendChild(toolbar);
@@ -2739,7 +2739,7 @@ function _buildEditaror(container) {
     // Set the initial swatch background so it reflects the starting value.
     el.value = el.value;
   });
-  // Hide brush controls initially (default tool is Mover)
+  // Hide brush controls initially (default tool is Move)
   const initBrushCtrl = document.getElementById('ge-brush-controls');
   if (initBrushCtrl) initBrushCtrl.style.display = 'none';
   // Brush-size slider is exponential — slider position 0..1000 maps to
@@ -2769,15 +2769,15 @@ function _buildEditaror(container) {
   }
   _wireBrushSlider(controls.querySelector('.ge-size-slider'));
   _wireBrushSlider(document.getElementById('ge-inpaint-brush-slider'));
-  // Topbar wiring (undo/redo/history, Guardar dropdown, zoom buttons,
-  // Export/Descargar/Project, Edge popup, cross-dropdown coordination) —
+  // Topbar wiring (undo/redo/history, Save dropdown, zoom buttons,
+  // Export/Download/Project, Edge popup, cross-dropdown coordination) —
   // full implementation in editor/wire-topbar.js.
   wireTopbar({
     undo, redo,
     toggleHistoryPanel: _toggleHistoryPanel,
     fitZoom: () => _fitZoom(),
     applyZoom: () => _applyZoom(),
-    exportToGalería, downloadPNG,
+    exportToGallery, downloadPNG,
     saveProject: () => _saveProject(),
     loadProjectPrompt: () => _loadProjectPrompt(),
     activeLayer,
@@ -2834,15 +2834,15 @@ function _buildEditaror(container) {
 
   // AI model selectors (Gen, Inpaint, per-tool) — full
   // implementation in editor/ai-models.js.
-  wireAIModeloSelectors({
+  wireAIModelSelectors({
     container,
     apiBase: API_BASE,
-    openRecetasForImg2img: () => _openRecetasForImg2img(),
+    openCookbookForImg2img: () => _openCookbookForImg2img(),
   });
 
   document.getElementById('ge-save').addEventListener('click', async () => {
     if (!state.imageId) {
-      await exportToGalería();
+      await exportToGallery();
       return;
     }
     const endBusy = _saveButtonBusy('Saving…');
@@ -2875,7 +2875,7 @@ function _buildEditaror(container) {
         throw new Error(`HTTP ${resp.status}${detail ? `: ${detail}` : ''}`);
       }
       const totalMs = Math.round(performance.now() - t0);
-      if (uiModule) uiModule.showToast(`Guardard over original (${(blob.size / 1024 / 1024).toFixed(1)}MB · ${(totalMs / 1000).toFixed(1)}s)`, 4000);
+      if (uiModule) uiModule.showToast(`Saved over original (${(blob.size / 1024 / 1024).toFixed(1)}MB · ${(totalMs / 1000).toFixed(1)}s)`, 4000);
       window.dispatchEvent(new CustomEvent('gallery-refresh'));
       savedOk = true;
     } catch (e) {
@@ -2883,14 +2883,14 @@ function _buildEditaror(container) {
       const sizeMB = blob ? ` (${(blob.size / 1024 / 1024).toFixed(1)}MB)` : '';
       let msg = e?.message || 'unknown';
       if (e?.name === 'TypeError' || /fetch|network|load failed/i.test(msg)) {
-        msg = `network dropped${sizeMB} — try "Guardar as copy" or check connection`;
+        msg = `network dropped${sizeMB} — try "Save as copy" or check connection`;
       } else {
         msg += sizeMB;
       }
       if (uiModule) uiModule.showToast('Failed to save: ' + msg, 6000);
     } finally {
       endBusy();
-      if (savedOk) _flashGuardarButtonOk();
+      if (savedOk) _flashSaveButtonOk();
     }
   });
 
@@ -2953,13 +2953,13 @@ function _buildEditaror(container) {
   // the wand-rembg button (in the wand controls section) can reuse it.
   const { buildSelectionHintMask: _buildSelectionHintMask } = wireRembgAndSharpen({
     applyImageTool: _applyImageTool,
-    openRecetasForDependency: (pkg) => _openRecetasForDependency(pkg),
+    openCookbookForDependency: (pkg) => _openCookbookForDependency(pkg),
     composite,
     renderLayerPanel: () => _renderLayerPanel(),
     uiModule,
   });
 
-  // Image import (topbar / panel File / Clipboard / Galería picker) —
+  // Image import (topbar / panel File / Clipboard / Gallery picker) —
   // full implementation in editor/wire-import.js. Returns the shared
   // handleImportedImage sink so drag-drop wires through the same path.
   const { handleImportedImage: _handleImportedImage } = wireImport({
@@ -2972,7 +2972,7 @@ function _buildEditaror(container) {
   });
 
   // Harmonize / Canvas Upscale / AI Upscale / Style Transfer +
-  // Agregar-Empty-Layer — full implementation in editor/ai-tools-misc.js.
+  // Add-Empty-Layer — full implementation in editor/ai-tools-misc.js.
   const { addEmptyLayer: _addEmptyLayer } = wireAIToolsMisc({
     apiBase: API_BASE,
     buildLayerBodyMask: _buildLayerBodyMask,
@@ -2987,22 +2987,22 @@ function _buildEditaror(container) {
     spinnerModule,
     uiModule,
   });
-  // (Merge dropdown removed — Merge Down / Merge All / Flatten Copiar
+  // (Merge dropdown removed — Merge Down / Merge All / Flatten Copy
   // are now three inline icon buttons in the layers header next to
-  // + Agregar. Their individual click handlers below already bind by id.)
+  // + Add. Their individual click handlers below already bind by id.)
 
   // Lasso + Magic Wand panel controls — full implementation in
   // editor/wire-selection-controls.js.
   wireSelectionControls({
     composite,
     invertSelection: _invertSelection,
-    lassoEliminarSelection: _lassoEliminarSelection,
-    lassoCopiarToLayer: _lassoCopiarToLayer,
+    lassoDeleteSelection: _lassoDeleteSelection,
+    lassoCopyToLayer: _lassoCopyToLayer,
     lassoToMask: _lassoToMask,
     runMagicWand: (x, y, mode, opts) => _runMagicWand(x, y, mode, opts),
     wandClear: _wandClear,
-    wandEliminarSelection: _wandEliminarSelection,
-    wandCopiarToNewLayer: _wandCopiarToNewLayer,
+    wandDeleteSelection: _wandDeleteSelection,
+    wandCopyToNewLayer: _wandCopyToNewLayer,
     wandToMask: _wandToMask,
     buildSelectionHintMask: _buildSelectionHintMask,
     applyImageTool: _applyImageTool,
@@ -3041,15 +3041,15 @@ function _buildEditaror(container) {
     // we don't want to hijack Enter elsewhere.
     if (e.key === 'Enter' && state.cropRect && !state.cropping && !state.cropMoving) {
       const t = e.target;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditarable)) return;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       e.preventDefault();
       e.stopPropagation();
       _applyCrop();
       return;
     }
     if (e.key !== 'Escape') return;
-    // Escape is disabled inside Galería Editar. It must not close the
-    // editor, close Galería, or cancel active editor state.
+    // Escape is disabled inside Gallery Edit. It must not close the
+    // editor, close Gallery, or cancel active editor state.
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -3068,10 +3068,10 @@ function _buildEditaror(container) {
     addEmptyLayer: _addEmptyLayer,
     brushSizeSync: _brushSizeSync,
     invertSelection: _invertSelection,
-    wandEliminarSelection: _wandEliminarSelection,
-    wandCopiarToNewLayer: _wandCopiarToNewLayer,
-    lassoEliminarSelection: _lassoEliminarSelection,
-    lassoCopiarToLayer: _lassoCopiarToLayer,
+    wandDeleteSelection: _wandDeleteSelection,
+    wandCopyToNewLayer: _wandCopyToNewLayer,
+    lassoDeleteSelection: _lassoDeleteSelection,
+    lassoCopyToLayer: _lassoCopyToLayer,
     lassoToMask: _lassoToMask,
     buildLassoMask: _buildLassoMask,
     drawLassoOverlay: _drawLassoOverlay,
@@ -3167,17 +3167,17 @@ export function exportPNG() {
   return flatten().toDataURL('image/png');
 }
 
-// Briefly turn the Guardar button green with a checkmark so the user can't
+// Briefly turn the Save button green with a checkmark so the user can't
 // miss a successful save (the toast alone is easy to miss on remote
 // connections where focus drifts during the upload).
-function _flashGuardarButtonOk() {
+function _flashSaveButtonOk() {
   const btn = document.getElementById('ge-save-menu-btn');
   if (!btn) return;
   const origHTML = btn.innerHTML;
   const origBg = btn.style.background;
   btn.style.background = '#3aa75a';
   btn.style.color = '#fff';
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Guardard';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Saved';
   setTimeout(() => {
     btn.style.background = origBg;
     btn.style.color = '';
@@ -3185,7 +3185,7 @@ function _flashGuardarButtonOk() {
   }, 1800);
 }
 
-// Show whirlpool + label on the visible "Guardar ▾" topbar button while a
+// Show whirlpool + label on the visible "Save ▾" topbar button while a
 // save operation runs. Returns a function to call when done (or in finally).
 function _saveButtonBusy(label) {
   const btn = document.getElementById('ge-save-menu-btn');
@@ -3213,7 +3213,7 @@ function _saveButtonBusy(label) {
   };
 }
 
-export async function exportToGalería() {
+export async function exportToGallery() {
   const endBusy = _saveButtonBusy('Saving copy…');
   let blob = null;
   let savedOk = false;
@@ -3244,7 +3244,7 @@ export async function exportToGalería() {
     }
     const totalMs = Math.round(performance.now() - t0);
     window.dispatchEvent(new CustomEvent('gallery-refresh'));
-    if (uiModule) uiModule.showToast(`Guardard copy to gallery (${(blob.size / 1024 / 1024).toFixed(1)}MB · ${(totalMs / 1000).toFixed(1)}s)`, 4000);
+    if (uiModule) uiModule.showToast(`Saved copy to gallery (${(blob.size / 1024 / 1024).toFixed(1)}MB · ${(totalMs / 1000).toFixed(1)}s)`, 4000);
     savedOk = true;
     if (state.draftId) {
       _clearDraftServer(state.draftId);
@@ -3259,31 +3259,31 @@ export async function exportToGalería() {
     } else {
       msg += sizeMB;
     }
-    if (uiModule) uiModule.showToast('Guardar failed: ' + msg, 6000);
+    if (uiModule) uiModule.showToast('Save failed: ' + msg, 6000);
   } finally {
     endBusy();
-    if (savedOk) _flashGuardarButtonOk();
+    if (savedOk) _flashSaveButtonOk();
   }
 }
 
-// Open the Recetas modal scoped to img2img-capable models so the user
-// can serve one in a few clicks. Falls back to plain Recetas if the
+// Open the Cookbook modal scoped to img2img-capable models so the user
+// can serve one in a few clicks. Falls back to plain Cookbook if the
 // filter hook isn't available.
-// Open Recetas on its Dependencies tab and highlight a specific
+// Open Cookbook on its Dependencies tab and highlight a specific
 // package row. Used for "rembg not installed" → install path.
-function _openRecetasForDependency(pkgName) {
+function _openCookbookForDependency(pkgName) {
   // Use cookbookModule.open({ tab: 'Dependencies' }) so the intent is
-  // honored after Recetas's async render. The old path clicked the
-  // sidebar button + polled for the modal, but Recetas's _renderRecipes
+  // honored after Cookbook's async render. The old path clicked the
+  // sidebar button + polled for the modal, but Cookbook's _renderRecipes
   // runs AFTER an awaited _syncFromServer, so depsTab.click() often
-  // raced and the user landed on Descargar.
+  // raced and the user landed on Download.
   const cookbook = window.cookbookModule;
   if (!cookbook || typeof cookbook.open !== 'function') {
     // Fall back to the old click-then-poll path if the module isn't
     // on window for some reason.
     const btn = document.getElementById('tool-cookbook-btn');
     if (btn) btn.click();
-    else if (uiModule) uiModule.showToast(`Open Recetas to install ${pkgName}`, 6000);
+    else if (uiModule) uiModule.showToast(`Open Cookbook to install ${pkgName}`, 6000);
     return;
   }
   cookbook.open({ tab: 'Dependencies' });
@@ -3350,7 +3350,7 @@ async function _checkRembgInstalled() {
   }
 }
 
-function _openRecetasForImg2img() {
+function _openCookbookForImg2img() {
   // Try multiple openers in order — the sidebar button may be hidden on
   // mobile so we fall back to the rail button, then to modalManager.
   let opened = false;
@@ -3366,7 +3366,7 @@ function _openRecetasForImg2img() {
       const cb = document.getElementById('cookbook-modal');
       const serveTab = cb ? cb.querySelector('.cookbook-tab[data-backend="Serve"]') : null;
       // Retry until BOTH the modal mounts AND its tab bar has rendered.
-      // Recetas builds its body html after the modal opens, so we need
+      // Cookbook builds its body html after the modal opens, so we need
       // to wait a bit longer than just "modal exists".
       if (!cb || !serveTab) {
         if (attempt < 40) return setTimeout(() => tryServe(attempt + 1), 80);
@@ -3391,7 +3391,7 @@ function _openRecetasForImg2img() {
     tryServe();
     return;
   }
-  if (uiModule) uiModule.showToast('Open Recetas from the sidebar to serve an img2img model', 6000);
+  if (uiModule) uiModule.showToast('Open Cookbook from the sidebar to serve an img2img model', 6000);
 }
 
 export function downloadPNG() {
@@ -3402,7 +3402,7 @@ export function downloadPNG() {
   a.click();
 }
 
-// Guardar the entire layered editor state as a JSON project file. Each
+// Save the entire layered editor state as a JSON project file. Each
 // layer is encoded as a base64 PNG so transparency / partial alpha
 // survives the round-trip. Use Load Project to restore.
 function _saveProject() {
@@ -3440,7 +3440,7 @@ function _saveProject() {
   if (uiModule) uiModule.showToast('Project saved', 3000);
 }
 
-// Open-file picker for Load Project. Restaurars layers + canvas size.
+// Open-file picker for Load Project. Restores layers + canvas size.
 function _loadProjectPrompt() {
   const inp = document.createElement('input');
   inp.type = 'file';
@@ -3476,7 +3476,7 @@ function _loadProjectPrompt() {
 function _promptCanvasSize(opts) {
   opts = opts || {};
   const title    = opts.title    || 'New canvas';
-  const okLabel  = opts.okLabel  || 'Crear';
+  const okLabel  = opts.okLabel  || 'Create';
   const initialW = opts.initialW || 1024;
   const initialH = opts.initialH || 1024;
   return new Promise(resolve => {
@@ -3503,7 +3503,7 @@ function _promptCanvasSize(opts) {
     function cleanup(result) {
       overlay.style.display = 'none';
       okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancelar);
+      cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       resolve(result);
@@ -3513,14 +3513,14 @@ function _promptCanvasSize(opts) {
       if (!dims) { uiModule.showToast('Invalid size'); return; }
       cleanup(dims);
     }
-    function onCancelar() { cleanup(null); }
+    function onCancel() { cleanup(null); }
     function onBackdrop(e) { if (e.target === overlay) cleanup(null); }
     function onKey(e) {
       if (e.key === 'Enter') { e.preventDefault(); onOk(); }
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cleanup(null); }
     }
     okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancelar);
+    cancelBtn.addEventListener('click', onCancel);
     overlay.addEventListener('click', onBackdrop);
     document.addEventListener('keydown', onKey);
   });
@@ -3553,16 +3553,16 @@ function _parseCanvasSizePrompt(widthText, heightText, initialW = 1024, initialH
 
 // imageUrl=null + presetSize={w,h} → skips the size prompt and creates a
 // blank canvas at the given dimensions (used by template tiles in the
-// gallery's Editar-tab landing). `displayName` is optional — when provided,
-// the Editar tab in the gallery is renamed to "Editar: <name>".
-// Compartird loading-overlay mount/unmount — used by the image-load path AND
+// gallery's Edit-tab landing). `displayName` is optional — when provided,
+// the Edit tab in the gallery is renamed to "Edit: <name>".
+// Shared loading-overlay mount/unmount — used by the image-load path AND
 // the draft-restore paths so every "we're waiting on something" moment
 // in the editor surfaces the same whirlpool + label instead of a blank
 // canvas that looks broken.
-function _mountEditarorLoading(label, dims) {
+function _mountEditorLoading(label, dims) {
   if (!state.container) return;
   const area = state.container.querySelector('.ge-canvas-area');
-  _unmountEditarorLoading();
+  _unmountEditorLoading();
   // Cover the WHOLE editor (toolbar + canvas + panel), not just the canvas area
   // — otherwise the toolbar/old content shows above the overlay at the top while
   // a past project loads, which looks half-rendered.
@@ -3602,7 +3602,7 @@ function _mountEditarorLoading(label, dims) {
   el._placeholder = placeholder;
   state.editorLoadingEl = el;
 }
-function _unmountEditarorLoading() {
+function _unmountEditorLoading() {
   if (!state.editorLoadingEl) return;
   try { state.editorLoadingEl._spinner?.destroy(); } catch {}
   try { state.editorLoadingEl._placeholder?.remove(); } catch {}
@@ -3610,8 +3610,8 @@ function _unmountEditarorLoading() {
   state.editorLoadingEl = null;
 }
 
-export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId) {
-  _setEditarTabLabel(displayName || (presetSize ? 'New canvas' : 'Untitled'));
+export function openEditor(imageUrl, imageId, presetSize, displayName, draftId) {
+  _setEditTabLabel(displayName || (presetSize ? 'New canvas' : 'Untitled'));
   state.imageId = imageId || null;
   // Track original file extension so save-over-original can re-encode in the
   // same format. JPEG re-encoding cuts upload size 5-10x for camera photos,
@@ -3632,23 +3632,23 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
   state.cropRect = null;
   state.lassoPoints = [];
   state.lassoActive = false;
-  window.__galleryEditarLive = true;
+  window.__galleryEditLive = true;
   if (state.persistTimer) { clearTimeout(state.persistTimer); state.persistTimer = null; }
   state.persistDirty = false;
 
   state.container = document.getElementById('gallery-editor-container');
   if (!state.container) {
-    console.error('[openEditaror] #gallery-editor-container not found in DOM — editor cannot open');
-    if (uiModule) uiModule.showError('Editaror container missing');
+    console.error('[openEditor] #gallery-editor-container not found in DOM — editor cannot open');
+    if (uiModule) uiModule.showError('Editor container missing');
     return;
   }
   state.container.style.display = 'flex';
 
   try {
-    _buildEditaror(state.container);
+    _buildEditor(state.container);
   } catch (e) {
-    console.error('[openEditaror] _buildEditaror threw:', e);
-    if (uiModule) uiModule.showError('Editaror failed to build: ' + (e?.message || 'unknown'));
+    console.error('[openEditor] _buildEditor threw:', e);
+    if (uiModule) uiModule.showError('Editor failed to build: ' + (e?.message || 'unknown'));
     return;
   }
 
@@ -3665,24 +3665,24 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
 
   if (!imageUrl && draftId) {
     // Re-open a saved draft by its server-side id — covers the
-    // "Resume" buttons on the Editar-tab landing.
-    _mountEditarorLoading('Loading draft…', presetSize || null);
+    // "Resume" buttons on the Edit-tab landing.
+    _mountEditorLoading('Loading draft…', presetSize || null);
     // Bail if the user closes the editor while the async load is in
     // flight — without this guard, the .then() callbacks fire after
-    // closeEditaror and re-mount the spinner / draw into a dead canvas,
+    // closeEditor and re-mount the spinner / draw into a dead canvas,
     // leaving "stuck" preview artefacts on the next open.
     return _loadDraftById(draftId)
       .then(d => {
         if (!state.editorOpen) return;
         if (!d) {
-          _unmountEditarorLoading();
+          _unmountEditorLoading();
           if (uiModule) uiModule.showToast('Draft not found');
-          closeEditaror();
+          closeEditor();
           return;
         }
         state.draftId = d.id;
         state.draftName = d.name || 'Untitled';
-        _setEditarTabLabel(state.draftName);
+        _setEditTabLabel(state.draftName);
         state.imageId = d.source_image_id || null;
         return _restoreDraft(d).then(() => {
           if (!state.editorOpen) return;
@@ -3691,32 +3691,32 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
           _fitZoom();
           const sizeLabel = document.getElementById('ge-canvas-size');
           if (sizeLabel) sizeLabel.textContent = `${state.imgWidth}×${state.imgHeight}`;
-          _unmountEditarorLoading();
+          _unmountEditorLoading();
           if (uiModule) uiModule.showToast('Resumed draft');
         });
       })
       .catch(err => {
         if (!state.editorOpen) return;
-        _unmountEditarorLoading();
+        _unmountEditorLoading();
         console.warn('[ge] draft load failed', err);
         if (uiModule) uiModule.showToast('Failed to load draft');
-        closeEditaror();
+        closeEditor();
       });
   }
 
   if (!imageUrl) {
     // Empty canvas — use preset size if supplied, otherwise show the
     // styled prompt. Asynchronous: we promise-chain so callers can await
-    // openEditaror() and still rely on isEditarorOpen() afterwards.
+    // openEditor() and still rely on isEditorOpen() afterwards.
     const _finishBlank = (w, h) => {
       _initCanvas(w, h);
       // White-filled Background so the canvas is visible, then a separate
-      // transparent Editar layer on top — keeps user's work isolated from
+      // transparent Edit layer on top — keeps user's work isolated from
       // the underlying canvas, the standard editor pattern.
       const bgLayer = createLayer('Background', w, h);
       bgLayer.ctx.fillStyle = '#ffffff';
       bgLayer.ctx.fillRect(0, 0, w, h);
-      const editLayer = createLayer('Editar', w, h);
+      const editLayer = createLayer('Edit', w, h);
       state.layers.push(bgLayer);
       state.layers.push(editLayer);
       state.activeLayerId = editLayer.id;
@@ -3731,7 +3731,7 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
       return;
     }
     return _promptCanvasSize().then(size => {
-      if (!size) { closeEditaror(); return; }
+      if (!size) { closeEditor(); return; }
       _finishBlank(size.w, size.h);
     });
   }
@@ -3739,7 +3739,7 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
   // Try to restore a previously-persisted draft for this image — that
   // way closing the gallery / editor mid-edit doesn't lose progress.
   // (Server-backed: look up by source_image_id.)
-  _mountEditarorLoading('Looking up draft…');
+  _mountEditorLoading('Looking up draft…');
   _findDraftForImage(imageId).then(_draft => {
     if (!state.editorOpen) return;
     if (!_draft) return null;
@@ -3754,7 +3754,7 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
       // this guard the editor would sit empty and the user would be
       // stuck with no way to recover.
       if (state.layers.length === 0) {
-        console.warn('[openEditaror] draft restored but produced 0 layers — falling back to source image');
+        console.warn('[openEditor] draft restored but produced 0 layers — falling back to source image');
         return null;
       }
       composite();
@@ -3762,7 +3762,7 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
       _fitZoom();
       const sizeLabel = document.getElementById('ge-canvas-size');
       if (sizeLabel) sizeLabel.textContent = `${state.imgWidth}×${state.imgHeight}`;
-      _unmountEditarorLoading();
+      _unmountEditorLoading();
       if (uiModule) uiModule.showToast('Resumed previous edit');
       return 'restored';
     });
@@ -3772,8 +3772,8 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
     _loadSourceImage();
   }).catch(err => {
     if (!state.editorOpen) return;
-    _unmountEditarorLoading();
-    console.warn('[openEditaror] draft lookup failed', err);
+    _unmountEditorLoading();
+    console.warn('[openEditor] draft lookup failed', err);
     _loadSourceImage();
   });
   function _loadSourceImage() {
@@ -3782,14 +3782,14 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
   // downloads / decodes. Especially important for multi-MB photos where
   // the canvas would otherwise sit blank for several seconds with no
   // feedback. If a draft-lookup overlay is already mounted, reuse it.
-  if (!state.editorLoadingEl) _mountEditarorLoading('Loading…');
+  if (!state.editorLoadingEl) _mountEditorLoading('Loading…');
   else {
     const inner = state.editorLoadingEl.querySelector('.ge-loading-text');
     if (inner) inner.textContent = 'Loading…';
   }
-  const _removeLoading = () => _unmountEditarorLoading();
+  const _removeLoading = () => _unmountEditorLoading();
 
-  // Load image — single layer named "Photo" (no extra Editar layer; the
+  // Load image — single layer named "Photo" (no extra Edit layer; the
   // user can add one manually if they want isolated edits).
   const img = new Image();
   img.crossOrigin = 'anonymous';
@@ -3811,33 +3811,33 @@ export function openEditaror(imageUrl, imageId, presetSize, displayName, draftId
     console.error('[_loadSourceImage] onerror — failed to load', imageUrl, e);
     _removeLoading();
     if (uiModule) uiModule.showToast('Failed to load image');
-    closeEditaror();
+    closeEditor();
   };
   img.src = imageUrl;
   }
 }
 
-// Actualizar the gallery's Editar tab label to reflect what's currently open.
-// Pass null to reset to plain "Editar". Only mutates the inner label span
+// Update the gallery's Edit tab label to reflect what's currently open.
+// Pass null to reset to plain "Edit". Only mutates the inner label span
 // so the SVG icon next to it survives the update.
-function _setEditarTabLabel(name) {
+function _setEditTabLabel(name) {
   const tab = document.getElementById('gallery-editor-tab');
   if (!tab) return;
   const labelEl = tab.querySelector('.gallery-tab-label') || tab;
   if (!name) {
-    labelEl.textContent = 'Editar';
+    labelEl.textContent = 'Edit';
     tab.classList.remove('has-edit');
     return;
   }
   const trimmed = name.length > 24 ? name.slice(0, 22) + '…' : name;
-  labelEl.textContent = `Editar: ${trimmed}`;
+  labelEl.textContent = `Edit: ${trimmed}`;
   tab.classList.add('has-edit');
 }
 
-export function closeEditaror() {
-  const editorMounted = _galleryEditarMounted();
-  if ((state.editorOpen || editorMounted) && !window.__galleryAllowCerrarEditaror) {
-    try { uiModule.showToast('Cerrar the edit tab first'); } catch {}
+export function closeEditor() {
+  const editorMounted = _galleryEditMounted();
+  if ((state.editorOpen || editorMounted) && !window.__galleryAllowCloseEditor) {
+    try { uiModule.showToast('Close the edit tab first'); } catch {}
     return false;
   }
   // Flush any pending debounced persist + fire one final save so closing
@@ -3847,11 +3847,11 @@ export function closeEditaror() {
   if (state.layers.length) {
     try { _persistDraft(); } catch {}
   }
-  _setEditarTabLabel(null);
-  _unmountEditarorLoading();
+  _setEditTabLabel(null);
+  _unmountEditorLoading();
   state.editorOpen = false;
   // Drop every document-level click-away handler registered by this
-  // openEditaror invocation. Without this, dropdown closers accumulated
+  // openEditor invocation. Without this, dropdown closers accumulated
   // across reopens (six handlers × N opens).
   while (state.editorDocClickHandlers.length) {
     const h = state.editorDocClickHandlers.pop();
@@ -3908,21 +3908,21 @@ export function closeEditaror() {
   state.maskCtx = null;
   state.imageId = null;
   state.container = null;
-  window.__galleryEditarLive = false;
+  window.__galleryEditLive = false;
   return true;
 }
 
-export function isEditarorOpen() {
+export function isEditorOpen() {
   return state.editorOpen;
 }
 
-const galleryEditarorModule = {
-  openEditaror,
-  closeEditaror,
-  isEditarorOpen,
+const galleryEditorModule = {
+  openEditor,
+  closeEditor,
+  isEditorOpen,
   exportPNG,
-  exportToGalería,
+  exportToGallery,
   downloadPNG,
 };
 
-export default galleryEditarorModule;
+export default galleryEditorModule;

@@ -4,7 +4,7 @@
  * Returns the string — caller creates the wrapper element, attaches its
  * own touch / swipe-to-dismiss listeners, then sets innerHTML. Per-tool
  * sections are all toggled `display:none` here; the tool-switch handler
- * in galleryEditaror.js shows the section matching the active tool.
+ * in galleryEditor.js shows the section matching the active tool.
  *
  * @param {{ color: string, brushSize: number, wandTolerance: number }} ctx
  * @returns {string}
@@ -38,13 +38,13 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           Invert
         </button>
-        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-lasso-delete" title="Eliminar selected pixels from the layer">
+        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-lasso-delete" title="Delete selected pixels from the layer">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-          Eliminar
+          Delete
         </button>
-        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-lasso-copy" title="Copiar selection to new layer">
+        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-lasso-copy" title="Copy selection to new layer">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar Layer
+          Copy Layer
         </button>
         <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-lasso-mask" title="Convert selection to inpaint mask">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
@@ -56,7 +56,7 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
     <div class="ge-wand-section" id="ge-wand-section" style="display:none;">
       <div class="ge-control-row" style="display:flex;gap:4px;margin-bottom:4px;" title="How the next click combines with the current selection. Shift / Alt held during a click override this for one click.">
         <button type="button" class="ge-btn ge-btn-sm ge-wand-mode-btn active" data-wand-mode="replace" title="Replace selection on each click">New</button>
-        <button type="button" class="ge-btn ge-btn-sm ge-wand-mode-btn" data-wand-mode="add" title="Agregar to selection (Shift)">+ Agregar</button>
+        <button type="button" class="ge-btn ge-btn-sm ge-wand-mode-btn" data-wand-mode="add" title="Add to selection (Shift)">+ Add</button>
         <button type="button" class="ge-btn ge-btn-sm ge-wand-mode-btn" data-wand-mode="subtract" title="Subtract from selection (Alt)">− Subtract</button>
       </div>
       <div class="ge-control-row ge-eraser-row">
@@ -87,15 +87,15 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           Invert
         </button>
-        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-delete" title="Eliminar selected pixels from the layer">
+        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-delete" title="Delete selected pixels from the layer">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
           Erase
         </button>
-        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-copy" title="Copiar selection to a new layer">
+        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-copy" title="Copy selection to a new layer">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar Layer
+          Copy Layer
         </button>
-        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-mask" title="Agregar selection to the inpaint mask">
+        <button class="ge-btn ge-btn-sm ge-btn-iconlabel" id="ge-wand-mask" title="Add selection to the inpaint mask">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
           To Mask
         </button>
@@ -105,7 +105,7 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
     <div class="ge-inpaint-section" id="ge-inpaint-section" style="display:none;">
       <div class="ge-inpaint-popover-head" data-inpaint-drag>
         <div class="ge-section-title ge-section-title-with-help ge-inpaint-popover-title"><span>INPAINT</span><span class="ge-section-help" tabindex="0" role="img" aria-label="How inpaint works" title="Brush the area you want the AI to redraw — the red preview marks the mask region. Use Paint to add, Erase to subtract (or hold Ctrl+Alt to flip for one stroke). Generate fills with what your prompt describes; Remove fills with the surrounding background.">?</span></div>
-        <button class="ge-inpaint-popover-close" id="ge-inpaint-popover-close" type="button" title="Cerrar inpaint panel" aria-label="Cerrar inpaint panel">&times;</button>
+        <button class="ge-inpaint-popover-close" id="ge-inpaint-popover-close" type="button" title="Close inpaint panel" aria-label="Close inpaint panel">&times;</button>
       </div>
       <div class="ge-section-title ge-section-title-with-help"><span>INPAINT</span><span class="ge-section-help" tabindex="0" role="img" aria-label="How inpaint works" title="Brush the area you want the AI to redraw — the red preview marks the mask region. Use Paint to add, Erase to subtract (or hold Ctrl+Alt to flip for one stroke). Generate fills with what your prompt describes; Remove fills with the surrounding background.">?</span></div>
       <p class="ge-section-hint" style="margin-top:0;">
@@ -148,11 +148,11 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
       <div class="ge-section-title" style="margin-top:8px;"><span>PROMPT</span></div>
       <input type="text" class="ge-inpaint-prompt" id="ge-inpaint-prompt" placeholder="What to fill the masked area with..." />
       <div class="ge-control-row ge-inpaint-model-row" style="margin-top:6px;">
-        <label for="ge-ai-inpaint">Modelo</label>
-        <select id="ge-ai-inpaint" class="ge-ai-model" title="Modelo for inpainting">
+        <label for="ge-ai-inpaint">Model</label>
+        <select id="ge-ai-inpaint" class="ge-ai-model" title="Model for inpainting">
           <option value="">Auto</option>
           <option value="" disabled>──────────</option>
-          <option value="__serve_cookbook__">+ Serve a model in Recetas…</option>
+          <option value="__serve_cookbook__">+ Serve a model in Cookbook…</option>
         </select>
       </div>
       <div class="ge-control-row ge-eraser-row" style="margin-top:6px;">
@@ -182,7 +182,7 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
       <div class="ge-control-row ge-eraser-row" id="ge-inpaint-postfeather-row" style="display:none;">
         <span class="ge-eraser-preview" id="ge-feather-preview" aria-hidden="true"></span>
         <label>Edge feather <span id="ge-feather-label">0px</span></label>
-        <input type="range" id="ge-feather-slider" min="0" max="200" value="0" title="Blurs the inpaint result's alpha edge — drag to blend the AI fill into the surrounding image. Actualizars live." />
+        <input type="range" id="ge-feather-slider" min="0" max="200" value="0" title="Blurs the inpaint result's alpha edge — drag to blend the AI fill into the surrounding image. Updates live." />
       </div>
       <div class="ge-control-row ge-eraser-row" id="ge-inpaint-edgestroke-row" style="display:none;">
         <span class="ge-eraser-preview" id="ge-edgestroke-preview" aria-hidden="true"></span>
@@ -263,7 +263,7 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
         <div class="ge-dep-notice-text">
           <strong>rembg not installed.</strong>
           Background Remove needs the <code>rembg</code> package on this
-          server. Click to install it from Recetas → Dependencies.
+          server. Click to install it from Cookbook → Dependencies.
         </div>
         <button type="button" class="ge-btn ge-btn-sm" id="ge-rembg-install-link">Install rembg</button>
       </div>
@@ -291,14 +291,14 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
       <div class="ge-control-row ge-actions">
         <button class="ge-btn" id="ge-import-file">File</button>
         <button class="ge-btn" id="ge-import-paste">Clipboard</button>
-        <button class="ge-btn" id="ge-import-gallery">Galería</button>
+        <button class="ge-btn" id="ge-import-gallery">Gallery</button>
       </div>
     </div>
     <div class="ge-harmonize-section" id="ge-harmonize-section" style="display:none;">
       <div class="ge-section-title">Harmonize <span class="ge-section-help" tabindex="0" role="img" title="Blends pasted layers into the base photo. Color match shifts the layer's lighting/tone to match its surroundings (no pixel redraw). Seam fix uses inpaint to clean jagged cutout edges (needs a self-hosted img2img/inpaint model).">?</span></div>
       <div class="ge-control-row ge-tool-model-row">
-        <label>Modelo</label>
-        <select class="ge-tool-model" data-ge-tool-model="harmonize" title="Modelo for harmonize">
+        <label>Model</label>
+        <select class="ge-tool-model" data-ge-tool-model="harmonize" title="Model for harmonize">
           <option value="">Auto</option>
         </select>
       </div>
@@ -323,8 +323,8 @@ export function controlsHTML({ color, brushSize, wandTolerance }) {
     <div class="ge-style-section" id="ge-style-section" style="display:none;">
       <p style="font-size:10px;opacity:0.5;margin:0 0 6px;">Apply an art style to the image using img2img. Requires a running diffusion model.</p>
       <div class="ge-control-row ge-tool-model-row">
-        <label>Modelo</label>
-        <select class="ge-tool-model" data-ge-tool-model="style" title="Modelo for Style transfer">
+        <label>Model</label>
+        <select class="ge-tool-model" data-ge-tool-model="style" title="Model for Style transfer">
           <option value="">Auto</option>
         </select>
       </div>
@@ -361,6 +361,6 @@ export function layerPanelHTML() {
       <button class="ge-btn ge-btn-sm ge-icon-btn" id="ge-flatten" title="Flatten copy (keeps originals)" aria-label="Flatten copy">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L4 6 L4 18 L12 22 L20 18 L20 6 Z"/><path d="M12 2 L12 22"/><path d="M4 6 L20 6"/><path d="M4 18 L20 18"/></svg>
       </button>
-      <button class="ge-btn ge-btn-sm" id="ge-add-layer" title="Agregar empty layer">+ Agregar</button>
+      <button class="ge-btn ge-btn-sm" id="ge-add-layer" title="Add empty layer">+ Add</button>
     </div><div class="ge-layers-list" id="ge-layers-list"></div>`;
 }

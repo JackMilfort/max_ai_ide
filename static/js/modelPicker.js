@@ -1,16 +1,16 @@
-// Modelo Picker — chatbox model selector dropdown
+// Model Picker — chatbox model selector dropdown
 // Extracted from sessions.js
 
 import { providerLogo } from './providers.js';
 import uiModule from './ui.js';
 import settingsModule from './settings.js';
-import { sortModeloObjects } from './modelSort.js';
+import { sortModelObjects } from './modelSort.js';
 
 const API_BASE = window.location.origin;
 
 // ── Recent + Favorites persistence ──
 // Recent is auto-tracked (last 5 picks, most-recent-first) and lives in its
-// own key. Favorites is the SAME key the sidebar Modelos section uses, so a
+// own key. Favorites is the SAME key the sidebar Models section uses, so a
 // favorite toggled here shows up there and vice-versa.
 const RECENT_KEY = 'odysseus-model-recent';
 const FAVORITES_KEY = 'odysseus-model-favorites';
@@ -42,16 +42,16 @@ function _toggleFavorite(mid) {
   if (i >= 0) favs.splice(i, 1);
   else favs.push(mid);
   _saveList(FAVORITES_KEY, favs);
-  // Keep the sidebar Modelos section (same key) in sync if it's mounted.
+  // Keep the sidebar Models section (same key) in sync if it's mounted.
   try {
-    if (window.modelsModule && typeof window.modelsModule.refreshModelos === 'function') {
-      window.modelsModule.refreshModelos();
+    if (window.modelsModule && typeof window.modelsModule.refreshModels === 'function') {
+      window.modelsModule.refreshModels();
     }
   } catch { /* sidebar not present */ }
   return i < 0; // true when now favorited
 }
 
-// ── Compartird keyboard nav for model pickers ──
+// ── Shared keyboard nav for model pickers ──
 function _handlePickerKeydown(e, listEl, itemSelector, closeFn) {
   if (e.key === 'Escape') { closeFn(); return; }
   if (e.key === 'Enter') {
@@ -74,7 +74,7 @@ function _handlePickerKeydown(e, listEl, itemSelector, closeFn) {
   }
 }
 
-// Dependencies injected via initModeloPicker()
+// Dependencies injected via initModelPicker()
 let _deps = null;
 let _autoSelectingDefault = false;
 let _defaultChatPickInFlight = false;
@@ -92,7 +92,7 @@ function _modelExists(modelId, url) {
   });
 }
 
-function _firstAvailableModelo() {
+function _firstAvailableModel() {
   if (!window.modelsModule || !window.modelsModule.getCachedItems) return null;
   const items = window.modelsModule.getCachedItems() || [];
   for (const item of items) {
@@ -108,12 +108,12 @@ function _firstAvailableModelo() {
   return null;
 }
 
-async function _ensureModeloCacheForFallback() {
+async function _ensureModelCacheForFallback() {
   if (!window.modelsModule || !window.modelsModule.getCachedItems) return;
   const items = window.modelsModule.getCachedItems() || [];
   if (items.length) return;
-  if (typeof window.modelsModule.refreshModelos === 'function') {
-    try { await window.modelsModule.refreshModelos(false); } catch (_) {}
+  if (typeof window.modelsModule.refreshModels === 'function') {
+    try { await window.modelsModule.refreshModels(false); } catch (_) {}
   }
 }
 
@@ -124,7 +124,7 @@ async function _ensureDefaultPendingChat() {
   if (pending && pending.modelId && pending.source === 'manual') return;
   _defaultChatPickInFlight = true;
   try {
-    await _ensureModeloCacheForFallback();
+    await _ensureModelCacheForFallback();
     let dc = null;
     try {
       const res = await fetch(`${API_BASE}/api/default-chat`, { credentials: 'same-origin' });
@@ -141,17 +141,17 @@ async function _ensureDefaultPendingChat() {
       });
       try { window.__odysseusDefaultChat = dc; } catch (_) {}
       if (!pending || pending.modelId !== dc.model || pendingUrl !== defaultUrl || pending.source !== 'default') {
-        updateModeloPicker();
+        updateModelPicker();
       }
       return;
     }
     if (pending && pending.modelId) return;
     // No configured default, or the configured default is gone/offline:
     // preserve the convenience fallback and keep the picker usable.
-    const fallback = _firstAvailableModelo();
+    const fallback = _firstAvailableModel();
     if (fallback) {
       _deps.setPendingChat({ ...fallback, source: 'fallback' });
-      updateModeloPicker();
+      updateModelPicker();
     }
   } finally {
     _defaultChatPickInFlight = false;
@@ -167,12 +167,12 @@ async function _ensureDefaultPendingChat() {
  * @param {function} deps.setPendingChat - sets _pendingChat object
  * @param {function} deps.createDirectChat - creates a new direct chat session
  */
-export function initModeloPicker(deps) {
+export function initModelPicker(deps) {
   _deps = deps;
-  _initModeloPickerDropdown();
+  _initModelPickerDropdown();
 }
 
-function _initModeloPickerDropdown() {
+function _initModelPickerDropdown() {
   const wrap = document.getElementById('model-picker-wrap');
   const btn = document.getElementById('model-picker-btn');
   const menu = document.getElementById('model-picker-menu');
@@ -184,7 +184,7 @@ function _initModeloPickerDropdown() {
 
   function _close() {
     if (menu.classList.contains('hidden')) return;
-    // Restaurar scroll button
+    // Restore scroll button
     const _scrollBtn = document.getElementById('scroll-bottom-btn');
     if (_scrollBtn) _scrollBtn.style.display = '';
     menu.classList.add('closing');
@@ -245,25 +245,25 @@ function _initModeloPickerDropdown() {
     } catch (_) { /* leave stale data; picker still works */ }
   }
 
-  function _getAllModelos() {
+  function _getAllModels() {
     const items = (window.modelsModule && window.modelsModule.getCachedItems) ? window.modelsModule.getCachedItems() : [];
     const result = [];
     const seen = new Set();
     items.forEach(item => {
       // Previously: offline endpoints were skipped entirely, so a server
       // that briefly went down disappeared from the picker — confusing
-      // when the user can still see it (offline-tagged) in Configuración.
+      // when the user can still see it (offline-tagged) in Settings.
       // Now: include offline-endpoint models too but flag them
       // `stale: true` so the row renderer dims them + shows the offline
       // pill. The user can still click and try anyway (matches the
       // existing "local server appears offline" path on line 301).
       const epOffline = !!item.offline;
-      const allModelos = (item.models || []).concat(item.models_extra || []);
+      const allModels = (item.models || []).concat(item.models_extra || []);
       const allDisplay = (item.models_display || []).concat(item.models_extra_display || []);
       // Mark local endpoints whose live probe failed.
       const probeResult = item.endpoint_id ? _localProbe[item.endpoint_id] : null;
       const isLocalDead = !!(probeResult && probeResult.alive === false);
-      allModelos.forEach((mid, i) => {
+      allModels.forEach((mid, i) => {
         // Deduplicate by model ID — prefer ONLINE endpoint entries over
         // offline duplicates so the user gets a working endpoint first
         // when the same model is exposed by both.
@@ -289,7 +289,7 @@ function _initModeloPickerDropdown() {
         });
       });
     });
-    return sortModeloObjects(result);
+    return sortModelObjects(result);
   }
 
   // ── Provider display names and grouping ──
@@ -310,7 +310,7 @@ function _initModeloPickerDropdown() {
     'meta': 'Llama', 'meta-llama': 'Llama', 'microsoft': 'Microsoft',
     'minimax': 'MiniMax', 'minimaxai': 'MiniMax', 'mistralai': 'Mistral',
     'moonshotai': 'Moonshot', 'morph': 'Morph', 'nex-agi': 'Nex AGI',
-    'nousresearch': 'Nous Investigación', 'nv-mistralai': 'NVIDIA x Mistral',
+    'nousresearch': 'Nous Research', 'nv-mistralai': 'NVIDIA x Mistral',
     'nvidia': 'NVIDIA', 'openai': 'OpenAI', 'openrouter': 'OpenRouter',
     'perceptron': 'Perceptron', 'perplexity': 'Perplexity', 'poolside': 'Poolside',
     'prime-intellect': 'Prime Intellect', 'qwen': 'Qwen', 'rekaai': 'Reka',
@@ -342,19 +342,19 @@ function _initModeloPickerDropdown() {
 
   function _populate(filter) {
     listEl.innerHTML = '';
-    const all = _getAllModelos();
+    const all = _getAllModels();
     const q = (filter || '').trim().toLowerCase();
-    const hasAnyModelo = all.length > 0;
-    listEl.classList.toggle('is-empty', !hasAnyModelo);
-    menu.classList.toggle('no-models', !hasAnyModelo);
+    const hasAnyModel = all.length > 0;
+    listEl.classList.toggle('is-empty', !hasAnyModel);
+    menu.classList.toggle('no-models', !hasAnyModel);
     if (search) {
-      search.placeholder = hasAnyModelo ? 'Buscar models…' : 'No models connected';
+      search.placeholder = hasAnyModel ? 'Search models…' : 'No models connected';
     }
     if (searchRow) {
       searchRow.classList.toggle('searching', !!q);
     }
 
-    if (!hasAnyModelo) return; // collapsed empty list — nothing to render
+    if (!hasAnyModel) return; // collapsed empty list — nothing to render
 
     // Unique lookup so Recent/Favorites (stored as bare model IDs) can be
     // resolved back to full model objects; drops anything no longer offered.
@@ -381,7 +381,7 @@ function _initModeloPickerDropdown() {
       if (m.stale) {
         row.classList.add('model-switch-stale');
         row.style.opacity = '0.45';
-        row.title = `Local server appears offline: ${m.staleReason}. Click to try anyway, or relaunch in Recetas.`;
+        row.title = `Local server appears offline: ${m.staleReason}. Click to try anyway, or relaunch in Cookbook.`;
       }
       const _mlogo = providerLogo(m.mid);
       if (_mlogo) {
@@ -416,8 +416,8 @@ function _initModeloPickerDropdown() {
       favDot.textContent = '●';
       const _setFavState = (on) => {
         favDot.classList.toggle('active', on);
-        favDot.title = on ? 'Remove from favorites' : 'Agregar to favorites';
-        favDot.setAttribute('aria-label', on ? 'Remove from favorites' : 'Agregar to favorites');
+        favDot.title = on ? 'Remove from favorites' : 'Add to favorites';
+        favDot.setAttribute('aria-label', on ? 'Remove from favorites' : 'Add to favorites');
         favDot.setAttribute('aria-pressed', on ? 'true' : 'false');
       };
       _setFavState(favs.includes(m.mid));
@@ -448,7 +448,7 @@ function _initModeloPickerDropdown() {
       listEl.appendChild(row);
     }
 
-    // ── Buscar mode: flat, filtered results across the whole catalog ──
+    // ── Search mode: flat, filtered results across the whole catalog ──
     if (q) {
       const matches = all.filter(m => {
         const provName = _providerDisplayName(_providerSlug(m.mid)).toLowerCase();
@@ -470,23 +470,23 @@ function _initModeloPickerDropdown() {
     //      list fits below as "All models" and a separate Recent
     //      section just duplicates rows.
     const shown = new Set();
-    const favModelos = favs.map(id => byId.get(id)).filter(Boolean);
-    if (favModelos.length) {
+    const favModels = favs.map(id => byId.get(id)).filter(Boolean);
+    if (favModels.length) {
       _addSection('Favorites');
-      favModelos.forEach(m => { shown.add(m.mid); _addRow(m); });
+      favModels.forEach(m => { shown.add(m.mid); _addRow(m); });
     }
     // Recent: only render when the catalog is big enough that surfacing
     // a recency shortlist is actually useful, AND only models that
     // aren't already in Favorites (dedupe).
     if (all.length > BROWSE_ALL_LIMIT) {
-      const recentModelos = _loadRecent()
+      const recentModels = _loadRecent()
         .map(id => byId.get(id))
         .filter(Boolean)
         .filter(m => !shown.has(m.mid))
         .slice(0, RECENT_MAX);
-      if (recentModelos.length) {
+      if (recentModels.length) {
         _addSection('Recent');
-        recentModelos.forEach(m => { shown.add(m.mid); _addRow(m); });
+        recentModels.forEach(m => { shown.add(m.mid); _addRow(m); });
       }
     }
 
@@ -538,7 +538,7 @@ function _initModeloPickerDropdown() {
           group.className = 'mp-provider-group' + (_justExpandedProvider === provider ? ' mp-just-expanded' : '');
           models.forEach(m => {
             _addRow(m);
-            // Mover the just-appended row into the group container
+            // Move the just-appended row into the group container
             group.appendChild(listEl.lastElementChild);
           });
           listEl.appendChild(group);
@@ -572,7 +572,7 @@ function _initModeloPickerDropdown() {
       // Already have a deferred session — just update the model
       _deps.setPendingChat({ url: m.url, modelId: m.mid, endpointId: m.endpointId, source: 'manual' });
       // Header stays as session name — model switch only updates picker
-      updateModeloPicker();
+      updateModelPicker();
       uiModule.showToast(`Using ${m.display}`);
       return;
     } else if (!currentSessionId) {
@@ -599,8 +599,8 @@ function _initModeloPickerDropdown() {
         return;
       }
     }
-    // Actualizar picker visibility — model is now set
-    updateModeloPicker();
+    // Update picker visibility — model is now set
+    updateModelPicker();
     uiModule.showToast(`Using ${m.display}`);
   }
 
@@ -612,19 +612,19 @@ function _initModeloPickerDropdown() {
     const pending = _deps.getPendingChat();
     if ((current && current.model) || (pending && pending.modelId)) return;
 
-    if (window.modelsModule && window.modelsModule.refreshModelos) {
-      try { await window.modelsModule.refreshModelos(false); } catch (_) {}
+    if (window.modelsModule && window.modelsModule.refreshModels) {
+      try { await window.modelsModule.refreshModels(false); } catch (_) {}
     }
     const items = window.modelsModule && window.modelsModule.getCachedItems ? window.modelsModule.getCachedItems() : [];
     const targetEndpointId = detail.endpointId ? String(detail.endpointId) : '';
-    const targetModelo = detail.modelId || '';
+    const targetModel = detail.modelId || '';
     let match = null;
     for (const item of items) {
       if (item.offline) continue;
       if (targetEndpointId && String(item.endpoint_id || '') !== targetEndpointId) continue;
       const models = (item.models || []).concat(item.models_extra || []);
       const displays = (item.models_display || []).concat(item.models_extra_display || []);
-      const idx = targetModelo ? models.indexOf(targetModelo) : (models.length ? 0 : -1);
+      const idx = targetModel ? models.indexOf(targetModel) : (models.length ? 0 : -1);
       if (idx >= 0) {
         match = {
           mid: models[idx],
@@ -656,10 +656,10 @@ function _initModeloPickerDropdown() {
       // Force-clear any in-progress close animation
       menu.classList.remove('closing', 'hidden');
       _populate('');
-      if (window.modelsModule && window.modelsModule.refreshModelos) {
-        window.modelsModule.refreshModelos().then(() => {
+      if (window.modelsModule && window.modelsModule.refreshModels) {
+        window.modelsModule.refreshModels().then(() => {
           if (!menu.classList.contains('hidden')) _populate(search.value || '');
-          updateModeloPicker();
+          updateModelPicker();
         }).catch(() => {});
       }
       if (window.innerWidth >= 768) search.focus();
@@ -679,14 +679,14 @@ function _initModeloPickerDropdown() {
       refreshBtn.disabled = true;
       refreshBtn.classList.add('spinning');
       try {
-        if (window.modelsModule && window.modelsModule.refreshModelos) {
-          await window.modelsModule.refreshModelos(true);
+        if (window.modelsModule && window.modelsModule.refreshModels) {
+          await window.modelsModule.refreshModels(true);
         }
         await _refreshLocalProbe();
         if (!menu.classList.contains('hidden')) _populate(search.value || '');
-        updateModeloPicker();
+        updateModelPicker();
       } catch (_) {
-        uiModule.showToast('Modelo refresh failed');
+        uiModule.showToast('Model refresh failed');
       } finally {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove('spinning');
@@ -696,9 +696,9 @@ function _initModeloPickerDropdown() {
   search.addEventListener('keydown', (e) => {
     _handlePickerKeydown(e, listEl, '.model-switch-item', _close);
   });
-  const addModelosBtn = document.getElementById('model-picker-add-models-btn');
-  if (addModelosBtn) {
-    addModelosBtn.addEventListener('click', (e) => {
+  const addModelsBtn = document.getElementById('model-picker-add-models-btn');
+  if (addModelsBtn) {
+    addModelsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       _openPickerShortcut('models');
     });
@@ -711,11 +711,11 @@ function _initModeloPickerDropdown() {
 }
 
 /**
- * Actualizar the model picker label to show the current model.
+ * Update the model picker label to show the current model.
  * Always visible — shows current model name or "Select model" if none.
  * Called after selectSession, createDirectChat, and model switch.
  */
-export function updateModeloPicker() {
+export function updateModelPicker() {
   if (!_deps) return;
   const label = document.getElementById('model-picker-label');
   if (!label) return;
@@ -765,7 +765,7 @@ export function updateModeloPicker() {
       (item.models || []).concat(item.models_extra || []).forEach(m => allAvailable.push(m));
     });
     if (allAvailable.length > 0 && !allAvailable.includes(modelId)) {
-      // Modelo no longer available — switch to first available
+      // Model no longer available — switch to first available
       const fallback = items.find(item => !item.offline && (item.models || []).length > 0);
       if (fallback) {
         modelId = fallback.models[0];

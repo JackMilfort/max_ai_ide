@@ -44,7 +44,7 @@ function imageHtml(alt, url, title) {
   return `<img src="${escapeHtml(safeUrl)}" alt="${safeAlt}"${safeTitle} loading="lazy" decoding="async">`;
 }
 
-function _isModeloEndpointUrl(rawUrl) {
+function _isModelEndpointUrl(rawUrl) {
   try {
     const parsed = new URL(String(rawUrl || ''), window.location.origin);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
@@ -196,7 +196,7 @@ function normalizePlainThinking(text) {
   if (!startsWithReasoningPrefix(trimmed)) return text;
 
   const replyStarts = [
-    'Hey', 'Hi ', 'Hi!', 'Hello', 'Sure', 'Sí', 'No ', 'No,', 'Yo', 'OK',
+    'Hey', 'Hi ', 'Hi!', 'Hello', 'Sure', 'Yes', 'No ', 'No,', 'Yo', 'OK',
     'Here', 'Absolutely', 'Of course', 'Great', 'Alright', 'Thanks', 'Welcome',
     'Good ', "I'm happy", "I'd be"
   ];
@@ -253,7 +253,7 @@ export function extractThinkingBlocks(text) {
   // closed by a second orphaned </think>.
   let normalized = normalizePlainThinking(text);
   // Collapse <think>short</think>...real thinking...</think> into one block
-  // Modelos sometimes emit a trivial first block then continue thinking outside tags
+  // Models sometimes emit a trivial first block then continue thinking outside tags
   normalized = normalized.replace(/<think(?:ing)?(?:\s+[^>]*)?>.{0,30}<\/think(?:ing)?>\s*([\s\S]*?)<\/think(?:ing)?>/gi, (m, content) => {
     return '<think>' + content.trim() + '</think>';
   });
@@ -330,7 +330,7 @@ export function extractThinkingBlocks(text) {
 }
 
 /**
- * Crear a collapsible thinking section
+ * Create a collapsible thinking section
  */
 function createThinkingSection(thinkingContent, index = 0, thinkingTime = null) {
   const id = `thinking-${Date.now()}-${index}`;
@@ -465,12 +465,12 @@ export function processWithThinking(text) {
   const doneOnly = /^\s*\[DONE\]\s*$/i.test(visibleContent);
   const hadTrailingDone = !doneOnly && /(?:^|\n)\s*\[DONE\]\s*$/i.test(visibleContent);
 
-  // Agregar thinking sections (collapsed by default)
+  // Add thinking sections (collapsed by default)
   thinkingBlocks.forEach((block, index) => {
     html += createThinkingSection(block, index, thinkingTime);
   });
 
-  // Agregar the actual content
+  // Add the actual content
   if (doneOnly) {
     html += createTaskCompletedMarker();
   } else {
@@ -521,7 +521,7 @@ export function mdToHtml(src, opts) {
     const runBtn = (lang && runnableLangs.includes(lang.toLowerCase()))
       ? `<button type="button" class="run-code" data-code="${escapeHtml(escaped)}" data-lang="${lang}" title="Run code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
       : '';
-    const editBtn = `<button type="button" class="edit-code" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`;
+    const editBtn = `<button type="button" class="edit-code" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`;
     codeBlocks.push(`<pre><code${langClass} data-lang="${lang || ''}">${escapeHtml(escaped)}</code>${runBtn}${editBtn}<button type="button" class="copy-code" data-code="${escapeHtml(escaped)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></pre>`);
 
     return placeholder;
@@ -541,7 +541,7 @@ export function mdToHtml(src, opts) {
   });
 
   // Repair common ways the agent mangles the entity-anchor convention
-  // (`[Name](#kind-<id>)`). Modelos reliably get the single-link case
+  // (`[Name](#kind-<id>)`). Models reliably get the single-link case
   // right but slip into other formats when listing many in a table.
   // These regexes upgrade the broken forms to proper markdown links so
   // the standard `[text](url)` handler below picks them up.
@@ -758,27 +758,27 @@ export function mdToHtml(src, opts) {
   // Remove empty paragraphs
   s = s.replace(/<p><\/p>/g, '');
 
-  // CRITICAL: Restaurar allowed HTML blocks first
+  // CRITICAL: Restore allowed HTML blocks first
   allowedHtmlBlocks.forEach((block, index) => {
     s = s.replace(`___ALLOWED_HTML_${index}___`, block);
   });
 
-  // Restaurar math blocks
+  // Restore math blocks
   mathBlocks.forEach((block, index) => {
     s = s.replace(`___MATH_BLOCK_${index}___`, block);
   });
 
-  // Restaurar mermaid diagram blocks
+  // Restore mermaid diagram blocks
   mermaidBlocks.forEach((block, index) => {
     s = s.replace(`___MERMAID_BLOCK_${index}___`, block);
   });
 
-  // CRITICAL: Restaurar code blocks at the end
+  // CRITICAL: Restore code blocks at the end
   codeBlocks.forEach((block, index) => {
     s = s.replace(`___CODE_BLOCK_${index}___`, block);
   });
 
-  // Restaurar inline code spans last, so placeholders carried inside restored
+  // Restore inline code spans last, so placeholders carried inside restored
   // <a>/allowed-HTML blocks are resolved too. The function replacer keeps the
   // escaped code literal — e.g. a shell snippet like `echo $1` is not treated
   // as a regex back-reference.
@@ -968,40 +968,40 @@ document.addEventListener('click', function(e) {
 function _endpointNameFromUrl(url) {
   try {
     const parsed = new URL(url, window.location.origin);
-    return parsed.host || parsed.hostname || 'Modelo endpoint';
+    return parsed.host || parsed.hostname || 'Model endpoint';
   } catch (_) {
-    return 'Modelo endpoint';
+    return 'Model endpoint';
   }
 }
 
-function _appendEndpointAgregarButtons(root) {
+function _appendEndpointAddButtons(root) {
   if (!root || !root.querySelectorAll) return;
   const anchors = root.matches?.('a[href]')
     ? [root]
     : [...root.querySelectorAll('a[href]')];
   for (const anchor of anchors) {
-    if (anchor.dataset.endpointAgregarChecked === '1') continue;
-    anchor.dataset.endpointAgregarChecked = '1';
+    if (anchor.dataset.endpointAddChecked === '1') continue;
+    anchor.dataset.endpointAddChecked = '1';
     const href = anchor.getAttribute('href') || '';
-    if (!_isModeloEndpointUrl(href)) continue;
+    if (!_isModelEndpointUrl(href)) continue;
     if (anchor.nextElementSibling?.classList?.contains('model-endpoint-add-btn')) continue;
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'model-endpoint-add-btn';
     btn.dataset.endpointUrl = new URL(href, window.location.origin).href.replace(/\/+$/, '');
-    btn.title = 'Agregar this OpenAI-compatible endpoint to the model picker';
-    btn.innerHTML = '<span aria-hidden="true">+</span><span>Agregar to model picker</span>';
+    btn.title = 'Add this OpenAI-compatible endpoint to the model picker';
+    btn.innerHTML = '<span aria-hidden="true">+</span><span>Add to model picker</span>';
     anchor.insertAdjacentElement('afterend', btn);
   }
 }
 
 async function _registerEndpointFromButton(btn) {
   const baseUrl = String(btn?.dataset?.endpointUrl || '').trim();
-  if (!baseUrl || !_isModeloEndpointUrl(baseUrl)) return;
+  if (!baseUrl || !_isModelEndpointUrl(baseUrl)) return;
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span aria-hidden="true">...</span><span>Agregaring</span>';
+  btn.innerHTML = '<span aria-hidden="true">...</span><span>Adding</span>';
   try {
     const existingRes = await fetch('/api/model-endpoints', { credentials: 'same-origin' });
     if (existingRes.ok) {
@@ -1013,8 +1013,8 @@ async function _registerEndpointFromButton(btn) {
         btn.classList.add('added');
         btn.innerHTML = '<span aria-hidden="true">✓</span><span>Already added</span>';
         window.dispatchEvent(new CustomEvent('ge:model-endpoints-updated', { detail: { baseUrl } }));
-        if (window.modelsModule?.refreshModelos) window.modelsModule.refreshModelos(true);
-        if (window.sessionModule?.updateModeloPicker) window.sessionModule.updateModeloPicker();
+        if (window.modelsModule?.refreshModels) window.modelsModule.refreshModels(true);
+        if (window.sessionModule?.updateModelPicker) window.sessionModule.updateModelPicker();
         uiModule.showToast?.(`Already in model picker: ${existing.name || _endpointNameFromUrl(baseUrl)}`);
         return;
       }
@@ -1040,19 +1040,19 @@ async function _registerEndpointFromButton(btn) {
       throw new Error(`HTTP ${res.status}${body ? ': ' + body.slice(0, 160) : ''}`);
     }
     btn.classList.add('added');
-    btn.innerHTML = '<span aria-hidden="true">✓</span><span>Agregared</span>';
+    btn.innerHTML = '<span aria-hidden="true">✓</span><span>Added</span>';
     window.dispatchEvent(new CustomEvent('ge:model-endpoints-updated', { detail: { baseUrl } }));
-    if (window.modelsModule?.refreshModelos) await window.modelsModule.refreshModelos(true);
-    if (window.sessionModule?.updateModeloPicker) window.sessionModule.updateModeloPicker();
-    uiModule.showToast?.(`Modelo endpoint added: ${_endpointNameFromUrl(baseUrl)}`);
+    if (window.modelsModule?.refreshModels) await window.modelsModule.refreshModels(true);
+    if (window.sessionModule?.updateModelPicker) window.sessionModule.updateModelPicker();
+    uiModule.showToast?.(`Model endpoint added: ${_endpointNameFromUrl(baseUrl)}`);
   } catch (err) {
     btn.disabled = false;
     btn.innerHTML = original;
-    uiModule.showError?.(`Agregar endpoint failed: ${err.message || err}`);
+    uiModule.showError?.(`Add endpoint failed: ${err.message || err}`);
   }
 }
 
-(function _watchModeloEndpointLinks() {
+(function _watchModelEndpointLinks() {
   if (window._modelEndpointLinkWatcherWired) return;
   window._modelEndpointLinkWatcherWired = true;
 
@@ -1067,11 +1067,11 @@ async function _registerEndpointFromButton(btn) {
   const start = () => {
     const root = document.body;
     if (!root) return;
-    _appendEndpointAgregarButtons(root);
+    _appendEndpointAddButtons(root);
     new MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const node of m.addedNodes) {
-          if (node.nodeType === 1) _appendEndpointAgregarButtons(node);
+          if (node.nodeType === 1) _appendEndpointAddButtons(node);
         }
       }
     }).observe(root, { childList: true, subtree: true });

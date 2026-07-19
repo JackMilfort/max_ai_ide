@@ -22,7 +22,7 @@ let _lastPointerClientY = null;
 let _scrollRafId = null;
 let _scrollBox = null;
 
-function _isTextEditaringTarget(target) {
+function _isTextEditingTarget(target) {
   const el = target && target.nodeType === 1 ? target : target?.parentElement;
   return !!(el && el.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]'));
 }
@@ -142,7 +142,7 @@ function _closeHoveredWindow() {
 function _spaceIsBlocked(e, surface) {
   const target = _targetEl(e.target);
   if (!target) return false;
-  if (_isTextEditaringTarget(target)) return !surface || surface.contains(target);
+  if (_isTextEditingTarget(target)) return !surface || surface.contains(target);
   const blocked = target.closest?.(SPACE_BLOCKED_SELECTOR);
   return !!(blocked && (!surface || surface.contains(blocked)));
 }
@@ -215,7 +215,7 @@ function _initHoverCardSpaceToggle() {
 _initHoverCardSpaceToggle();
 
 /**
- * Copiar text to clipboard
+ * Copy text to clipboard
  */
 export async function copyToClipboard(text) {
   try {
@@ -271,7 +271,7 @@ function _wireToastSwipe(el) {
     if (!swiping) return;
     swiping = false;
     const dx = currentX - startX;
-    // Restaurar the transition so the next mutation animates.
+    // Restore the transition so the next mutation animates.
     el.style.transition = '';
     if (Math.abs(dx) > DISMISS_PX) {
       // Fling off in the drag direction, then hide.
@@ -368,7 +368,7 @@ export function showToast(msg, durationOrOpts) {
     toastEl.style.pointerEvents = '';
   }
 
-  // Cerrar button for all toasts — dismiss without waiting for timeout.
+  // Close button for all toasts — dismiss without waiting for timeout.
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'toast-close-btn';
@@ -393,7 +393,7 @@ export function showToast(msg, durationOrOpts) {
   toastEl.classList.add('show');
   clearTimeout(toastEl._hideTimer);
   toastEl._hideTimer = setTimeout(() => {
-    // Agregar `exiting` so the CSS rule slides it off to the LEFT instead of
+    // Add `exiting` so the CSS rule slides it off to the LEFT instead of
     // back to the right (where it came from). We piggyback on the same
     // .toast base; .exiting overrides the resting transform.
     toastEl.classList.add('exiting');
@@ -579,7 +579,7 @@ export function el(id) {
  * Styled confirm dialog — replaces native browser confirm().
  * Returns a Promise<boolean>.
  */
-export function styledConfirmar(message, { confirmText = 'Confirmar', cancelText = 'Cancelar', danger = false } = {}) {
+export function styledConfirm(message, { confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) {
   return new Promise(resolve => {
     // Reuse or create the modal
     let overlay = document.getElementById('styled-confirm-overlay');
@@ -589,7 +589,7 @@ export function styledConfirmar(message, { confirmText = 'Confirmar', cancelText
       overlay.className = 'modal';
       overlay.innerHTML =
         '<div class="modal-content styled-confirm-box" role="dialog" aria-modal="true" aria-labelledby="styled-confirm-title" aria-describedby="styled-confirm-msg">' +
-          '<div class="modal-header"><h4 id="styled-confirm-title">Confirmar</h4></div>' +
+          '<div class="modal-header"><h4 id="styled-confirm-title">Confirm</h4></div>' +
           '<div class="modal-body"><p id="styled-confirm-msg"></p></div>' +
           '<div class="modal-footer">' +
             '<button id="styled-confirm-cancel"></button>' +
@@ -618,14 +618,14 @@ export function styledConfirmar(message, { confirmText = 'Confirmar', cancelText
       overlay.classList.add('hidden');
       overlay.style.display = 'none';
       okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancelar);
+      cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       try { _prevFocus && _prevFocus.focus && _prevFocus.focus(); } catch {}
       resolve(result);
     }
     function onOk() { cleanup(true); }
-    function onCancelar() { cleanup(false); }
+    function onCancel() { cleanup(false); }
     function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
     function onKey(e) {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -649,7 +649,7 @@ export function styledConfirmar(message, { confirmText = 'Confirmar', cancelText
     }
 
     okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancelar);
+    cancelBtn.addEventListener('click', onCancel);
     overlay.addEventListener('click', onBackdrop);
     document.addEventListener('keydown', onKey);
     okBtn.focus();
@@ -658,14 +658,14 @@ export function styledConfirmar(message, { confirmText = 'Confirmar', cancelText
 
 /**
  * Styled text-input prompt — drop-in replacement for window.prompt().
- * Resolves to the trimmed string the user typed, or null on Cancelar / Escape / backdrop.
+ * Resolves to the trimmed string the user typed, or null on Cancel / Escape / backdrop.
  */
 export function styledPrompt(message, {
   title = 'Name',
   defaultValue = '',
   placeholder = '',
-  confirmText = 'Guardar',
-  cancelText = 'Cancelar',
+  confirmText = 'Save',
+  cancelText = 'Cancel',
   maxLength = 80,
 } = {}) {
   return new Promise(resolve => {
@@ -713,7 +713,7 @@ export function styledPrompt(message, {
       overlay.classList.add('hidden');
       overlay.style.display = 'none';
       okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancelar);
+      cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       input.removeEventListener('keydown', onInputKey);
@@ -721,7 +721,7 @@ export function styledPrompt(message, {
       resolve(result);
     }
     function onOk() { cleanup((input.value || '').trim()); }
-    function onCancelar() { cleanup(null); }
+    function onCancel() { cleanup(null); }
     function onBackdrop(e) { if (e.target === overlay) cleanup(null); }
     function onKey(e) {
       if (e.key === 'Escape') {
@@ -730,7 +730,7 @@ export function styledPrompt(message, {
         e.stopImmediatePropagation();
         cleanup(null);
       } else if (e.key === 'Tab') {
-        // Trap focus inside the dialog (input → Cancelar → OK → input …).
+        // Trap focus inside the dialog (input → Cancel → OK → input …).
         e.preventDefault();
         const f = [input, cancelBtn, okBtn];
         const i = f.indexOf(document.activeElement);
@@ -746,7 +746,7 @@ export function styledPrompt(message, {
     }
 
     okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancelar);
+    cancelBtn.addEventListener('click', onCancel);
     overlay.addEventListener('click', onBackdrop);
     document.addEventListener('keydown', onKey);
     input.addEventListener('keydown', onInputKey);
@@ -793,7 +793,7 @@ export function isTouchInsideModal() {
   return _touchInsideModal;
 }
 
-// Cerrar floating dropdowns/popups on scroll to prevent them drifting
+// Close floating dropdowns/popups on scroll to prevent them drifting
 function _initScrollDismiss() {
   const chatHistory = document.getElementById('chat-history');
   if (chatHistory) {
@@ -841,7 +841,7 @@ const uiModule = {
   copyToClipboard,
   showToast,
   showError,
-  styledConfirmar,
+  styledConfirm,
   styledPrompt,
   scrollHistory,
   scrollHistoryInstant,
@@ -860,9 +860,9 @@ export default uiModule;
 
 // Expose the styled confirm globally so any module can replace the native
 // browser confirm() with the themed dialog — even files that don't import
-// uiModule. Usage: `if (!await window.styledConfirmar(msg, { danger:true })) return;`
+// uiModule. Usage: `if (!await window.styledConfirm(msg, { danger:true })) return;`
 if (typeof window !== 'undefined') {
-  window.styledConfirmar = styledConfirmar;
+  window.styledConfirm = styledConfirm;
 }
 
 // ── Mobile: clear enter animation so inline transform works for dragging ──
@@ -906,7 +906,7 @@ if ('ontouchstart' in window) {
   let _dragging = false;    // true once we've committed to a vertical drag
   let _cancelled = false;   // true if horizontal movement detected
 
-  // Cerrar any floating dropdowns/menus that hang off body via position:fixed.
+  // Close any floating dropdowns/menus that hang off body via position:fixed.
   // Called when a swipe-dismiss gesture starts so the menu doesn't orphan over
   // the page after the sheet slides away.
   function _closeFloatingDropdownsForSwipe() {
@@ -1154,7 +1154,7 @@ if ('ontouchstart' in window || window.innerWidth <= 768) {
     if (!el || el.nodeType !== 1) return;
     const tag = el.tagName;
     const isText = tag === 'INPUT' || tag === 'TEXTAREA' ||
-                   (tag === 'DIV' && el.isContentEditarable);
+                   (tag === 'DIV' && el.isContentEditable);
     if (!isText) return;
     // Inputs of type button/checkbox/radio/range/etc. don't summon a keyboard
     if (tag === 'INPUT') {
@@ -1248,7 +1248,7 @@ if (!window._odyEscExpandGuard) {
       return;
     }
     // Transient ad-hoc menus (dropdowns / context popups) live outside the
-    // .modal system and register a dismiss callback in escMenuStack. Cerrar the
+    // .modal system and register a dismiss callback in escMenuStack. Close the
     // most-recently-opened one first — so a menu opened over a modal dismisses
     // before the modal — and do it BEFORE the text-input guard below, since a
     // menu may own the focused input (e.g. a search dropdown).
@@ -1257,7 +1257,7 @@ if (!window._odyEscExpandGuard) {
       return;
     }
     const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditarable)) return;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const expanded = document.querySelector('.doclib-card-expanded');
     const think = document.querySelector('.thinking-content.expanded');
     if (expanded) {
@@ -1275,16 +1275,16 @@ if (!window._odyEscExpandGuard) {
       }
       return;
     }
-    const galleryEditaror = document.getElementById('gallery-editor-container');
-    const galleryModal = galleryEditaror?.closest('.modal');
-    const galleryEditaring = !!(
-      galleryEditaror &&
+    const galleryEditor = document.getElementById('gallery-editor-container');
+    const galleryModal = galleryEditor?.closest('.modal');
+    const galleryEditing = !!(
+      galleryEditor &&
       galleryModal &&
       !galleryModal.classList.contains('hidden') &&
-      getComputedStyle(galleryEditaror).display !== 'none' &&
-      galleryEditaror.querySelector('.gallery-editor')
+      getComputedStyle(galleryEditor).display !== 'none' &&
+      galleryEditor.querySelector('.gallery-editor')
     );
-    if (galleryEditaring) {
+    if (galleryEditing) {
       e.preventDefault();
       e.stopImmediatePropagation();
       return;

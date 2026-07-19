@@ -1,7 +1,7 @@
 // compare/stream.js — SSE streaming to panes
 import state from './state.js';
 import { addFinishBadge } from './vote.js';
-import { getModeloCost, safeDisplayImageSrc } from '../chatRenderer.js';
+import { getModelCost, safeDisplayImageSrc } from '../chatRenderer.js';
 import markdownModule from '../markdown.js';
 import spinnerModule from '../spinner.js';
 import uiModule from '../ui.js';
@@ -39,7 +39,7 @@ function _formatMs(ms) {
 }
 
 /** Build a DOM container of search-result cards from a search response. Returns an HTMLElement. */
-function _renderBuscarResults(data) {
+function _renderSearchResults(data) {
   const container = document.createElement('div');
   container.className = 'compare-search-results';
   (data.results || []).forEach(r => {
@@ -74,7 +74,7 @@ function _renderBuscarResults(data) {
 
 /** Run synthesis for a search pane — sends search results to an LLM for analysis. */
 async function _runSynthForPane(modelToUse, synthPrompt, synthBody, spinner, hist) {
-  // Crear temp session for synthesis
+  // Create temp session for synthesis
   const fd = new FormData();
   fd.append('name', 'Synthesis');
   fd.append('endpoint_url', modelToUse.endpoint || '');
@@ -222,14 +222,14 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
 
     // Compare mode determines what tools/features are enabled
     const isAgent = state._compareMode === 'agent';
-    const isInvestigación = state._compareMode === 'research';
+    const isResearch = state._compareMode === 'research';
 
     // Agent mode: enable all tools (web, bash, etc.)
     if (isAgent) {
       fd.append('mode', 'agent');
       fd.append('allow_web_search', 'true');
       fd.append('allow_bash', 'true');
-    } else if (isInvestigación) {
+    } else if (isResearch) {
       fd.append('use_research', 'true');
     } else {
       // Chat/Image: pure chat only — no tools, no search, no bash, no RAG.
@@ -282,7 +282,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
           if (json.type === 'metrics') {
             metrics = json.data;
 
-          // ── Investigación progress (spinner updates) ──
+          // ── Research progress (spinner updates) ──
           } else if (json.type === 'research_progress') {
             const rp = json.data;
             const spinner = aiMsgEl._spinner;
@@ -290,7 +290,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
               if (rp.phase === 'searching') {
                 const q = rp.queries ? `${rp.queries} queries` : '';
                 const s = rp.total_sources ? ` · ${rp.total_sources} sources` : '';
-                spinner.updateMessage(`R${rp.round || '?'}: Buscaring${q ? ' (' + q + ')' : ''}${s}`);
+                spinner.updateMessage(`R${rp.round || '?'}: Searching${q ? ' (' + q + ')' : ''}${s}`);
               } else if (rp.phase === 'reading') {
                 spinner.updateMessage(`R${rp.round || '?'}: Reading ${rp.new_sources || ''} pages`);
               } else if (rp.phase === 'analyzing') {
@@ -298,15 +298,15 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
               } else if (rp.phase === 'writing') {
                 spinner.updateMessage(`Writing report · ${rp.total_sources || 0} sources`);
               } else if (rp.phase === 'error') {
-                spinner.updateMessage(rp.message || 'Investigación error');
+                spinner.updateMessage(rp.message || 'Research error');
               }
             }
 
-          // ── Investigación sources / Web sources (compact sources box) ──
+          // ── Research sources / Web sources (compact sources box) ──
           } else if (json.type === 'research_sources' || json.type === 'web_sources') {
             const sources = json.data || [];
             if (sources.length > 0) {
-              const label = json.type === 'research_sources' ? 'Investigación' : 'Web';
+              const label = json.type === 'research_sources' ? 'Research' : 'Web';
               const box = document.createElement('div');
               box.className = 'compare-sources-box';
               box.innerHTML = '<span class="sources-label">' + sources.length + ' ' + label + ' sources</span>';
@@ -352,7 +352,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
               currentToolBlock = null;
             } else {
               // Agent thread node — matches main chat style
-              const _toolLabels = { bash: 'Terminal', python: 'Python', web_search: 'Web Buscar', read_file: 'Read File', write_file: 'Write File' };
+              const _toolLabels = { bash: 'Terminal', python: 'Python', web_search: 'Web Search', read_file: 'Read File', write_file: 'Write File' };
               const toolLabel = _toolLabels[toolName.toLowerCase()] || toolName;
               const cmdHtml = cmd ? `<pre class="agent-thread-cmd">${escapeHtml(cmd)}</pre>` : '';
               const node = document.createElement('div');
@@ -408,7 +408,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
               if (currentToolBlock._waveInterval) { clearInterval(currentToolBlock._waveInterval); currentToolBlock._waveInterval = null; }
               const ok = (json.exit_code === 0 || json.exit_code == null);
               const cmd = json.command || '';
-              const _toolLabels2 = { bash: 'Terminal', python: 'Python', web_search: 'Web Buscar', read_file: 'Read File', write_file: 'Write File' };
+              const _toolLabels2 = { bash: 'Terminal', python: 'Python', web_search: 'Web Search', read_file: 'Read File', write_file: 'Write File' };
               const tLabel = _toolLabels2[(json.tool || '').toLowerCase()] || json.tool || '';
               let outHtml = '';
               if (json.output && json.output.trim()) {
@@ -437,7 +437,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
               const srcBox = aiBody.querySelector('.compare-sources-box');
               aiBody.innerHTML = '';
               if (srcBox) aiBody.appendChild(srcBox);
-              // Agregar text container
+              // Add text container
               const textEl = document.createElement('div');
               textEl.className = 'compare-text-content';
               aiBody.appendChild(textEl);
@@ -490,7 +490,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
       const copyBtn = document.createElement('button');
       copyBtn.className = 'footer-copy-btn';
       copyBtn.type = 'button';
-      copyBtn.title = 'Copiar prompt';
+      copyBtn.title = 'Copy prompt';
       copyBtn.textContent = '\u2398';
       copyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -506,7 +506,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
       const dlBtn = document.createElement('button');
       dlBtn.className = 'footer-copy-btn';
       dlBtn.type = 'button';
-      dlBtn.title = 'Descargar image';
+      dlBtn.title = 'Download image';
       dlBtn.textContent = '\u2913';
       dlBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -575,9 +575,9 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
       if (responseTime != null && responseTime !== 'undefined' && parts.length === 0) {
         parts.push(responseTime + 's');
       }
-      // Agregar per-request cost and cost per 1000
-      const _model = metrics.model || (state._selectedModelos[paneIdx] && state._selectedModelos[paneIdx].model) || '';
-      const _cost = getModeloCost(_model, metrics.input_tokens || 0, metrics.output_tokens || 0);
+      // Add per-request cost and cost per 1000
+      const _model = metrics.model || (state._selectedModels[paneIdx] && state._selectedModels[paneIdx].model) || '';
+      const _cost = getModelCost(_model, metrics.input_tokens || 0, metrics.output_tokens || 0);
       // Build the metrics span with optional cost and context
       span.textContent = parts.join(' | ');
       if (_cost !== null) {
@@ -624,7 +624,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
         notice.appendChild(retryBtn);
         aiBody.appendChild(notice);
       } else {
-        if (!accumulated.trim()) aiBody.innerHTML = '<div style="color:#f0ad4e;font-size:0.9em;">Cancelarled.</div>';
+        if (!accumulated.trim()) aiBody.innerHTML = '<div style="color:#f0ad4e;font-size:0.9em;">Cancelled.</div>';
       }
     } else {
       console.error('Compare stream error:', error);
@@ -664,7 +664,7 @@ async function streamToPane(paneIdx, sessionId, message, aiMsgEl, opts) {
           // finish" is meaningless (it's just whoever ran first).
           // Wait until all panes are done, then badge whichever had
           // the lowest measured per-pane elapsed time.
-          const total = state._selectedModelos.length;
+          const total = state._selectedModels.length;
           const finished = state._paneElapsed.filter(v => typeof v === 'number').length;
           if (finished >= total) {
             let winnerIdx = -1, winnerMs = Infinity;
@@ -733,4 +733,4 @@ function _stampGradeBadge(paneIdx, response, expected) {
   else header.appendChild(badge);
 }
 
-export { streamToPane, _renderBuscarResults, _runSynthForPane, _formatMs, registerStreamActions };
+export { streamToPane, _renderSearchResults, _runSynthForPane, _formatMs, registerStreamActions };

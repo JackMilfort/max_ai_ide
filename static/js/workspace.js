@@ -148,7 +148,7 @@ function _getModal() {
     <div class="modal-content">
       <div class="modal-header">
         <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Select workspace</h4>
-        <button class="close-btn" id="workspace-close" aria-label="Cerrar">✖</button>
+        <button class="close-btn" id="workspace-close" aria-label="Close">✖</button>
       </div>
       <input type="text" class="styled-prompt-input workspace-cur" id="workspace-cur-path"
              spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
@@ -156,14 +156,14 @@ function _getModal() {
       <p class="muted workspace-note">File tools are <strong>confined</strong> to this folder. Shell commands start here but are <strong>not sandboxed</strong> and can reach outside it. A workspace scopes the tools; it is not a security boundary.</p>
       <div class="modal-body workspace-body" id="workspace-body"></div>
       <div class="modal-footer workspace-footer">
-        <button type="button" class="confirm-btn confirm-btn-secondary" id="workspace-cancel">Cancelar</button>
+        <button type="button" class="confirm-btn confirm-btn-secondary" id="workspace-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-btn-primary" id="workspace-use">Use this folder</button>
       </div>
     </div>`;
   document.body.appendChild(_modal);
   _modal.querySelector('#workspace-close').addEventListener('click', closeWorkspaceBrowser);
   _modal.querySelector('#workspace-cancel').addEventListener('click', closeWorkspaceBrowser);
-  // Editarable path bar: Enter navigates to a typed/pasted folder.
+  // Editable path bar: Enter navigates to a typed/pasted folder.
   _modal.querySelector('#workspace-cur-path').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -197,7 +197,7 @@ export function closeWorkspaceBrowser() {
 }
 
 export function initWorkspace() {
-  // Restaurar persisted workspace into the pill on load.
+  // Restore persisted workspace into the pill on load.
   syncWorkspaceIndicator(getWorkspace());
   const overflow = document.getElementById('overflow-workspace-btn');
   if (overflow) overflow.addEventListener('click', openWorkspaceBrowser);

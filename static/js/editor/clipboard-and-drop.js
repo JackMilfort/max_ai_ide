@@ -5,7 +5,7 @@
  *   - Paste (Ctrl+V): checks `state.internalClipboard` first (set by
  *     lasso copy/cut), then falls back to the system clipboard's
  *     `image/*` items. Layer is named "Pasted Selection" or "Pasted"
- *     and becomes active; the tool snaps to Move so the user can
+ *     and becomes active; the tool snaps to Mover so the user can
  *     reposition it immediately.
  *   - Drop: any `image/*` file dragged from the OS / another tab.
  *     Shows a "Drop image to add as new layer" overlay mid-drag. Each

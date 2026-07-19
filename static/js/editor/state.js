@@ -1,8 +1,8 @@
 /**
- * Editor state store — a single mutable object that the gallery editor
+ * Editaror state store — a single mutable object that the gallery editor
  * and its tool modules read and write directly.
  *
- * Migration: galleryEditor.js used to own ~110 module-scope `let`
+ * Migration: galleryEditaror.js used to own ~110 module-scope `let`
  * declarations and capture them via closure. Tool modules can't import
  * a `let` binding's mutations across module boundaries, so we move the
  * state into a single exported OBJECT whose properties are freely
@@ -10,9 +10,9 @@
  * exactly the way the old code wrote `_transformW`.
  *
  * Slices land here one tool at a time; this file grows as more state
- * migrates out of galleryEditor.js. Defaults match the legacy
+ * migrates out of galleryEditaror.js. Defaults match the legacy
  * module-scope initializers verbatim — every `state.foo = …` reset
- * site in galleryEditor.js still works unchanged.
+ * site in galleryEditaror.js still works unchanged.
  */
 export const state = {
   // ── Transform tool ──
@@ -29,7 +29,7 @@ export const state = {
   // hover cursor lookup; lives next to `transformHandle` because both
   // come from `_getTransformHandle`.
   hoveredHandle: null,
-  // Snapshot of the layer canvas + offset at transform start so Cancel
+  // Snapshot of the layer canvas + offset at transform start so Cancelar
   // can restore exactly without re-fetching from the layer.
   transformOrigCanvas: null,
   transformOrigOffset: null,
@@ -47,8 +47,8 @@ export const state = {
   transformStartOffX: 0,
   transformStartOffY: 0,
   // Transform overlay canvas — separate canvas positioned over the
-  // main canvas with extra slack for handle rendering. Created by
-  // _buildEditor; the move/transform tools draw their handle layer
+  // main canvas with extra slack for handle rendering. Creard by
+  // _buildEditaror; the move/transform tools draw their handle layer
   // onto its 2D context.
   transformOverlay: null,
   transformOverlayCtx: null,
@@ -70,7 +70,7 @@ export const state = {
   wandSrcCache: null,
 
   // ── Brush / Eraser / Clone tools ──
-  // Shared paint color (brush picks up the swatch; eraser and clone
+  // Compartird paint color (brush picks up the swatch; eraser and clone
   // ignore color but reuse the same picker control).
   color: '#e06c75',
   // Brush diameter in canvas pixels. Persisted across tool switches;
@@ -149,7 +149,7 @@ export const state = {
   lastX: 0,
   lastY: 0,
 
-  // ── Move tool ──
+  // ── Mover tool ──
   moving: false,
   moveStartX: 0,
   moveStartY: 0,
@@ -170,7 +170,7 @@ export const state = {
   // True while the user drags the inside of an already-finished crop
   // rect to reposition it.
   cropMoving: false,
-  cropMoveStart: null,
+  cropMoverStart: null,
 
   // ── Lasso tool ──
   // Freehand selection polygon in canvas pixels. Empty when no lasso
@@ -182,10 +182,10 @@ export const state = {
   // round-trip layer alpha and metadata losslessly.
   internalClipboard: null,
 
-  // ── Editor DOM refs ──
-  // Root container that openEditor mounts into.
+  // ── Editaror DOM refs ──
+  // Root container that openEditaror mounts into.
   container: null,
-  // Main image canvas + its 2D context. Re-created on every openEditor
+  // Main image canvas + its 2D context. Re-created on every openEditaror
   // so the editor can reopen with fresh dimensions.
   mainCanvas: null,
   mainCtx: null,
@@ -204,19 +204,19 @@ export const state = {
   // Document dimensions in canvas pixels.
   imgWidth: 0,
   imgHeight: 0,
-  // Gallery image id this editor session is editing, or null for
+  // Galería image id this editor session is editing, or null for
   // blank-canvas drafts.
   imageId: null,
   // Original file extension so save-over-original re-encodes in the
   // same format (JPEG vs PNG matters: JPEG cuts upload size 5-10× for
   // camera photos over remote tunnels).
   originalExt: 'png',
-  // True between openEditor / closeEditor — guards async callbacks
+  // True between openEditaror / closeEditaror — guards async callbacks
   // that fire after the user closes the editor (don't draw onto a
   // dead canvas, don't re-mount the spinner).
   editorOpen: false,
   // Document-level click-away handlers registered for the current
-  // session. Tracked so closeEditor can detach them all cleanly.
+  // session. Tracked so closeEditaror can detach them all cleanly.
   // Mutated in place (push / length = 0); the reference never changes.
   editorDocClickHandlers: [],
 

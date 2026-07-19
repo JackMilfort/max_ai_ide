@@ -1,7 +1,7 @@
 // static/js/search.js
 
 /**
- * Search settings management — reads active provider from admin settings.
+ * Buscar settings management — reads active provider from admin settings.
  */
 
 let API_BASE = '';

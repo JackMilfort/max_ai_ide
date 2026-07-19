@@ -17,7 +17,7 @@ export function buildToolbar({ currentTool, onSelectTool, onClearSelection }) {
   const toolbar = document.createElement('div');
   toolbar.className = 'ge-toolbar';
   const tools = [
-    { id: 'move', label: 'Move', icon: '✥', key: 'V' },
+    { id: 'move', label: 'Mover', icon: '✥', key: 'V' },
     { id: 'crop', label: 'Crop', icon: '✂', key: 'C' },
     { id: 'transform', label: 'Transform', icon: '⤢', key: 'T' },
     { sep: true },

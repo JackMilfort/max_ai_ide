@@ -1,9 +1,9 @@
 /**
- * Gallery Module — photo backup + AI-generated image library.
+ * Galería Module — photo backup + AI-generated image library.
  */
 
 import uiModule from './ui.js';
-import { openEditor, closeEditor, isEditorOpen } from './galleryEditor.js';
+import { openEditaror, closeEditaror, isEditarorOpen } from './galleryEditaror.js';
 import spinnerModule from './spinner.js';
 import { makeWindowDraggable } from './windowDrag.js';
 import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
@@ -28,7 +28,7 @@ let _items = [];
 let _total = 0;
 let _totalTagged = 0;
 
-// Update the "X/Y tagged" badge in the AI-tagging settings header.
+// Actualizar the "X/Y tagged" badge in the AI-tagging settings header.
 function _updateTagCount() {
   const el = document.getElementById('gallery-tag-count');
   if (el) el.textContent = _total ? `${_totalTagged}/${_total} tagged` : '';
@@ -38,7 +38,7 @@ let _search = '';
 // builds this up by clicking tag chips or by hitting Enter in the
 // search box, and tears it down with the × on each pill.
 let _activeTags = [];
-let _activeModel = null;
+let _activeModelo = null;
 let _activeAlbum = null;
 let _galleryCascaded = false;   // play the domino-in cascade once per open
 let _favoritesOnly = false;
@@ -66,7 +66,7 @@ let _escHandler = null;
 let _albums = [];
 // Albums tab — search filter + multi-select state. Mirrors what the
 // Photos tab does (_search, _selectMode) but scoped to the albums grid.
-let _albumSearch = '';
+let _albumBuscar = '';
 let _albumSelectMode = false;
 const _albumSelected = new Set();
 
@@ -93,11 +93,11 @@ async function _fetchLibrary(append) {
     // re-open. The new list replaces _items on success below; if the fetch
     // fails, the previous photos stay visible.
   }
-  const params = new URLSearchParams({ sort: _sort, offset: _offset, limit: _limit });
+  const params = new URLBuscarParams({ sort: _sort, offset: _offset, limit: _limit });
   if (_sort === 'shuffle') params.set('seed', String(_shuffleSeed));
   if (_search) params.set('search', _search);
   if (_activeTags.length) params.set('tag', _activeTags.join(','));
-  if (_activeModel) params.set('model', _activeModel);
+  if (_activeModelo) params.set('model', _activeModelo);
   if (_activeAlbum) params.set('album', _activeAlbum);
   if (_favoritesOnly) params.set('favorites', 'true');
   try {
@@ -111,7 +111,7 @@ async function _fetchLibrary(append) {
     // Cache an "empty" verdict so the next open of an empty gallery doesn't
     // flash skeleton tiles before the real "No photos yet" message.
     try {
-      const _noFilters = !_search && !_activeTags.length && !_activeModel && !_activeAlbum && !_favoritesOnly;
+      const _noFilters = !_search && !_activeTags.length && !_activeModelo && !_activeAlbum && !_favoritesOnly;
       if (_noFilters) {
         if (_items.length === 0) localStorage.setItem('gallery-known-empty', '1');
         else localStorage.removeItem('gallery-known-empty');
@@ -122,10 +122,10 @@ async function _fetchLibrary(append) {
     _updateTagCount();
     _renderGrid();
     _renderTags(data.tags || []);
-    _renderModels(data.models || []);
+    _renderModelos(data.models || []);
     _renderStats();
   } catch (e) {
-    console.error('Gallery fetch error:', e);
+    console.error('Galería fetch error:', e);
   }
 }
 
@@ -152,12 +152,12 @@ async function _patchImage(id, patch) {
       body: JSON.stringify(patch),
     });
     if (!r.ok) {
-      console.warn('Gallery patch returned', r.status);
+      console.warn('Galería patch returned', r.status);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('Gallery patch error:', e);
+    console.error('Galería patch error:', e);
     return false;
   }
 }
@@ -169,12 +169,12 @@ async function _deleteImage(id) {
       credentials: 'same-origin',
     });
     if (!r.ok) {
-      console.warn('Gallery delete returned', r.status);
+      console.warn('Galería delete returned', r.status);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('Gallery delete error:', e);
+    console.error('Galería delete error:', e);
     return false;
   }
 }
@@ -183,7 +183,7 @@ async function _deleteImage(id) {
 
 // Accepts either File[] (uploads all into fallbackAlbumId) or
 // {file, albumId}[] (per-file album targeting — used for folder drops).
-async function _bulkUpload(filesOrItems, fallbackAlbumId) {
+async function _bulkSubir(filesOrItems, fallbackAlbumId) {
   const bar = document.getElementById('gallery-upload-bar');
   const progress = document.getElementById('gallery-upload-progress');
   const status = document.getElementById('gallery-upload-status');
@@ -283,7 +283,7 @@ async function _walkEntryForImages(entry) {
 
 // Handle a native drop: split into folders (→ new/existing albums) and loose files
 // (→ current album). Returns when the whole upload is complete.
-async function _handleGalleryDrop(e) {
+async function _handleGaleríaDrop(e) {
   const dtItems = [...(e.dataTransfer?.items || [])];
   const entries = dtItems
     .map(it => (typeof it.webkitGetAsEntry === 'function' ? it.webkitGetAsEntry() : null))
@@ -328,13 +328,13 @@ async function _handleGalleryDrop(e) {
   }
 
   if (uploadItems.length) {
-    await _bulkUpload(uploadItems);
+    await _bulkSubir(uploadItems);
     return;
   }
 
   // Nothing usable — either an empty folder, an unreadable folder URI, or a
   // non-image drop. If the dataTransfer types hint at a folder/URI drop,
-  // explain the limitation and point at the Upload album button.
+  // explain the limitation and point at the Subir album button.
   const types = [...(e.dataTransfer?.types || [])];
   const looksLikeFolderUri = !sawFolderEntry && (
     types.includes('text/uri-list') ||
@@ -342,7 +342,7 @@ async function _handleGalleryDrop(e) {
     dtItems.some(it => it.kind === 'string')
   );
   if (looksLikeFolderUri) {
-    uiModule.showError('Browsers can’t read folders dropped from native file managers (Thunar/Nautilus). Use the "Upload album" tile in the Albums tab instead.');
+    uiModule.showError('Browsers can’t read folders dropped from native file managers (Thunar/Nautilus). Use the "Subir album" tile in the Albums tab instead.');
   } else if (entries.length || dtItems.length) {
     uiModule.showToast('No images found in that drop');
   }
@@ -365,12 +365,12 @@ function _renderTags(tags) {
   container.style.display = 'none';
 }
 
-function _renderModels(models) {
+function _renderModelos(models) {
   const sel = document.getElementById('gallery-model-filter');
   if (!sel) return;
   let html = '<option value="">All sources</option>';
   models.forEach(m => {
-    const selected = _activeModel === m ? ' selected' : '';
+    const selected = _activeModelo === m ? ' selected' : '';
     html += `<option value="${_esc(m)}"${selected}>${_esc(m)}</option>`;
   });
   sel.innerHTML = html;
@@ -447,7 +447,7 @@ function _renderAlbumsTab() {
 }
 
 function _filteredAlbums() {
-  const q = _albumSearch.trim().toLowerCase();
+  const q = _albumBuscar.trim().toLowerCase();
   if (!q) return _albums;
   return _albums.filter(a => (a.name || '').toLowerCase().includes(q));
 }
@@ -457,31 +457,31 @@ function _ensureAlbumsToolbar(container) {
   container.innerHTML = `
     <div class="gallery-toolbar" id="gallery-albums-toolbar">
       <div class="gallery-search-wrap">
-        <input type="text" class="gallery-search" id="gallery-albums-search" placeholder="Search albums..." />
+        <input type="text" class="gallery-search" id="gallery-albums-search" placeholder="Buscar albums..." />
       </div>
       <button class="gallery-select-btn gallery-toolbar-action" id="gallery-albums-select-btn" title="Select for bulk actions" style="position:relative;top:2px;"><span style="position:relative;top:1px;">Select</span></button>
     </div>
     <div class="memory-bulk-bar hidden" id="gallery-albums-bulk-bar">
       <label class="memory-bulk-check-all" style="position:relative;top:-1px;"><input type="checkbox" id="gallery-albums-bulk-all"> All</label>
       <span id="gallery-albums-bulk-count" style="position:relative;top:-1px;">0 selected</span>
-      <button class="memory-toolbar-btn" id="gallery-albums-bulk-delete" title="Delete selected" style="margin-left:auto;color:var(--color-error, #f44);position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Delete</button>
-      <button class="memory-toolbar-btn" id="gallery-albums-bulk-cancel" title="Cancel (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <button class="memory-toolbar-btn" id="gallery-albums-bulk-delete" title="Eliminar selected" style="margin-left:auto;color:var(--color-error, #f44);position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Eliminar</button>
+      <button class="memory-toolbar-btn" id="gallery-albums-bulk-cancel" title="Cancelar (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div id="gallery-albums-grid-wrap"></div>
   `;
 
   // Wire search — debounced re-render, same pattern as Photos.
   const searchInput = container.querySelector('#gallery-albums-search');
-  let _albumSearchDebounce = null;
+  let _albumBuscarDebounce = null;
   searchInput.addEventListener('input', () => {
-    clearTimeout(_albumSearchDebounce);
-    _albumSearchDebounce = setTimeout(() => {
-      _albumSearch = searchInput.value;
+    clearTimeout(_albumBuscarDebounce);
+    _albumBuscarDebounce = setTimeout(() => {
+      _albumBuscar = searchInput.value;
       _renderAlbumsGrid();
     }, 150);
   });
 
-  // Wire Select + bulk bar — Cancel restores the normal click-to-open
+  // Wire Select + bulk bar — Cancelar restores the normal click-to-open
   // behavior; Actions opens a dropdown anchored on the button.
   container.querySelector('#gallery-albums-select-btn').addEventListener('click', () => {
     _setAlbumSelectMode(!_albumSelectMode);
@@ -499,7 +499,7 @@ function _ensureAlbumsToolbar(container) {
   container.querySelector('#gallery-albums-bulk-delete').addEventListener('click', (e) => {
     e.stopPropagation();
     if (!_albumSelected.size) { uiModule.showToast('Select albums first'); return; }
-    _bulkDeleteAlbums([..._albumSelected]);
+    _bulkEliminarAlbums([..._albumSelected]);
   });
 }
 
@@ -507,7 +507,7 @@ function _setAlbumSelectMode(on) {
   _albumSelectMode = on;
   if (!on) _albumSelected.clear();
   const container = document.getElementById('gallery-albums-container');
-  container.querySelector('#gallery-albums-select-btn span').textContent = on ? 'Cancel' : 'Select';
+  container.querySelector('#gallery-albums-select-btn span').textContent = on ? 'Cancelar' : 'Select';
   container.querySelector('#gallery-albums-select-btn').classList.toggle('active', on);
   container.querySelector('#gallery-albums-bulk-bar').classList.toggle('hidden', !on);
   _renderAlbumsGrid();
@@ -543,12 +543,12 @@ function _renderAlbumsGrid() {
     return;
   }
   if (!albums.length) {
-    wrap.innerHTML = `<div class="gallery-albums-empty"><p>No albums match "${_esc(_albumSearch)}".</p></div>`;
+    wrap.innerHTML = `<div class="gallery-albums-empty"><p>No albums match "${_esc(_albumBuscar)}".</p></div>`;
     return;
   }
 
   let html = '<div class="gallery-albums-grid">';
-  // Action tiles (New / Upload) — hidden in select mode so they don't
+  // Action tiles (New / Subir) — hidden in select mode so they don't
   // visually compete with the selection dots and can't be accidentally
   // toggled like real albums.
   if (!_albumSelectMode) {
@@ -568,7 +568,7 @@ function _renderAlbumsGrid() {
           </div>
         </div>
         <div class="gallery-album-info">
-          <div class="gallery-album-name">Upload album</div>
+          <div class="gallery-album-name">Subir album</div>
           <div class="gallery-album-count">Pick a folder</div>
         </div>
       </div>`;
@@ -596,15 +596,15 @@ function _renderAlbumsGrid() {
         <div class="gallery-album-menu-pop dropdown" data-album="${_esc(a.id)}" hidden>
           <div class="dropdown-item-compact" data-action="upload">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-            <span>Upload here</span>
+            <span>Subir here</span>
           </div>
           <div class="dropdown-item-compact" data-action="rename">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>
-            <span>Rename</span>
+            <span>Renombrar</span>
           </div>
           <div class="dropdown-item-compact dropdown-item-danger" data-action="delete">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
-            <span>Delete</span>
+            <span>Eliminar</span>
           </div>
         </div>
         <div class="gallery-album-cover">${cover}</div>
@@ -694,7 +694,7 @@ function _wireAlbumsEvents(scope) {
       picker.style.display = 'none';
       picker.addEventListener('change', async () => {
         const files = [...(picker.files || [])];
-        if (files.length) await _bulkUpload(files, id);
+        if (files.length) await _bulkSubir(files, id);
         picker.remove();
       });
       document.body.appendChild(picker);
@@ -704,7 +704,7 @@ function _wireAlbumsEvents(scope) {
       e.stopPropagation();
       pop.hidden = true;
       const album = _albums.find(a => a.id === id);
-      const newName = prompt('Rename album:', album?.name || '');
+      const newName = prompt('Renombrar album:', album?.name || '');
       if (!newName || !newName.trim() || newName.trim() === album?.name) return;
       const r = await fetch(`${API_BASE}/api/gallery/albums/${id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -715,16 +715,16 @@ function _wireAlbumsEvents(scope) {
         _renderAlbumsTab();
         if (uiModule) uiModule.showToast('Album renamed');
       } else if (uiModule) {
-        uiModule.showError('Rename failed');
+        uiModule.showError('Renombrar failed');
       }
     });
     pop.querySelector('[data-action="delete"]')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       pop.hidden = true;
       const album = _albums.find(a => a.id === id);
-      const ok = await uiModule.styledConfirm(
-        `Delete album "${album?.name || ''}"? Photos inside will stay in your library.`,
-        { confirmText: 'Delete', danger: true },
+      const ok = await uiModule.styledConfirmar(
+        `Eliminar album "${album?.name || ''}"? Photos inside will stay in your library.`,
+        { confirmText: 'Eliminar', danger: true },
       );
       if (!ok) return;
       const r = await fetch(`${API_BASE}/api/gallery/albums/${id}`, {
@@ -737,14 +737,14 @@ function _wireAlbumsEvents(scope) {
         _renderAlbums();
         if (uiModule) uiModule.showToast('Album deleted');
       } else if (uiModule) {
-        uiModule.showError('Delete failed');
+        uiModule.showError('Eliminar failed');
       }
     });
   });
 
   document.getElementById('gallery-albums-new')?.addEventListener('click', async () => {
     const name = (uiModule.styledPrompt
-      ? await uiModule.styledPrompt('Name your new album.', { title: 'New album', placeholder: 'e.g. Vacation 2026', confirmText: 'Create' })
+      ? await uiModule.styledPrompt('Name your new album.', { title: 'New album', placeholder: 'e.g. Vacation 2026', confirmText: 'Crear' })
       : prompt('Album name:'));
     if (!name?.trim()) return;
     await fetch(`${API_BASE}/api/gallery/albums`, {
@@ -796,7 +796,7 @@ function _wireAlbumsEvents(scope) {
         if (uiModule) uiModule.showError('Could not create album');
         return;
       }
-      await _bulkUpload(images, album.id);
+      await _bulkSubir(images, album.id);
       await _fetchAlbums();
       _renderAlbumsTab();
     });
@@ -805,11 +805,11 @@ function _wireAlbumsEvents(scope) {
   });
 }
 
-async function _bulkDeleteAlbums(ids) {
+async function _bulkEliminarAlbums(ids) {
   if (!ids.length) return;
-  const ok = await uiModule.styledConfirm(
-    `Delete ${ids.length} album${ids.length > 1 ? 's' : ''}? Photos inside will stay in your library.`,
-    { confirmText: 'Delete', danger: true },
+  const ok = await uiModule.styledConfirmar(
+    `Eliminar ${ids.length} album${ids.length > 1 ? 's' : ''}? Photos inside will stay in your library.`,
+    { confirmText: 'Eliminar', danger: true },
   );
   if (!ok) return;
   let failed = 0;
@@ -821,7 +821,7 @@ async function _bulkDeleteAlbums(ids) {
     else if (_activeAlbum === id) _activeAlbum = null;
   }
   if (failed) uiModule.showError(`Failed to delete ${failed} of ${ids.length} albums`);
-  else if (uiModule) uiModule.showToast(`Deleted ${ids.length} album${ids.length > 1 ? 's' : ''}`);
+  else if (uiModule) uiModule.showToast(`Eliminard ${ids.length} album${ids.length > 1 ? 's' : ''}`);
   _setAlbumSelectMode(false);
   await _fetchAlbums();
   _renderAlbumsTab();
@@ -866,11 +866,11 @@ function _draftsHideLoading(section) {
 
 // Held between renders so search + select state survive a re-render.
 let _draftsCache = [];
-let _draftsSearch = '';
+let _draftsBuscar = '';
 let _draftsSelectMode = false;
 let _draftsSelected = new Set();
 
-async function _renderEditorDrafts() {
+async function _renderEditarorDrafts() {
   const section = document.getElementById('gallery-editor-drafts');
   const grid = document.getElementById('gallery-editor-drafts-grid');
   if (!section || !grid) return;
@@ -910,7 +910,7 @@ async function _renderEditorDrafts() {
 function _draftsPaint() {
   const grid = document.getElementById('gallery-editor-drafts-grid');
   if (!grid) return;
-  const q = _draftsSearch.trim().toLowerCase();
+  const q = _draftsBuscar.trim().toLowerCase();
   const filtered = _draftsCache.filter(d => {
     if (!q) return true;
     const name = String(d.name || '').toLowerCase();
@@ -934,7 +934,7 @@ function _draftsPaint() {
           <div class="gallery-editor-draft-name">${_esc(d.name || 'Untitled')}</div>
           <div class="gallery-editor-draft-meta">${_esc([dims, updated].filter(Boolean).join(' · '))}</div>
         </div>
-        <button class="gallery-editor-draft-delete" data-draft-id="${_esc(d.id)}" title="Delete project" aria-label="Delete project">×</button>
+        <button class="gallery-editor-draft-delete" data-draft-id="${_esc(d.id)}" title="Eliminar project" aria-label="Eliminar project">×</button>
       </div>`;
   }).join('');
   grid.querySelectorAll('.gallery-editor-draft-card').forEach(card => {
@@ -955,7 +955,7 @@ function _draftsPaint() {
       const presetSize = (draft && draft.width && draft.height)
         ? { w: draft.width, h: draft.height }
         : null;
-      openEditor(null, null, presetSize, draft?.name || null, id);
+      openEditaror(null, null, presetSize, draft?.name || null, id);
     });
   });
   grid.querySelectorAll('.gallery-editor-draft-delete').forEach(btn => {
@@ -963,8 +963,8 @@ function _draftsPaint() {
       e.stopPropagation();
       const id = btn.dataset.draftId;
       if (!id) return;
-      const ok = await uiModule.styledConfirm('Delete this project?', {
-        confirmText: 'Delete', cancelText: 'Cancel', danger: true,
+      const ok = await uiModule.styledConfirmar('Eliminar this project?', {
+        confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true,
       });
       if (!ok) return;
       // Graceful exit: fade + shrink the card before the grid re-renders.
@@ -977,7 +977,7 @@ function _draftsPaint() {
       } catch (_) { /* swallow — refresh below */ }
       await new Promise(r => setTimeout(r, 240));   // let the animation finish
       _draftsSelected.delete(id);
-      _renderEditorDrafts();
+      _renderEditarorDrafts();
     });
   });
   _draftsSyncBulkBar();
@@ -990,14 +990,14 @@ function _draftsSyncBulkBar() {
   if (bar) bar.classList.toggle('hidden', !_draftsSelectMode);
   if (countEl) countEl.textContent = `${_draftsSelected.size} selected`;
   if (selectBtn) {
-    selectBtn.textContent = _draftsSelectMode ? 'Cancel' : 'Select';
+    selectBtn.textContent = _draftsSelectMode ? 'Cancelar' : 'Select';
     selectBtn.classList.toggle('active', _draftsSelectMode);
   }
   // "All" checkbox state — checked when all visible drafts are selected,
   // indeterminate when only some (matches the Photos tab).
   const all = document.getElementById('gallery-editor-drafts-select-all');
   if (all) {
-    const q = _draftsSearch.trim().toLowerCase();
+    const q = _draftsBuscar.trim().toLowerCase();
     const visible = _draftsCache.filter(d => !q || String(d.name || '').toLowerCase().includes(q));
     const selVis = visible.filter(d => _draftsSelected.has(d.id)).length;
     all.checked = visible.length > 0 && selVis === visible.length;
@@ -1010,7 +1010,7 @@ function _draftsWireOnce() {
   if (_draftsWired) return;
   _draftsWired = true;
   document.getElementById('gallery-editor-drafts-search')?.addEventListener('input', (e) => {
-    _draftsSearch = e.target.value || '';
+    _draftsBuscar = e.target.value || '';
     _draftsPaint();
   });
   document.getElementById('gallery-editor-drafts-select')?.addEventListener('click', () => {
@@ -1021,7 +1021,7 @@ function _draftsWireOnce() {
   document.getElementById('gallery-editor-drafts-select-all')?.addEventListener('change', (e) => {
     // Same "All" checkbox behavior as Photos: checked selects every visible
     // draft, unchecked clears them (respects the search filter).
-    const q = _draftsSearch.trim().toLowerCase();
+    const q = _draftsBuscar.trim().toLowerCase();
     const visible = _draftsCache.filter(d => !q || String(d.name || '').toLowerCase().includes(q));
     if (e.target.checked) for (const d of visible) _draftsSelected.add(d.id);
     else for (const d of visible) _draftsSelected.delete(d.id);
@@ -1035,8 +1035,8 @@ function _draftsWireOnce() {
   document.getElementById('gallery-editor-drafts-bulk-delete')?.addEventListener('click', async () => {
     if (!_draftsSelected.size) return;
     const n = _draftsSelected.size;
-    const ok = await uiModule.styledConfirm(`Delete ${n} project${n === 1 ? '' : 's'}?`, {
-      confirmText: 'Delete', cancelText: 'Cancel', danger: true,
+    const ok = await uiModule.styledConfirmar(`Eliminar ${n} project${n === 1 ? '' : 's'}?`, {
+      confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true,
     });
     if (!ok) return;
     const ids = [..._draftsSelected];
@@ -1051,7 +1051,7 @@ function _draftsWireOnce() {
     ));
     _draftsSelected.clear();
     _draftsSelectMode = false;
-    _renderEditorDrafts();
+    _renderEditarorDrafts();
   });
 }
 
@@ -1065,12 +1065,12 @@ function _humanRelativeDate(when) {
   return when.toLocaleDateString();
 }
 
-// Edit tab empty state — shown when the user clicks the tab without a photo
+// Editar tab empty state — shown when the user clicks the tab without a photo
 // loaded. Lets them start a blank canvas or jump back to pick a photo.
-function _renderEditorLanding() {
+function _renderEditarorLanding() {
   const container = document.getElementById('gallery-editor-container');
   if (!container) return;
-  // openEditor()/closeEditor() may have left the container hidden; the Edit
+  // openEditaror()/closeEditaror() may have left the container hidden; the Editar
   // tab is still active so make sure the landing is actually visible.
   container.style.display = 'flex';
   // Templates rendered as a native <select>. Browsers handle all the layout
@@ -1092,7 +1092,7 @@ function _renderEditorLanding() {
   container.innerHTML = `
     <div class="gallery-editor-landing">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-      <h3>Image Editor <span class="ge-alpha-tag">Alpha</span></h3>
+      <h3>Image Editaror <span class="ge-alpha-tag">Alpha</span></h3>
       <p>Start a blank canvas, or open a photo from your gallery to edit it.</p>
       <div class="gallery-editor-landing-actions">
         <button class="gallery-select-btn" id="gallery-editor-new">New canvas...</button>
@@ -1107,15 +1107,15 @@ function _renderEditorLanding() {
       </label>
       <div class="gallery-editor-drafts" id="gallery-editor-drafts" hidden>
         <div class="gallery-editor-drafts-header">
-          <h4 class="gallery-editor-drafts-title">Saved projects</h4>
-          <input type="search" class="gallery-editor-drafts-search" id="gallery-editor-drafts-search" placeholder="Search projects…" autocomplete="off" />
+          <h4 class="gallery-editor-drafts-title">Guardard projects</h4>
+          <input type="search" class="gallery-editor-drafts-search" id="gallery-editor-drafts-search" placeholder="Buscar projects…" autocomplete="off" />
           <button class="gallery-select-btn" id="gallery-editor-drafts-select" title="Toggle multi-select">Select</button>
         </div>
         <div class="gallery-bulk-bar hidden" id="gallery-editor-drafts-bulk">
           <label class="memory-bulk-check-all"><input type="checkbox" id="gallery-editor-drafts-select-all"> All</label>
           <span class="gallery-bulk-count" id="gallery-editor-drafts-bulk-count">0 selected</span>
-          <button class="gallery-bulk-delete" id="gallery-editor-drafts-bulk-delete"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Delete selected</button>
-          <button class="memory-toolbar-btn" id="gallery-editor-drafts-bulk-cancel" title="Cancel (Esc)" style="margin-left:4px;padding:3px 6px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="gallery-bulk-delete" id="gallery-editor-drafts-bulk-delete"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Eliminar selected</button>
+          <button class="memory-toolbar-btn" id="gallery-editor-drafts-bulk-cancel" title="Cancelar (Esc)" style="margin-left:4px;padding:3px 6px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <div class="gallery-editor-drafts-grid" id="gallery-editor-drafts-grid"></div>
       </div>
@@ -1123,28 +1123,28 @@ function _renderEditorLanding() {
   // Each remount of the editor landing rebuilds the drafts header
   // markup, so the cached event listener references are stale. Reset.
   _draftsWired = false;
-  _renderEditorDrafts();
+  _renderEditarorDrafts();
   document.getElementById('gallery-editor-template')?.addEventListener('change', (e) => {
     const idx = parseInt(e.target.value, 10);
     if (Number.isNaN(idx)) return;
     const p = presets[idx];
-    if (p) openEditor(null, null, { w: p.w, h: p.h }, `${p.w}×${p.h}`);
+    if (p) openEditaror(null, null, { w: p.w, h: p.h }, `${p.w}×${p.h}`);
   });
   document.getElementById('gallery-editor-new')?.addEventListener('click', async () => {
-    // openEditor() now returns a Promise — it's async because the size
+    // openEditaror() now returns a Promise — it's async because the size
     // prompt is a styled modal. Await it before checking whether the
     // editor actually opened (the user may have cancelled).
-    await openEditor(null, null, null, 'New canvas');
-    if (!isEditorOpen()) _renderEditorLanding();
+    await openEditaror(null, null, null, 'New canvas');
+    if (!isEditarorOpen()) _renderEditarorLanding();
   });
   document.getElementById('gallery-editor-pick')?.addEventListener('click', () => {
     document.querySelector('#gallery-modal .gallery-tab[data-tab="images"]')?.click();
   });
 }
 
-// Wire the first-tile Upload affordance in the Photos grid. Opens the same
+// Wire the first-tile Subir affordance in the Photos grid. Opens the same
 // multi-file picker the old Import button used.
-function _wireUploadTile() {
+function _wireSubirTile() {
   const tile = document.getElementById('gallery-upload-tile');
   if (!tile) return;
   tile.addEventListener('click', () => {
@@ -1156,10 +1156,10 @@ function _wireUploadTile() {
       if (!input.files.length) return;
       const files = [];
       for (const file of [...input.files]) {
-        const nextFile = await fileHandlerModule.cropForMobileUpload(file);
+        const nextFile = await fileHandlerModule.cropForMobileSubir(file);
         if (nextFile) files.push(nextFile);
       }
-      if (files.length) _bulkUpload(files, _activeAlbum);
+      if (files.length) _bulkSubir(files, _activeAlbum);
     });
     input.click();
   });
@@ -1184,20 +1184,20 @@ function _renderGrid() {
   const loadMore = document.getElementById('gallery-load-more');
   if (!grid) return;
 
-  // First tile: always-visible "Upload" affordance. Mirrors the Upload album
+  // First tile: always-visible "Subir" affordance. Mirrors the Subir album
   // tile in the Albums tab so the upload entry point is consistent across
   // both grids.
   const uploadTile = `
-    <div class="gallery-card gallery-card-upload" id="gallery-upload-tile" title="Upload photos or videos">
+    <div class="gallery-card gallery-card-upload" id="gallery-upload-tile" title="Subir photos or videos">
       <div class="gallery-card-upload-inner">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div class="gallery-card-upload-label">Upload</div>
+        <div class="gallery-card-upload-label">Subir</div>
       </div>
     </div>`;
 
   if (_items.length === 0) {
-    grid.innerHTML = uploadTile + '<div class="gallery-empty">No photos yet. Click Upload or drag-and-drop to get started!</div>';
-    _wireUploadTile();
+    grid.innerHTML = uploadTile + '<div class="gallery-empty">No photos yet. Click Subir or drag-and-drop to get started!</div>';
+    _wireSubirTile();
     if (loadMore) loadMore.style.display = 'none';
     return;
   }
@@ -1223,7 +1223,7 @@ function _renderGrid() {
       <div class="gallery-card" data-id="${_esc(img.id)}">
         <span class="gallery-select-dot" style="display:none;"></span>
         <button class="gallery-fav-btn${favCls}" data-id="${_esc(img.id)}" title="Favorite">&#9829;</button>
-        <button class="gallery-dl-btn" data-id="${_esc(img.id)}" data-url="${_esc(img.url)}" data-filename="${_esc(img.filename || '')}" title="Download">
+        <button class="gallery-dl-btn" data-id="${_esc(img.id)}" data-url="${_esc(img.url)}" data-filename="${_esc(img.filename || '')}" title="Descargar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
         ${_isVideoUrl(img.url)
@@ -1242,7 +1242,7 @@ function _renderGrid() {
       </div>`;
   });
   grid.innerHTML = html;
-  _wireUploadTile();
+  _wireSubirTile();
 
   // Domino-in cascade the first render after opening (not on filter/sort/
   // load-more re-renders) — mirrors the document library.
@@ -1268,7 +1268,7 @@ function _renderGrid() {
     });
   });
 
-  // Download buttons
+  // Descargar buttons
   grid.querySelectorAll('.gallery-dl-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -1344,7 +1344,7 @@ function _openDetail(img) {
   const aiTags = img.ai_tags || '';
   const dims = img.width && img.height ? `${img.width} x ${img.height}` : (img.size || 'Unknown');
   const fileSize = img.file_size ? _humanSize(img.file_size) : '';
-  // "Edited" row: only show when updated_at is meaningfully later than
+  // "Editared" row: only show when updated_at is meaningfully later than
   // created_at (>10s). Every photo bumps updated_at on insert via the
   // ORM timestamp mixin, so the gap filters out the trivial case.
   let editedHtml = '';
@@ -1352,7 +1352,7 @@ function _openDetail(img) {
     const u = new Date(img.updated_at);
     const c = new Date(img.created_at);
     if (!isNaN(u) && !isNaN(c) && (u.getTime() - c.getTime() > 10000)) {
-      editedHtml = `<div class="gallery-detail-section"><label>Edited</label><div>${u.toLocaleString()}<span class="gallery-date-rel"> (${_relAgo(u)})</span></div></div>`;
+      editedHtml = `<div class="gallery-detail-section"><label>Editared</label><div>${u.toLocaleString()}<span class="gallery-date-rel"> (${_relAgo(u)})</span></div></div>`;
     }
   }
 
@@ -1360,9 +1360,9 @@ function _openDetail(img) {
     <div class="gallery-detail-header">
       <button class="gallery-detail-back" id="gallery-detail-back">&larr; Back</button>
       <div style="flex:1"></div>
-      <button class="gallery-detail-back" id="gallery-edit-direct-btn" title="Edit (E)" aria-label="Edit photo" style="display:inline-flex;align-items:center;gap:4px;">
+      <button class="gallery-detail-back" id="gallery-edit-direct-btn" title="Editar (E)" aria-label="Editar photo" style="display:inline-flex;align-items:center;gap:4px;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        Edit
+        Editar
       </button>
       <button class="gallery-detail-back" id="gallery-chat-photo-btn" title="${img.session_id ? 'Open source chat' : 'Start a new chat with this photo'}" aria-label="${img.session_id ? 'Open source chat' : 'Discuss photo'}" style="display:inline-flex;align-items:center;gap:4px;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
@@ -1386,7 +1386,7 @@ function _openDetail(img) {
           </button>
           <button class="dropdown-item-compact" id="gallery-download-btn">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-            Download
+            Descargar
           </button>
           ${img.album_id ? `<button class="dropdown-item-compact" id="gallery-set-cover-btn">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
@@ -1394,7 +1394,7 @@ function _openDetail(img) {
           </button>` : ''}
           <button class="dropdown-item-compact dropdown-item-danger" id="gallery-delete-btn">
             <span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
-            Delete
+            Eliminar
           </button>
         </div>
       </div>
@@ -1450,7 +1450,7 @@ function _openDetail(img) {
           <div class="gallery-ai-tags" id="gallery-user-tag-chips">${userTags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<button class="gallery-ai-chip gallery-user-chip" data-tag-filter="${_esc(t)}" title="Filter to photos tagged “${_esc(t)}”">${_esc(t)}<span class="gallery-tag-x" title="Remove tag" aria-label="Remove tag">×</span></button>`).join('')}</div>
           <div class="gallery-tag-input-wrap">
             <input type="text" class="gallery-tag-input" id="gallery-tag-input"
-              value="" placeholder="Add a tag" title="Type a tag and press Enter to add it" />
+              value="" placeholder="Agregar a tag" title="Type a tag and press Enter to add it" />
             <span class="gallery-tag-enter-hint" aria-hidden="true">↵</span>
           </div>
         </div>
@@ -1476,7 +1476,7 @@ function _openDetail(img) {
 
   document.getElementById('gallery-chat-photo-btn')?.addEventListener('click', async () => {
     if (img.session_id) {
-      closeGallery();
+      closeGalería();
       try {
         await sessionModule.selectSession(img.session_id);
       } catch (e) {
@@ -1494,7 +1494,7 @@ function _openDetail(img) {
         return;
       }
       sessionModule.createDirectChat(dc.endpoint_url, dc.model, dc.endpoint_id);
-      closeGallery();
+      closeGalería();
       const res = await fetch(img.url, { credentials: 'same-origin' });
       if (!res.ok) throw new Error('image fetch ' + res.status);
       const blob = await res.blob();
@@ -1711,7 +1711,7 @@ function _openDetail(img) {
     }, { passive: true });
   }
 
-  const _openInEditor = () => {
+  const _openInEditaror = () => {
     try {
       detail.style.display = 'none';
       const modal = document.getElementById('gallery-modal');
@@ -1727,14 +1727,14 @@ function _openDetail(img) {
       if (editorContainer) editorContainer.style.display = 'flex';
       const baseFilename = (img.filename || '').replace(/\.[^.]+$/, '');
       const label = img.prompt?.trim() || baseFilename || 'Photo';
-      openEditor(img.url, img.id, null, label);
+      openEditaror(img.url, img.id, null, label);
     } catch (e) {
       console.error('[edit] failed:', e);
       if (uiModule) uiModule.showError('Failed to open editor: ' + (e?.message || 'unknown'));
     }
   };
-  document.getElementById('gallery-edit-btn')?.addEventListener('click', _openInEditor);
-  document.getElementById('gallery-edit-direct-btn')?.addEventListener('click', _openInEditor);
+  document.getElementById('gallery-edit-btn')?.addEventListener('click', _openInEditaror);
+  document.getElementById('gallery-edit-direct-btn')?.addEventListener('click', _openInEditaror);
 
   // Rotate — server-side image rotation. Forces a fresh URL afterwards
   // so the browser doesn't show the old cached version. Shows a
@@ -1812,7 +1812,7 @@ function _openDetail(img) {
   });
 
   document.getElementById('gallery-delete-btn').addEventListener('click', async () => {
-    if (!await uiModule.styledConfirm('Delete this photo? This cannot be undone.', { confirmText: 'Delete', danger: true })) return;
+    if (!await uiModule.styledConfirmar('Eliminar this photo? This cannot be undone.', { confirmText: 'Eliminar', danger: true })) return;
     const ok = await _deleteImage(img.id);
     if (!ok) {
       uiModule.showError('Failed to delete photo');
@@ -1828,7 +1828,7 @@ function _openDetail(img) {
 
   // Tag input — Enter saves; also strips a leading '#' from each tag so
   // typing "#person, #beach" stores as "person, beach".
-  // Rename input — saves to the prompt column on Enter/blur via the
+  // Renombrar input — saves to the prompt column on Enter/blur via the
   // dedicated rename endpoint.
   const _nameInput = document.getElementById('gallery-detail-name-input');
   if (_nameInput) {
@@ -1844,7 +1844,7 @@ function _openDetail(img) {
         });
         if (!r.ok) throw new Error('Failed');
         img.prompt = newName;
-        if (uiModule) uiModule.showToast('Renamed');
+        if (uiModule) uiModule.showToast('Renombrard');
         window.dispatchEvent(new CustomEvent('gallery-refresh'));
       } catch {
         if (uiModule) uiModule.showError('Failed to rename');
@@ -1923,12 +1923,12 @@ function _openDetail(img) {
     const ok = await _patchImage(img.id, { album_id: albumId || '' });
     if (!ok) { uiModule.showError('Failed to update album'); return; }
     img.album_id = albumId || null;
-    uiModule.showToast(albumId ? 'Added to album' : 'Removed from album');
+    uiModule.showToast(albumId ? 'Agregared to album' : 'Removed from album');
   });
 }
 
 
-function _makeGalleryDraggable(content) {
+function _makeGaleríaDraggable(content) {
   if (!content) return;
   const header = content.querySelector('.modal-header');
   if (!header) return;
@@ -1936,12 +1936,12 @@ function _makeGalleryDraggable(content) {
   makeWindowDraggable(modal, { content, header });
 }
 
-// ---- Open / Close ----
+// ---- Open / Cerrar ----
 
 // Re-export the manager for the rail click handler
 import * as Modals from './modalManager.js';
 
-export function openGallery() {
+export function openGalería() {
   // If already minimized — restore in place, preserve all state
   if (Modals.isRegistered('gallery-modal') && Modals.isMinimized('gallery-modal')) {
     Modals.restore('gallery-modal');
@@ -1950,13 +1950,13 @@ export function openGallery() {
   if (_open) return;
   _open = true;
   _galleryCascaded = false;   // replay the domino-in cascade on each open
-  let _freshChatUpload = false;
+  let _freshChatSubir = false;
   try {
     const ts = Number(localStorage.getItem('gallery-fresh-chat-upload') || '0');
-    _freshChatUpload = ts > 0 && Date.now() - ts < 5 * 60 * 1000;
-    if (_freshChatUpload) localStorage.removeItem('gallery-fresh-chat-upload');
+    _freshChatSubir = ts > 0 && Date.now() - ts < 5 * 60 * 1000;
+    if (_freshChatSubir) localStorage.removeItem('gallery-fresh-chat-upload');
   } catch (_) {}
-  if (_freshChatUpload) _sort = 'recent';
+  if (_freshChatSubir) _sort = 'recent';
   // State is preserved across close/reopen — filters, album, sort, items,
   // albums, people — so reopening the gallery feels instant. Use the search
   // input or "All" chip to clear the active filter.
@@ -1976,7 +1976,7 @@ export function openGallery() {
   modal.innerHTML = `
     <div class="modal-content gallery-modal-content">
       <div class="modal-header">
-        <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Gallery <span id="gallery-stats" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal;margin-left:8px"></span></h4>
+        <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Galería <span id="gallery-stats" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal;margin-left:8px"></span></h4>
         <button class="modal-close" id="gallery-close">&times;</button>
       </div>
       <div class="gallery-tabs">
@@ -1990,12 +1990,12 @@ export function openGallery() {
         </button>
         <button class="gallery-tab" data-tab="editor" id="gallery-editor-tab">
           <span class="gallery-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>
-          <span class="gallery-tab-label">Edit</span>
-          <span class="gallery-tab-close" id="gallery-editor-tab-close" title="Close edit" aria-label="Close edit">×</span>
+          <span class="gallery-tab-label">Editar</span>
+          <span class="gallery-tab-close" id="gallery-editor-tab-close" title="Cerrar edit" aria-label="Cerrar edit">×</span>
         </button>
         <button class="gallery-tab" data-tab="settings">
           <span class="gallery-tab-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-          <span class="gallery-tab-label">Settings</span>
+          <span class="gallery-tab-label">Configuración</span>
         </button>
       </div>
       <div class="modal-body">
@@ -2010,7 +2010,7 @@ export function openGallery() {
         <div class="gallery-album-chips gallery-people-chips" id="gallery-people-chips" style="display:none"></div>
         <div class="gallery-toolbar">
           <div class="gallery-search-wrap">
-            <input type="text" class="gallery-search" id="gallery-search" placeholder="Search photos, tags..." />
+            <input type="text" class="gallery-search" id="gallery-search" placeholder="Buscar photos, tags..." />
             <span class="gallery-search-enter-hint" aria-hidden="true"><svg class="gallery-enter-key" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>to tag</span>
           </div>
           <span class="gallery-toolbar-break" aria-hidden="true"></span>
@@ -2029,7 +2029,7 @@ export function openGallery() {
           <label class="memory-bulk-check-all" style="position:relative;top:-1px;"><input type="checkbox" id="gallery-bulk-select-all"> All</label>
           <span id="gallery-bulk-count" style="position:relative;top:-1px;">0 selected</span>
           <button class="memory-toolbar-btn" id="gallery-bulk-actions" style="position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Actions <span style="opacity:0.55;font-size:9px;">▼</span></button>
-          <button class="memory-toolbar-btn" id="gallery-bulk-cancel" title="Cancel (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <button class="memory-toolbar-btn" id="gallery-bulk-cancel" title="Cancelar (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-3px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         <div class="gallery-tag-chips" id="gallery-tag-chips"></div>
         <div class="gallery-grid" id="gallery-grid"></div>
@@ -2048,7 +2048,7 @@ export function openGallery() {
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
                 <div id="gallery-tag-status" style="font-size:10px;opacity:0.5;"></div>
-                <button id="gallery-tag-cancel" class="gallery-select-btn" style="font-size:10px;padding:1px 6px;">Cancel</button>
+                <button id="gallery-tag-cancel" class="gallery-select-btn" style="font-size:10px;padding:1px 6px;">Cancelar</button>
               </div>
             </div>
             <div class="memory-toolbar" style="display:flex;flex-direction:row;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:32px;">
@@ -2067,49 +2067,49 @@ export function openGallery() {
   Modals.register('gallery-modal', {
     railBtnId: 'rail-gallery',
     sidebarBtnId: 'tool-gallery-btn',
-    closeFn: () => _doCloseGallery(),
+    closeFn: () => _doCerrarGalería(),
     restoreFn: () => {},
   });
 
-  // Allow dragging the modal by its header — same pattern as Email Library,
+  // Allow dragging the modal by its header — same pattern as Correo Library,
   // Sessions, etc. The tileManager (corner/edge snap-tiling) listens on
   // pointer events too; it only shows a ghost on move and snaps on release,
   // so the two coexist.
-  _makeGalleryDraggable(modal.querySelector('.modal-content'));
+  _makeGaleríaDraggable(modal.querySelector('.modal-content'));
 
   document.getElementById('gallery-close').addEventListener('click', async () => {
-    if (isEditorOpen()) {
-      const ok = await uiModule.styledConfirm(
-        'Close Gallery and the active edit?',
-        { confirmText: 'Close', danger: true },
+    if (isEditarorOpen()) {
+      const ok = await uiModule.styledConfirmar(
+        'Cerrar Galería and the active edit?',
+        { confirmText: 'Cerrar', danger: true },
       );
       if (!ok) return;
-      window.__galleryAllowCloseEditor = true;
+      window.__galleryAllowCerrarEditaror = true;
     }
-    closeGallery();
+    closeGalería();
   });
 
-  // Double-click the Edit tab to rename what's being edited. The label
+  // Double-click the Editar tab to rename what's being edited. The label
   // shows up everywhere it's referenced by id (#gallery-editor-tab), so a
   // simple inline contenteditable swap is enough.
   const editorTab = modal.querySelector('.gallery-tab[data-tab="editor"]');
-  // Close × on the Edit tab — appears on hover. Confirms if the editor
+  // Cerrar × on the Editar tab — appears on hover. Confirmars if the editor
   // has an open session (any in-progress edit), otherwise just closes.
-  const editorTabClose = modal.querySelector('#gallery-editor-tab-close');
-  if (editorTabClose) {
-    editorTabClose.addEventListener('click', async (e) => {
+  const editorTabCerrar = modal.querySelector('#gallery-editor-tab-close');
+  if (editorTabCerrar) {
+    editorTabCerrar.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (isEditorOpen()) {
-        const ok = await uiModule.styledConfirm(
-          'Close the edit? Any unsaved changes will be lost.',
-          { confirmText: 'Close', danger: true },
+      if (isEditarorOpen()) {
+        const ok = await uiModule.styledConfirmar(
+          'Cerrar the edit? Any unsaved changes will be lost.',
+          { confirmText: 'Cerrar', danger: true },
         );
         if (!ok) return;
       }
-      window.__galleryAllowCloseEditor = true;
-      closeEditor();
-      window.__galleryAllowCloseEditor = false;
-      // If user is currently on the Edit tab, swap back to Photos.
+      window.__galleryAllowCerrarEditaror = true;
+      closeEditaror();
+      window.__galleryAllowCerrarEditaror = false;
+      // If user is currently on the Editar tab, swap back to Photos.
       const activeTab = modal.querySelector('.gallery-tab.active');
       if (activeTab?.dataset.tab === 'editor') {
         modal.querySelector('.gallery-tab[data-tab="images"]')?.click();
@@ -2120,12 +2120,12 @@ export function openGallery() {
     editorTab.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       const labelEl = editorTab.querySelector('.gallery-tab-label') || editorTab;
-      const current = labelEl.textContent.replace(/^Edit:\s*/, '');
+      const current = labelEl.textContent.replace(/^Editar:\s*/, '');
       const oldText = labelEl.textContent;
       const input = document.createElement('input');
       input.type = 'text';
-      input.value = current === 'Edit' ? '' : current;
-      input.placeholder = 'Edit name';
+      input.value = current === 'Editar' ? '' : current;
+      input.placeholder = 'Editar name';
       input.className = 'gallery-tab-rename-input';
       // Replace only the label span's contents so the icon SVG next to
       // it stays visible during the rename.
@@ -2135,7 +2135,7 @@ export function openGallery() {
       input.select();
       const finish = (commit) => {
         if (commit && input.value.trim()) {
-          labelEl.textContent = `Edit: ${input.value.trim().slice(0, 24)}`;
+          labelEl.textContent = `Editar: ${input.value.trim().slice(0, 24)}`;
         } else {
           labelEl.textContent = oldText;
         }
@@ -2167,14 +2167,14 @@ export function openGallery() {
       if (editorContainer) editorContainer.style.display = target === 'editor' ? 'flex' : 'none';
       if (settingsContainer) settingsContainer.style.display = target === 'settings' ? '' : 'none';
       if (target === 'images') {
-        // Keep active edits alive when leaving the Edit tab. The edit
-        // session is only torn down by the explicit Edit-tab close.
+        // Keep active edits alive when leaving the Editar tab. The edit
+        // session is only torn down by the explicit Editar-tab close.
       } else if (target === 'albums') {
         _renderAlbumsTab();
       } else if (target === 'editor') {
         // If the editor isn't already holding an image, render a chooser so the
         // tab does something useful instead of opening an empty grey pane.
-        if (!isEditorOpen()) _renderEditorLanding();
+        if (!isEditarorOpen()) _renderEditarorLanding();
       }
     });
   });
@@ -2197,7 +2197,7 @@ export function openGallery() {
     const raw = searchInput.value.trim().replace(/^#/, '');
     if (!raw) return;
     if (!_activeTags.includes(raw)) _activeTags.push(raw);
-    // Searching a tag swaps the active filter to All (clear Favorites/album) so
+    // Buscaring a tag swaps the active filter to All (clear Favorites/album) so
     // the heart deactivates and All lights up.
     _favoritesOnly = false;
     _activeAlbum = null;
@@ -2223,7 +2223,7 @@ export function openGallery() {
   });
 
   document.getElementById('gallery-model-filter').addEventListener('change', (e) => {
-    _activeModel = e.target.value || null;
+    _activeModelo = e.target.value || null;
     _fetchLibrary(false);
   });
 
@@ -2263,7 +2263,7 @@ export function openGallery() {
   // no blank space. Debounced; only fires when the freshly-computed
   // page size exceeds what's loaded and the server has more to give.
   let _resizeTopUpTimer = null;
-  const _onGalleryResize = () => {
+  const _onGaleríaResize = () => {
     clearTimeout(_resizeTopUpTimer);
     _resizeTopUpTimer = setTimeout(() => {
       if (!_open) return;
@@ -2273,13 +2273,13 @@ export function openGallery() {
       _fetchLibrary(true);
     }, 300);
   };
-  window.addEventListener('resize', _onGalleryResize);
-  // Remember the handler so closeGallery can detach it.
-  _galleryResizeHandler = _onGalleryResize;
+  window.addEventListener('resize', _onGaleríaResize);
+  // Remember the handler so closeGalería can detach it.
+  _galleryResizeHandler = _onGaleríaResize;
 
   // ── Import images ──
 
-  // "vision model" link → open Settings on the AI tab (where the vision model
+  // "vision model" link → open Configuración on the AI tab (where the vision model
   // is configured).
   const visionLink = document.getElementById('gallery-vision-link');
   if (visionLink) {
@@ -2300,18 +2300,18 @@ export function openGallery() {
   }
 
   // ── Tag All Untagged ──
-  let _tagCancelRequested = false;
+  let _tagCancelarRequested = false;
   let _tagging = false;
   const tagAllBtn = document.getElementById('gallery-tag-all-btn');
   const _tagAllOrigHTML = tagAllBtn ? tagAllBtn.innerHTML : '';
   if (tagAllBtn) {
     tagAllBtn.addEventListener('click', async () => {
-      // While a run is active this button acts as Cancel.
+      // While a run is active this button acts as Cancelar.
       if (_tagging) {
-        _tagCancelRequested = true;
+        _tagCancelarRequested = true;
         const _se = document.getElementById('gallery-tag-status');
-        if (_se) _se.textContent = 'Cancelling…';
-        tagAllBtn.textContent = 'Cancelling…';
+        if (_se) _se.textContent = 'Cancelarling…';
+        tagAllBtn.textContent = 'Cancelarling…';
         tagAllBtn.disabled = true;
         return;
       }
@@ -2319,7 +2319,7 @@ export function openGallery() {
       const scope = _activeAlbum
         ? (_albums.find(a => a.id === _activeAlbum)?.name || 'this album')
         : 'entire gallery';
-      const params = new URLSearchParams();
+      const params = new URLBuscarParams();
       if (_activeAlbum) params.set('album_id', _activeAlbum);
       let listRes;
       try {
@@ -2334,7 +2334,7 @@ export function openGallery() {
       }
       const total = listRes.image_ids.length;
       const untagged = listRes.total_untagged || total;
-      if (!await uiModule.styledConfirm(
+      if (!await uiModule.styledConfirmar(
         `Tag ${total} of ${untagged} untagged photo${total > 1 ? 's' : ''} in ${scope}?`,
         { confirmText: 'Tag All' }
       )) return;
@@ -2345,18 +2345,18 @@ export function openGallery() {
       const cancelBtn = document.getElementById('gallery-tag-cancel');
       bar.style.display = '';
       progEl.style.width = '0%';
-      // The Start button becomes the Cancel control for the run (kept enabled so
+      // The Start button becomes the Cancelar control for the run (kept enabled so
       // it's clickable; the click handler above routes to cancel via _tagging).
       _tagging = true;
-      _tagCancelRequested = false;
+      _tagCancelarRequested = false;
       tagAllBtn.classList.add('active', 'gallery-tag-cancelling');
-      tagAllBtn.textContent = 'Cancel';
+      tagAllBtn.textContent = 'Cancelar';
       if (cancelBtn) cancelBtn.style.display = 'none';   // start button covers it now
-      cancelBtn.onclick = () => { _tagCancelRequested = true; statusEl.textContent = 'Cancelling...'; };
+      cancelBtn.onclick = () => { _tagCancelarRequested = true; statusEl.textContent = 'Cancelarling...'; };
 
       let done = 0, failed = 0;
       for (const id of listRes.image_ids) {
-        if (_tagCancelRequested) break;
+        if (_tagCancelarRequested) break;
         try {
           const r = await fetch(`${API_BASE}/api/gallery/${id}/ai-tag`, {
             method: 'POST', credentials: 'same-origin',
@@ -2369,10 +2369,10 @@ export function openGallery() {
         statusEl.textContent = `Tagging ${done}/${total}${failed ? ` — ${failed} failed` : ''}`;
       }
 
-      statusEl.textContent = _tagCancelRequested
-        ? `Cancelled after ${done}/${total}${failed ? ` (${failed} failed)` : ''}`
+      statusEl.textContent = _tagCancelarRequested
+        ? `Cancelarled after ${done}/${total}${failed ? ` (${failed} failed)` : ''}`
         : `Done — tagged ${done - failed}/${total}${failed ? ` (${failed} failed)` : ''}`;
-      // Restore the Start button.
+      // Restaurar the Start button.
       _tagging = false;
       tagAllBtn.disabled = false;
       tagAllBtn.classList.remove('active', 'gallery-tag-cancelling');
@@ -2407,7 +2407,7 @@ export function openGallery() {
     clearAiTagsBtn.addEventListener('click', async () => {
       if (clearAiTagsBtn.disabled) return;
       if (moreMenu) { moreMenu.hidden = true; moreMenu.style.display = 'none'; }
-      if (!await uiModule.styledConfirm(
+      if (!await uiModule.styledConfirmar(
         'Remove all AI-generated tags from every photo? Your own tags are kept.',
         { confirmText: 'Clear AI Tags', danger: true }
       )) return;
@@ -2453,8 +2453,8 @@ export function openGallery() {
   function _setSelectMode(on) {
     _selectMode = on;
     selectBtn.classList.toggle('active', on);
-    // The Select button doubles as Cancel while active (mirrors the library).
-    selectBtn.textContent = on ? 'Cancel' : 'Select';
+    // The Select button doubles as Cancelar while active (mirrors the library).
+    selectBtn.textContent = on ? 'Cancelar' : 'Select';
     bulkBar.classList.toggle('hidden', !on);
     // Body-level signal so the CSS rule that hides per-thumbnail overlay
     // buttons (favorite/download) applies to every card — including cards
@@ -2491,7 +2491,7 @@ export function openGallery() {
   });
 
   // Mobile: long-press on a thumbnail enters select mode and marks that
-  // thumbnail as the first selection. Cancelled by movement (so vertical
+  // thumbnail as the first selection. Cancelarled by movement (so vertical
   // scrolling still works) or by lifting before the timer fires.
   if ('ontouchstart' in window) {
     const gridEl = document.getElementById('gallery-grid');
@@ -2548,7 +2548,7 @@ export function openGallery() {
     imagesContainer.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); grid.classList.remove('gallery-dragover'); });
   });
   imagesContainer.addEventListener('drop', (e) => {
-    _handleGalleryDrop(e).catch(err => console.error('Gallery drop error:', err));
+    _handleGaleríaDrop(e).catch(err => console.error('Galería drop error:', err));
   });
 
   // Same drop handling on the Albums tab: dropped folders become new albums,
@@ -2568,18 +2568,18 @@ export function openGallery() {
       });
     });
     albumsContainer.addEventListener('drop', (e) => {
-      _handleGalleryDrop(e)
+      _handleGaleríaDrop(e)
         .then(() => _renderAlbumsTab())
-        .catch(err => console.error('Gallery drop error:', err));
+        .catch(err => console.error('Galería drop error:', err));
     });
   }
 
 
-  // ── Bulk actions menu (Favorite / Add tag / Delete on the selection) ──
+  // ── Bulk actions menu (Favorite / Agregar tag / Eliminar on the selection) ──
   // Built dynamically like the email library's _showBulkActionsMenu so it
   // shares the exact same dropdown style/behaviour.
   const _bulkActionsBtn = document.getElementById('gallery-bulk-actions');
-  function _showGalleryBulkMenu(anchor) {
+  function _showGaleríaBulkMenu(anchor) {
     document.querySelectorAll('.gallery-bulk-menu').forEach(dismissOrRemove);
     // Standard Odysseus dropdown (.dropdown + dropdown-item-compact) so it
     // matches every other menu in the app. Positioned fixed at the button.
@@ -2597,11 +2597,11 @@ export function openGallery() {
     const _cancelIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     const items = [
       { label: 'Favorite', icon: _favIco, action: () => _bulkFavorite(_selectedIds()) },
-      { label: 'Add tag…', icon: _tagIco, action: () => _bulkTag(_selectedIds()) },
-      { label: 'Download', icon: _dlIco, action: () => _bulkDownload(_selectedIds()) },
-      { label: 'Delete', icon: _delIco, danger: true, action: () => _bulkDelete(_selectedIds()) },
+      { label: 'Agregar tag…', icon: _tagIco, action: () => _bulkTag(_selectedIds()) },
+      { label: 'Descargar', icon: _dlIco, action: () => _bulkDescargar(_selectedIds()) },
+      { label: 'Eliminar', icon: _delIco, danger: true, action: () => _bulkEliminar(_selectedIds()) },
       { separator: true },
-      { label: 'Cancel', icon: _cancelIco, action: () => _exitSelectMode() },
+      { label: 'Cancelar', icon: _cancelIco, action: () => _exitSelectMode() },
     ];
     for (const a of items) {
       if (a.separator) {
@@ -2629,12 +2629,12 @@ export function openGallery() {
     const existing = document.querySelector('.gallery-bulk-menu');
     if (existing) { dismissOrRemove(existing); return; }
     if (!_selectedIds().length) { uiModule.showToast('Select photos first'); return; }
-    _showGalleryBulkMenu(e.currentTarget);
+    _showGaleríaBulkMenu(e.currentTarget);
   });
 
-  async function _bulkDelete(ids) {
+  async function _bulkEliminar(ids) {
     if (!ids.length) return;
-    if (!await uiModule.styledConfirm(`Delete ${ids.length} photo${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { confirmText: 'Delete', danger: true })) return;
+    if (!await uiModule.styledConfirmar(`Eliminar ${ids.length} photo${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { confirmText: 'Eliminar', danger: true })) return;
     const deleted = [], failed = [];
     for (const id of ids) { const ok = await _deleteImage(id); (ok ? deleted : failed).push(id); }
     if (failed.length) uiModule.showError(`Failed to delete ${failed.length} of ${ids.length} photos`);
@@ -2656,7 +2656,7 @@ export function openGallery() {
     _renderGrid(); _renderStats();
   }
 
-  async function _bulkDownload(ids) {
+  async function _bulkDescargar(ids) {
     if (!ids.length) return;
     // More than 5 → bundle into a single .zip server-side instead of firing a
     // flood of individual downloads.
@@ -2679,7 +2679,7 @@ export function openGallery() {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
         _exitSelectMode();
-        if (uiModule) uiModule.showToast(`Downloaded ${ids.length} photos (zip)`);
+        if (uiModule) uiModule.showToast(`Descargared ${ids.length} photos (zip)`);
       } catch (e) {
         if (uiModule) uiModule.showError('Failed to create zip');
       }
@@ -2707,7 +2707,7 @@ export function openGallery() {
       } catch (_) { /* skip failures */ }
     }
     _exitSelectMode();
-    if (uiModule) uiModule.showToast(`Downloading ${n} photo${n === 1 ? '' : 's'}`);
+    if (uiModule) uiModule.showToast(`Descargaring ${n} photo${n === 1 ? '' : 's'}`);
   }
 
   async function _bulkFavorite(ids) {
@@ -2723,7 +2723,7 @@ export function openGallery() {
   }
 
   async function _bulkTag(ids) {
-    const tag = (await uiModule.styledPrompt('', { title: 'Add tag to selected', placeholder: 'tag', confirmText: 'Add', maxLength: 60 }) || '').trim().replace(/^#+/, '').trim();
+    const tag = (await uiModule.styledPrompt('', { title: 'Agregar tag to selected', placeholder: 'tag', confirmText: 'Agregar', maxLength: 60 }) || '').trim().replace(/^#+/, '').trim();
     if (!tag) return;
     let n = 0;
     for (const id of ids) {
@@ -2742,7 +2742,7 @@ export function openGallery() {
 
   modal.addEventListener('click', (e) => {
     if (uiModule.isTouchInsideModal()) return;
-    if (e.target === modal) closeGallery();
+    if (e.target === modal) closeGalería();
   });
 
   _escHandler = (e) => {
@@ -2750,7 +2750,7 @@ export function openGallery() {
       // While the image editor is visible, Escape is reserved for the
       // editor (cancel transform/lasso/crop, dismiss size prompt, etc.).
       // Don't close the gallery — users would lose their in-progress edit.
-      // We check the editor container's visibility AND the isEditorOpen()
+      // We check the editor container's visibility AND the isEditarorOpen()
       // flag so a crop popup, transform handles, etc. all keep Esc.
       const editorContainer = document.getElementById('gallery-editor-container');
       const editorVisible = !!(
@@ -2758,7 +2758,7 @@ export function openGallery() {
         getComputedStyle(editorContainer).display !== 'none' &&
         editorContainer.querySelector('.gallery-editor')
       );
-      if (editorVisible || isEditorOpen()) {
+      if (editorVisible || isEditarorOpen()) {
         e.preventDefault();
         e.stopImmediatePropagation();
         return;
@@ -2774,7 +2774,7 @@ export function openGallery() {
         const back = document.getElementById('gallery-detail-back');
         if (back) back.click(); else detail.style.display = 'none';
       } else {
-        closeGallery();
+        closeGalería();
       }
       return;
     }
@@ -2783,7 +2783,7 @@ export function openGallery() {
     const detail = document.getElementById('gallery-detail');
     if (!detail || detail.style.display === 'none') return;
     const tag = (e.target?.tagName || '').toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditarable) return;
     const btn = document.getElementById(e.key === 'ArrowLeft' ? 'gallery-detail-prev' : 'gallery-detail-next');
     if (btn && !btn.classList.contains('gallery-detail-nav-disabled')) {
       e.preventDefault();
@@ -2831,16 +2831,16 @@ function _showImagesTab() {
   if (settingsContainer) settingsContainer.style.display = 'none';
 }
 
-export async function openGalleryImage(imageId) {
+export async function openGaleríaImage(imageId) {
   if (!imageId) {
-    openGallery();
+    openGalería();
     return;
   }
-  openGallery();
+  openGalería();
   _showImagesTab();
   _search = '';
   _activeTags = [];
-  _activeModel = null;
+  _activeModelo = null;
   _activeAlbum = null;
   _favoritesOnly = false;
   _sort = 'recent';
@@ -2878,10 +2878,10 @@ export async function openGalleryImage(imageId) {
   }
 }
 
-function _doCloseGallery() {
+function _doCerrarGalería() {
   const editorMounted = !!document.querySelector('#gallery-editor-container .gallery-editor');
-  if ((window.__galleryEditLive || isEditorOpen() || editorMounted) && !window.__galleryAllowCloseEditor) {
-    if (uiModule) uiModule.showToast('Close the edit tab first');
+  if ((window.__galleryEditarLive || isEditarorOpen() || editorMounted) && !window.__galleryAllowCerrarEditaror) {
+    if (uiModule) uiModule.showToast('Cerrar the edit tab first');
     return;
   }
   _open = false;
@@ -2892,8 +2892,8 @@ function _doCloseGallery() {
   }
   // Detach the face-overlay resize listener so we don't leak a
   // handler past close (v2 review HIGH-9).
-  closeEditor();
-  window.__galleryAllowCloseEditor = false;
+  closeEditaror();
+  window.__galleryAllowCerrarEditaror = false;
 
   const modal = document.getElementById('gallery-modal');
   if (modal) {
@@ -2916,16 +2916,16 @@ function _doCloseGallery() {
   if (btn) btn.classList.remove('active');
 }
 
-export function closeGallery() {
+export function closeGalería() {
   if (!_open && !Modals.isMinimized('gallery-modal')) return;
   if (Modals.isRegistered('gallery-modal')) {
     Modals.close('gallery-modal');
   } else {
-    _doCloseGallery();
+    _doCerrarGalería();
   }
 }
 
-export function isGalleryOpen() {
+export function isGaleríaOpen() {
   if (Modals.isMinimized('gallery-modal')) return false;
   return _open;
 }
@@ -2949,10 +2949,10 @@ function _humanSize(bytes) {
 }
 
 const galleryModule = {
-  openGallery,
-  openGalleryImage,
-  closeGallery,
-  isGalleryOpen,
+  openGalería,
+  openGaleríaImage,
+  closeGalería,
+  isGaleríaOpen,
 };
 
 export default galleryModule;

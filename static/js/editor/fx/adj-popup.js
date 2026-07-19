@@ -17,7 +17,7 @@
  *       → sliders / histogram handles mutate `layer._stagedAdj.params`
  *       → composite() previews live via the adjLayers stack
  *       → Apply commits to layer.adjLayers + saveState() + renderLayerPanel()
- *       → Cancel / Esc drops the staged state
+ *       → Cancelar / Esc drops the staged state
  *
  * Popups can be minimised → modalManager dock chip → click chip to
  * restore. Re-opening a committed sub-layer (from the layer panel's
@@ -275,7 +275,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
 
   function openAdjPopup(layer, type, anchorEl, existingAdj) {
     closeAdjPopup();
-    // Editing an existing sub-layer? Pre-load its params as the staged
+    // Editaring an existing sub-layer? Pre-load its params as the staged
     // preview and mark the popup so Apply updates instead of appending.
     const editing = !!existingAdj;
     const startParams = editing
@@ -305,7 +305,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
     </div>
     <div class="ge-adj-body" data-adj-body></div>
     <div class="ge-adj-foot">
-      <button class="ge-btn ge-btn-sm ge-adj-cancel-btn" data-adj-action="cancel">Cancel</button>
+      <button class="ge-btn ge-btn-sm ge-adj-cancel-btn" data-adj-action="cancel">Cancelar</button>
       <button class="ge-btn ge-btn-sm ge-btn-primary ge-adj-apply-btn" data-adj-action="ok">Apply</button>
     </div>
     `;
@@ -359,7 +359,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
         const r0 = pop.getBoundingClientRect();
         head.setPointerCapture(e.pointerId);
         head.style.cursor = 'grabbing';
-        const onMove = (ev) => {
+        const onMover = (ev) => {
           const nx = Math.max(0, Math.min(window.innerWidth - 60, r0.left + (ev.clientX - startX)));
           const ny = Math.max(0, Math.min(window.innerHeight - 30, r0.top  + (ev.clientY - startY)));
           setPos(nx, ny);
@@ -367,10 +367,10 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
         const onUp = () => {
           head.releasePointerCapture(e.pointerId);
           head.style.cursor = '';
-          head.removeEventListener('pointermove', onMove);
+          head.removeEventListener('pointermove', onMover);
           head.removeEventListener('pointerup', onUp);
         };
-        head.addEventListener('pointermove', onMove);
+        head.addEventListener('pointermove', onMover);
         head.addEventListener('pointerup', onUp);
       });
     }
@@ -395,7 +395,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
       e.preventDefault();
       e.stopPropagation();
       suppressLayerGhostTap();
-      saveState(editing ? `Edit ${adjLayerLabel(type)}` : `Add ${adjLayerLabel(type)}`);
+      saveState(editing ? `Editar ${adjLayerLabel(type)}` : `Agregar ${adjLayerLabel(type)}`);
       const params = layer._stagedAdj.params;
       layer._stagedAdj = null;
       if (editing) {
@@ -545,7 +545,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
     });
   }
 
-  // Reset a single slider key back to identity. Updates staged params
+  // Reset a single slider key back to identity. Actualizars staged params
   // and triggers a composite refresh.
   function revertAdjKey(layer, type, key) {
     const defaults = defaultAdjParams(type);
@@ -620,7 +620,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
         h.setPointerCapture(e.pointerId);
         const which = h.dataset.handle;
         const rect = canvas.getBoundingClientRect();
-        const onMove = (ev) => {
+        const onMover = (ev) => {
           const x = Math.max(0, Math.min(rect.width, ev.clientX - rect.left));
           const v = Math.round((x / rect.width) * 255);
           const p = layer._stagedAdj.params;
@@ -639,7 +639,7 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
             p.gamma = Math.pow(10, log10g);
           }
           placeHandles();
-          // Update visible slider rows + value labels.
+          // Actualizar visible slider rows + value labels.
           const updateRow = (key, displayVal) => {
             const sl = bodyEl.querySelector(`input[type="range"][data-key="${key}"]`);
             if (sl) sl.value = String(key === 'gamma' ? Math.round(layer._stagedAdj.params.gamma * 100) : layer._stagedAdj.params[key]);
@@ -654,10 +654,10 @@ export function createAdjPopupSystem({ composite, saveState, renderLayerPanel })
         };
         const onUp = () => {
           h.releasePointerCapture(e.pointerId);
-          h.removeEventListener('pointermove', onMove);
+          h.removeEventListener('pointermove', onMover);
           h.removeEventListener('pointerup', onUp);
         };
-        h.addEventListener('pointermove', onMove);
+        h.addEventListener('pointermove', onMover);
         h.addEventListener('pointerup', onUp);
       });
     });

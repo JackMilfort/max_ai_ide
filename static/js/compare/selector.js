@@ -1,7 +1,7 @@
 // compare/selector.js — model selection modal
 import state from './state.js';
 import Storage from '../storage.js';
-import { fetchModels, _persistSelections, getExcludedModels } from './models.js';
+import { fetchModelos, _persistSelections, getExcludedModelos } from './models.js';
 import { showScoreboard } from './scoreboard.js';
 import { EYE_OPEN, EYE_CLOSED, ICON_DICE, ICON_PARALLEL, ICON_SEQUENTIAL, SAVE_ICON, WAVE_FRAMES, CHAT_ICON } from './icons.js';
 import { _clearProbeWaves } from './probe.js';
@@ -11,7 +11,7 @@ import themeModule from '../theme.js';
 
 const escapeHtml = uiModule.esc;
 
-// Match the Deep Research "Start" button (play icon + "Start", styled by
+// Match the Deep Investigación "Start" button (play icon + "Start", styled by
 // .research-start-btn) so the two primary actions look identical.
 const _CMP_PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
 const _CMP_START_LABEL = _CMP_PLAY_ICON + ' Start';
@@ -46,7 +46,7 @@ function disableToolToggles() {
   });
 }
 
-/** Restore tool toggles to pre-compare state. */
+/** Restaurar tool toggles to pre-compare state. */
 function restoreToolToggles() {
   if (!state._savedToggles) return;
   Object.entries(state._savedToggles).forEach(([id, wasChecked]) => {
@@ -57,7 +57,7 @@ function restoreToolToggles() {
 }
 
 /** Show model selection modal with dynamic model list + toggles. */
-async function showModelSelector() {
+async function showModeloSelector() {
   return new Promise((resolve) => {
     let models = [];
     let _modelsLoaded = false;
@@ -75,13 +75,13 @@ async function showModelSelector() {
     header.className = 'modal-header';
 
     const title = document.createElement('h4');
-    title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/></svg>Model Comparison';
+    title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/></svg>Modelo Comparison';
     // Absorb the free space so the injected minimize (_) and close (✕) cluster
     // together on the right instead of being spread apart by space-between.
     title.style.marginRight = 'auto';
     header.appendChild(title);
 
-    // Minimize (_) + Close (✕) grouped in one wrapper so they're always
+    // Minimize (_) + Cerrar (✕) grouped in one wrapper so they're always
     // adjacent on the right (the auto-injected minimize otherwise drifted
     // away from the close). The minimize carries .minimize-btn so the modal
     // manager wires it instead of injecting a second one.
@@ -95,14 +95,14 @@ async function showModelSelector() {
     headerMinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="18" x2="19" y2="18"/></svg>';
     headerMinBtn.style.margin = '0';
 
-    const headerCloseBtn = document.createElement('button');
-    headerCloseBtn.className = 'close-btn';
-    headerCloseBtn.innerHTML = '&#x2716;';
-    headerCloseBtn.style.cssText = 'flex-shrink:0;margin:0;';
-    headerCloseBtn.addEventListener('click', () => cleanup(false));
+    const headerCerrarBtn = document.createElement('button');
+    headerCerrarBtn.className = 'close-btn';
+    headerCerrarBtn.innerHTML = '&#x2716;';
+    headerCerrarBtn.style.cssText = 'flex-shrink:0;margin:0;';
+    headerCerrarBtn.addEventListener('click', () => cleanup(false));
 
     headerCtrls.appendChild(headerMinBtn);
-    headerCtrls.appendChild(headerCloseBtn);
+    headerCtrls.appendChild(headerCerrarBtn);
 
     // Toggle icons container
     const toggleRow = document.createElement('div');
@@ -127,7 +127,7 @@ async function showModelSelector() {
         _shuffled = false;
         diceBtn.classList.remove('active');
       }
-      renderModelRows();
+      renderModeloRows();
       // Mobile hides the button labels — surface the new state as a toast.
       uiModule.showToast('Mode: Blind ' + (state._blindMode ? 'on' : 'off'));
       _updateModeLabel();
@@ -149,7 +149,7 @@ async function showModelSelector() {
       parallelBtn.classList.toggle('active', state._parallel);
       parallelBtn.innerHTML = (state._parallel ? ICON_PARALLEL : ICON_SEQUENTIAL) + _toggleLabel(state._parallel ? 'Parallel' : 'Sequential');
       parallelBtn.title = state._parallel ? 'Switch to one at a time' : 'Run side by side';
-      renderModelRows();
+      renderModeloRows();
       uiModule.showToast('Mode: ' + (state._parallel ? 'Parallel' : 'Sequential'));
       _updateModeLabel();
       _setModeHint(state._parallel
@@ -170,15 +170,15 @@ async function showModelSelector() {
       if (_shuffled) {
         _shuffled = false;
         diceBtn.classList.remove('active');
-        renderModelRows();
+        renderModeloRows();
         uiModule.showToast('Mode: Shuffle off');
         _updateModeLabel();
         _setModeHint('<span style="color:var(--red)">Shuffle off</span>: choose the models yourself.');
         return;
       }
       // Randomly pick models from filtered list for each slot
-      const excluded = getExcludedModels();
-      const pool = filteredModels().filter(m => !excluded.includes(m.id)).slice();
+      const excluded = getExcludedModelos();
+      const pool = filteredModelos().filter(m => !excluded.includes(m.id)).slice();
       if (pool.length === 0) return;
       for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -195,7 +195,7 @@ async function showModelSelector() {
         blindBtn.classList.add('active');
         blindBtn.innerHTML = EYE_CLOSED + _toggleLabel('Blind');
       }
-      renderModelRows();
+      renderModeloRows();
       uiModule.showToast(state._blindMode ? 'Mode: Shuffle on · Blind on' : 'Mode: Shuffle on');
       _updateModeLabel();
       _setModeHint('<span style="color:var(--red)">Shuffle</span>: random models picked for each slot (auto-hidden).');
@@ -216,20 +216,20 @@ async function showModelSelector() {
 
     state._continueChat = false;
 
-    state._saveOnClose = false;
+    state._saveOnCerrar = false;
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
     saveBtn.className = 'compare-save-toggle';
-    saveBtn.title = 'Save — keep sessions after closing compare';
-    saveBtn.innerHTML = SAVE_ICON + _toggleLabel('Save');
+    saveBtn.title = 'Guardar — keep sessions after closing compare';
+    saveBtn.innerHTML = SAVE_ICON + _toggleLabel('Guardar');
     saveBtn.addEventListener('click', () => {
-      state._saveOnClose = !state._saveOnClose;
-      saveBtn.classList.toggle('active', state._saveOnClose);
-      uiModule.showToast('Mode: Save ' + (state._saveOnClose ? 'on' : 'off'));
+      state._saveOnCerrar = !state._saveOnCerrar;
+      saveBtn.classList.toggle('active', state._saveOnCerrar);
+      uiModule.showToast('Mode: Guardar ' + (state._saveOnCerrar ? 'on' : 'off'));
       _updateModeLabel();
-      _setModeHint(state._saveOnClose
-        ? '<span style="color:var(--color-save-green)">Save</span>: keep these sessions after you close Compare.'
-        : '<span style="color:var(--color-save-green)">Save off</span>: sessions are discarded when you close Compare.');
+      _setModeHint(state._saveOnCerrar
+        ? '<span style="color:var(--color-save-green)">Guardar</span>: keep these sessions after you close Compare.'
+        : '<span style="color:var(--color-save-green)">Guardar off</span>: sessions are discarded when you close Compare.');
     });
     toggleRow.appendChild(saveBtn);
 
@@ -246,13 +246,13 @@ async function showModelSelector() {
       _shuffled = false;
       diceBtn.classList.remove('active');
       state._continueChat = false;
-      state._saveOnClose = false;
+      state._saveOnCerrar = false;
       saveBtn.classList.remove('active');
       state._parallel = true;
       parallelBtn.classList.add('active');
       parallelBtn.innerHTML = ICON_PARALLEL + _toggleLabel('Parallel');
       selections = [null, null];
-      renderModelRows();
+      renderModeloRows();
     });
     toggleRow.appendChild(resetBtn);
 
@@ -298,11 +298,11 @@ async function showModelSelector() {
         ? '<span style="color:#5b8def">Parallel</span>'
         : '<span style="color:#e0a050">Sequential</span>');
       if (_shuffled) parts.push('<span style="color:var(--red)">Shuffle</span>');
-      if (state._saveOnClose) parts.push('<span style="color:var(--color-save-green)">Save</span>');
+      if (state._saveOnCerrar) parts.push('<span style="color:var(--color-save-green)">Guardar</span>');
       cur.innerHTML = parts.join(', ');
     }
 
-    // ── Type tabs (Chat / Agent / Search / Research) ──
+    // ── Type tabs (Chat / Agent / Buscar / Investigación) ──
     state._compareMode = 'chat';
     const typeWrap = document.createElement('div');
     typeWrap.className = 'compare-section';
@@ -317,13 +317,13 @@ async function showModelSelector() {
     // Agent — shell prompt `>_` (matches the bash-toggle-btn icon in the composer)
     const _ICON_AGENT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>';
     const _ICON_SEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-    // Research — magnifying glass with `+` (matches the sidebar Deep Research icon)
+    // Investigación — magnifying glass with `+` (matches the sidebar Deep Investigación icon)
     const _ICON_RESEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>';
     const _modes = [
       { id: 'chat', label: 'Chat', icon: CHAT_ICON },
       { id: 'agent', label: 'Agent', icon: _ICON_AGENT },
-      { id: 'search', label: 'Search', icon: _ICON_SEARCH },
-      { id: 'research', label: 'Research', icon: _ICON_RESEARCH },
+      { id: 'search', label: 'Buscar', icon: _ICON_SEARCH },
+      { id: 'research', label: 'Investigación', icon: _ICON_RESEARCH },
     ];
     _modes.forEach(m => {
       const tab = document.createElement('button');
@@ -349,7 +349,7 @@ async function showModelSelector() {
 
     function setModeTab(mode) {
       if (!_modelsLoaded) return;
-      // Save current tab's selections before switching
+      // Guardar current tab's selections before switching
       _tabSelections[state._compareMode] = selections.map(s => s ? { ...s } : null);
       state._compareMode = mode;
       tabBar.querySelectorAll('.compare-mode-tab').forEach(t => t.classList.remove('active'));
@@ -358,7 +358,7 @@ async function showModelSelector() {
       _updateTypeLabel(mode);
       _shuffled = false;
       diceBtn.classList.remove('active');
-      // Search and Research default to sequential; others default to parallel
+      // Buscar and Investigación default to sequential; others default to parallel
       if (mode === 'search' || mode === 'research') {
         state._parallel = false;
         parallelBtn.classList.remove('active');
@@ -368,15 +368,15 @@ async function showModelSelector() {
         parallelBtn.classList.add('active');
         parallelBtn.innerHTML = ICON_PARALLEL + _toggleLabel('Parallel');
       }
-      // Restore saved selections for this tab, or default
+      // Restaurar saved selections for this tab, or default
       selections = _tabSelections[mode] ? _tabSelections[mode].slice() : [null, null];
       _updateModeLabel();
       _setModeHint('');
-      renderModelRows();
+      renderModeloRows();
     }
     // Tab click listeners are set in the loop above
 
-    // ── Model list ──
+    // ── Modelo list ──
     const listContainer = document.createElement('div');
     body.appendChild(listContainer);
 
@@ -392,13 +392,13 @@ async function showModelSelector() {
     }
     listContainer.appendChild(_loadingDiv);
 
-    // Restore last used selections from storage (per-mode)
+    // Restaurar last used selections from storage (per-mode)
     const _selKey = 'odysseus-compare-selections-' + (state._compareMode || 'chat');
     let selections = Storage.getJSON(_selKey) || Storage.getJSON('odysseus-compare-selections') || [];
-    // Restore synthesis models for search/research
+    // Restaurar synthesis models for search/research
     if (state._compareMode === 'search' || state._compareMode === 'research') {
       const savedSynth = Storage.getJSON('odysseus-compare-synth-' + state._compareMode);
-      if (savedSynth) state._searchSynthModels = savedSynth;
+      if (savedSynth) state._searchSynthModelos = savedSynth;
     }
     // Validate saved selections against available models (done after models load)
     let _needsValidation = selections.length > 0;
@@ -406,8 +406,8 @@ async function showModelSelector() {
     let _shuffled = false;
     _updateModeLabel(); // initial readout (Blind + Parallel on by default)
 
-    function filteredModels() {
-      // Agent and Research modes use chat models
+    function filteredModelos() {
+      // Agent and Investigación modes use chat models
       const effectiveType = (state._compareMode === 'agent' || state._compareMode === 'research') ? 'chat' : state._compareMode;
       return models.filter(m => m.type === effectiveType);
     }
@@ -420,18 +420,18 @@ async function showModelSelector() {
     }
 
     /** Build a searchable model picker (used when >5 models) */
-    function _buildSearchablePicker(modelList, currentSel, slotIdx, onSelect) {
+    function _buildBuscarablePicker(modelList, currentSel, slotIdx, onSelect) {
       const wrap = document.createElement('div');
       wrap.style.cssText = 'flex:1;position:relative;';
 
       const input = document.createElement('input');
       input.type = 'text';
-      input.placeholder = 'Search models\u2026';
+      input.placeholder = 'Buscar models\u2026';
       input.className = 'cmp-form-control';
       input.style.cssText = 'width:100%;box-sizing:border-box;';
       // Mobile: suppress the on-screen keyboard so tapping the picker
       // opens the dropdown but doesn't shove a keyboard up over the list.
-      // (Matches the +Model dropdown's mobile behavior.)
+      // (Matches the +Modelo dropdown's mobile behavior.)
       if (window.innerWidth <= 768) {
         input.setAttribute('inputmode', 'none');
         input.setAttribute('readonly', 'readonly');
@@ -538,7 +538,7 @@ async function showModelSelector() {
           if (first) first.click();
         }
       });
-      // Close on outside click. The dropdown lives in document.body, so check
+      // Cerrar on outside click. The dropdown lives in document.body, so check
       // both wrap and dropdown; and tear the dropdown down when the picker row
       // is removed from the DOM (rebuild) so it doesn't orphan in the body.
       function _closeHandler(e) {
@@ -559,20 +559,20 @@ async function showModelSelector() {
       return wrap;
     }
 
-    function renderModelRows() {
+    function renderModeloRows() {
       if (!_modelsLoaded) return;
       // The picker dropdowns live in document.body (to escape modal clipping);
       // clear any leftovers before rebuilding the rows so they don't orphan.
       document.querySelectorAll('.cmp-picker-dropdown').forEach(d => d.remove());
 
-      // ── Search mode: show provider dropdowns ──
+      // ── Buscar mode: show provider dropdowns ──
       if (state._compareMode === 'search') {
         listContainer.innerHTML = '';
         if (!state._cachedProviders) {
           listContainer.innerHTML = '<div style="color:color-mix(in srgb, var(--fg) 40%, transparent);font-size:0.85em;padding:12px 0;text-align:left;">Loading search providers\u2026</div>';
           fetch(`${state.API_BASE}/api/search/providers`).then(r => r.json()).then(providers => {
             state._cachedProviders = providers;
-            renderModelRows();
+            renderModeloRows();
           }).catch(() => {
             listContainer.innerHTML = '<div style="color:var(--color-error);font-size:0.85em;padding:12px 0;">Failed to load search providers</div>';
           });
@@ -585,10 +585,10 @@ async function showModelSelector() {
           return;
         }
         // Ensure per-pane synth model array matches selections length
-        if (!state._searchSynthModels) state._searchSynthModels = [];
-        while (state._searchSynthModels.length < selections.length) state._searchSynthModels.push(null);
+        if (!state._searchSynthModelos) state._searchSynthModelos = [];
+        while (state._searchSynthModelos.length < selections.length) state._searchSynthModelos.push(null);
 
-        const chatModels = state._cachedModels.filter(m => m.type === 'chat');
+        const chatModelos = state._cachedModelos.filter(m => m.type === 'chat');
         const _seqStepS = !state._parallel ? Math.min(20, Math.floor(80 / Math.max(selections.length, 1))) : 0;
 
         selections.forEach((sel, idx) => {
@@ -606,35 +606,35 @@ async function showModelSelector() {
           }
           row.appendChild(lbl);
 
-          // Model picker (synthesis LLM) — searchable for large lists
-          if (!state._searchSynthModels[idx] && chatModels.length > 0) {
-            const fb = chatModels[Math.min(idx, chatModels.length - 1)];
-            state._searchSynthModels[idx] = { model: fb.id, endpoint: fb.url, endpointId: fb.endpointId, name: fb.name };
+          // Modelo picker (synthesis LLM) — searchable for large lists
+          if (!state._searchSynthModelos[idx] && chatModelos.length > 0) {
+            const fb = chatModelos[Math.min(idx, chatModelos.length - 1)];
+            state._searchSynthModelos[idx] = { model: fb.id, endpoint: fb.url, endpointId: fb.endpointId, name: fb.name };
           }
-          if (chatModels.length >= 5) {
-            const picker = _buildSearchablePicker(chatModels, state._searchSynthModels[idx], idx, (chosen) => {
-              state._searchSynthModels[idx] = chosen;
+          if (chatModelos.length >= 5) {
+            const picker = _buildBuscarablePicker(chatModelos, state._searchSynthModelos[idx], idx, (chosen) => {
+              state._searchSynthModelos[idx] = chosen;
             });
             row.appendChild(picker);
           } else {
             const modelSelect = document.createElement('select');
             modelSelect.className = 'cmp-form-control';
             modelSelect.style.flex = '1';
-            chatModels.forEach(m => {
+            chatModelos.forEach(m => {
               const opt = document.createElement('option');
               opt.value = JSON.stringify({ model: m.id, endpoint: m.url, endpointId: m.endpointId, name: m.name, endpointName: m.endpointName || '' });
               opt.textContent = m.endpointName ? `${m.name} (${m.endpointName})` : m.name;
-              if (state._searchSynthModels[idx] && state._searchSynthModels[idx].model === m.id) opt.selected = true;
+              if (state._searchSynthModelos[idx] && state._searchSynthModelos[idx].model === m.id) opt.selected = true;
               modelSelect.appendChild(opt);
             });
             modelSelect.addEventListener('change', () => {
-              try { state._searchSynthModels[idx] = JSON.parse(modelSelect.value); } catch (e) {}
+              try { state._searchSynthModelos[idx] = JSON.parse(modelSelect.value); } catch (e) {}
             });
-            try { if (!state._searchSynthModels[idx]) state._searchSynthModels[idx] = JSON.parse(modelSelect.value); } catch (e) {}
+            try { if (!state._searchSynthModelos[idx]) state._searchSynthModelos[idx] = JSON.parse(modelSelect.value); } catch (e) {}
             row.appendChild(modelSelect);
           }
 
-          // Search provider picker (smaller)
+          // Buscar provider picker (smaller)
           const provSelect = document.createElement('select');
           provSelect.className = 'cmp-form-control cmp-prov-select';
           available.forEach((p, pi) => {
@@ -659,7 +659,7 @@ async function showModelSelector() {
             rmBtn.className = 'cmp-rm-btn';
             rmBtn.addEventListener('mouseenter', () => { rmBtn.style.opacity = '1'; rmBtn.style.color = 'var(--color-error)'; });
             rmBtn.addEventListener('mouseleave', () => { rmBtn.style.opacity = '0.3'; rmBtn.style.color = 'var(--fg)'; });
-            rmBtn.addEventListener('click', () => { selections.splice(idx, 1); state._searchSynthModels.splice(idx, 1); renderModelRows(); });
+            rmBtn.addEventListener('click', () => { selections.splice(idx, 1); state._searchSynthModelos.splice(idx, 1); renderModeloRows(); });
             row.appendChild(rmBtn);
           }
 
@@ -669,20 +669,20 @@ async function showModelSelector() {
         return;
       }
 
-      // ── Chat / Image / Agent / Research mode: show model dropdowns ──
-      const filtered = filteredModels();
+      // ── Chat / Image / Agent / Investigación mode: show model dropdowns ──
+      const filtered = filteredModelos();
       listContainer.innerHTML = '';
 
-      // Research mode needs search providers too — fetch if not cached
+      // Investigación mode needs search providers too — fetch if not cached
       const needsProviders = state._compareMode === 'research';
       if (needsProviders && !state._cachedProviders) {
         listContainer.innerHTML = '<div style="color:color-mix(in srgb, var(--fg) 40%, transparent);font-size:0.85em;padding:12px 0;">Loading search providers\u2026</div>';
         fetch(`${state.API_BASE}/api/search/providers`).then(r => r.json()).then(providers => {
           state._cachedProviders = providers;
-          renderModelRows();
+          renderModeloRows();
         }).catch(() => {
           state._cachedProviders = [];
-          renderModelRows();
+          renderModeloRows();
         });
         return;
       }
@@ -696,10 +696,10 @@ async function showModelSelector() {
         return;
       }
 
-      // Research: ensure per-pane provider array
+      // Investigación: ensure per-pane provider array
       const researchProviders = needsProviders && state._cachedProviders ? state._cachedProviders.filter(p => p.available) : [];
-      if (!state._searchSynthModels) state._searchSynthModels = [];
-      while (state._searchSynthModels.length < selections.length) state._searchSynthModels.push(null);
+      if (!state._searchSynthModelos) state._searchSynthModelos = [];
+      while (state._searchSynthModelos.length < selections.length) state._searchSynthModelos.push(null);
 
       const _seqStep = !state._parallel ? Math.min(20, Math.floor(80 / Math.max(selections.length, 1))) : 0;
       selections.forEach((sel, idx) => {
@@ -724,7 +724,7 @@ async function showModelSelector() {
           mask.textContent = 'Hidden';
           row.appendChild(mask);
         } else if (filtered.length >= 5) {
-          const picker = _buildSearchablePicker(filtered, sel, idx, (chosen) => {
+          const picker = _buildBuscarablePicker(filtered, sel, idx, (chosen) => {
             selections[idx] = chosen;
             _remindShuffle();
           });
@@ -754,21 +754,21 @@ async function showModelSelector() {
           row.appendChild(select);
         }
 
-        // Research mode: search provider picker next to model
+        // Investigación mode: search provider picker next to model
         if (needsProviders && researchProviders.length > 0 && !_shuffled) {
           const provSelect = document.createElement('select');
           provSelect.className = 'cmp-form-control cmp-prov-select';
-          provSelect.title = 'Search provider';
+          provSelect.title = 'Buscar provider';
           researchProviders.forEach((p, pi) => {
             const optEl = document.createElement('option');
             optEl.value = p.id;
             optEl.textContent = p.label;
-            if (state._searchSynthModels[idx] && state._searchSynthModels[idx] === p.id) optEl.selected = true;
-            else if (!state._searchSynthModels[idx] && pi === 0) optEl.selected = true;
+            if (state._searchSynthModelos[idx] && state._searchSynthModelos[idx] === p.id) optEl.selected = true;
+            else if (!state._searchSynthModelos[idx] && pi === 0) optEl.selected = true;
             provSelect.appendChild(optEl);
           });
-          provSelect.addEventListener('change', () => { state._searchSynthModels[idx] = provSelect.value; });
-          if (!state._searchSynthModels[idx]) state._searchSynthModels[idx] = provSelect.value;
+          provSelect.addEventListener('change', () => { state._searchSynthModelos[idx] = provSelect.value; });
+          if (!state._searchSynthModelos[idx]) state._searchSynthModelos[idx] = provSelect.value;
           row.appendChild(provSelect);
         }
 
@@ -780,7 +780,7 @@ async function showModelSelector() {
           rmBtn.className = 'cmp-rm-btn';
           rmBtn.addEventListener('mouseenter', () => { rmBtn.style.opacity = '1'; rmBtn.style.color = 'var(--color-error)'; });
           rmBtn.addEventListener('mouseleave', () => { rmBtn.style.opacity = '0.3'; rmBtn.style.color = 'var(--fg)'; });
-          rmBtn.addEventListener('click', () => { selections.splice(idx, 1); if (state._searchSynthModels.length > idx) state._searchSynthModels.splice(idx, 1); renderModelRows(); });
+          rmBtn.addEventListener('click', () => { selections.splice(idx, 1); if (state._searchSynthModelos.length > idx) state._searchSynthModelos.splice(idx, 1); renderModeloRows(); });
           row.appendChild(rmBtn);
         }
 
@@ -795,7 +795,7 @@ async function showModelSelector() {
     addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.style.cssText = 'display:none;align-items:center;gap:6px;background:none;border:1px dashed var(--border);color:var(--fg);border-radius:6px;cursor:pointer;padding:6px 12px;font-size:0.82em;opacity:0.6;transition:all 0.15s;margin-bottom:16px;width:100%;justify-content:center;';
-    addBtn.textContent = '+ Add Model';
+    addBtn.textContent = '+ Agregar Modelo';
     addBtn.addEventListener('mouseenter', () => { addBtn.style.opacity = '1'; });
     addBtn.addEventListener('mouseleave', () => { addBtn.style.opacity = '0.6'; });
     addBtn.addEventListener('click', () => {
@@ -803,9 +803,9 @@ async function showModelSelector() {
       if (_shuffled) {
         // In shuffle mode every slot is a hidden, randomly-picked model — so a
         // new slot must get a random pool model too, not an empty picker.
-        const excluded = getExcludedModels();
+        const excluded = getExcludedModelos();
         const used = new Set(selections.filter(Boolean).map(s => s.model + '|' + s.endpoint));
-        const pool = filteredModels().filter(m => !excluded.includes(m.id));
+        const pool = filteredModelos().filter(m => !excluded.includes(m.id));
         const fresh = pool.filter(m => !used.has(m.id + '|' + m.url));
         const src = fresh.length ? fresh : pool;
         const pick = src.length ? src[Math.floor(Math.random() * src.length)] : null;
@@ -813,7 +813,7 @@ async function showModelSelector() {
       } else {
         selections.push(null);
       }
-      renderModelRows();
+      renderModeloRows();
       _remindShuffle();
     });
     body.appendChild(addBtn);
@@ -855,13 +855,13 @@ async function showModelSelector() {
     const footer = document.createElement('div');
     footer.className = 'modal-footer';
     footer.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;padding:14px 16px 10px;border-top:1px solid var(--border);';
-    // Cancel button removed — the overlay's X / outside-click / Esc all
-    // dismiss the popup, so the footer Cancel was redundant.
+    // Cancelar button removed — the overlay's X / outside-click / Esc all
+    // dismiss the popup, so the footer Cancelar was redundant.
     const startBtn = document.createElement('button');
     startBtn.innerHTML = _CMP_START_LABEL;
     startBtn.className = 'research-start-btn';
     startBtn.disabled = true;
-    // Pin to the same 30px box as Cancel so both buttons sit on the same line.
+    // Pin to the same 30px box as Cancelar so both buttons sit on the same line.
     startBtn.style.cssText = 'opacity:0.4;height:30px;box-sizing:border-box;align-items:center;';
     footer.appendChild(startBtn);
     content.appendChild(footer);
@@ -879,7 +879,7 @@ async function showModelSelector() {
       // Remove any body-appended picker dropdowns so they don't orphan.
       document.querySelectorAll('.cmp-picker-dropdown').forEach(d => d.remove());
       if (result) {
-        state._selectedModels = selections.filter(Boolean);
+        state._selectedModelos = selections.filter(Boolean);
         state._timeout = Math.max(5, parseInt(timeoutInput.value) || 30);
         // Persist selections for next time (save filtered, non-null entries)
         _persistSelections();
@@ -892,7 +892,7 @@ async function showModelSelector() {
       let selected = selections.filter(Boolean);
       // Auto-populate any null selections from available models
       if (selected.length < selections.length) {
-        const avail = state._compareMode === 'search' ? [] : filteredModels();
+        const avail = state._compareMode === 'search' ? [] : filteredModelos();
         selections.forEach((s, i) => {
           if (!s && avail.length > 0) {
             const fb = avail[Math.min(i, avail.length - 1)];
@@ -905,7 +905,7 @@ async function showModelSelector() {
 
       // For search mode, probe the synthesis LLM models instead of providers
       const modelsToProbe = (state._compareMode === 'search')
-        ? (state._searchSynthModels || []).filter(Boolean)
+        ? (state._searchSynthModelos || []).filter(Boolean)
         : selected;
       if (modelsToProbe.length < 1) { cleanup(true); return; }
 
@@ -935,7 +935,7 @@ async function showModelSelector() {
         row.dataset.idx = i;
         // In blind mode, hide name until failure — only show slot letter
         const name = m.name || m.model.split('/').pop();
-        const displayName = isBlind ? `Model ${_slotChar(i)}` : escapeHtml(name);
+        const displayName = isBlind ? `Modelo ${_slotChar(i)}` : escapeHtml(name);
         row._realName = name;
         row.innerHTML = `<span class="compare-probe-spinner">▁▂▃</span><span class="compare-probe-name">${displayName}</span><span class="compare-probe-status"></span>`;
         const waveEl = row.querySelector('.compare-probe-spinner');
@@ -993,16 +993,16 @@ async function showModelSelector() {
       document.addEventListener('keydown', _probeEsc, false);
 
       // Helper: probe a single model (skip image models — they use a different API)
-      const _imageModelPrefixes = ['dall-e', 'gpt-image', 'chatgpt-image', 'stable-diffusion', 'sdxl', 'flux', 'midjourney'];
-      function _isImageModel(modelId) {
+      const _imageModeloPrefixes = ['dall-e', 'gpt-image', 'chatgpt-image', 'stable-diffusion', 'sdxl', 'flux', 'midjourney'];
+      function _isImageModelo(modelId) {
         const lower = (modelId || '').toLowerCase();
-        return _imageModelPrefixes.some(p => lower.includes(p));
+        return _imageModeloPrefixes.some(p => lower.includes(p));
       }
       async function _probeOne(m) {
-        if (_isImageModel(m.model)) {
+        if (_isImageModelo(m.model)) {
           return { status: 'ok', model: m.model, skipped: true, skipReason: 'Image' };
         }
-        // Search mode — probe the LLM model normally (don't skip)
+        // Buscar mode — probe the LLM model normally (don't skip)
         if (state._compareMode === 'search' && !m.model) {
           return { status: 'ok', model: m.model, skipped: true, skipReason: 'No model' };
         }
@@ -1071,7 +1071,7 @@ async function showModelSelector() {
             detail.remove();
             if (isBlind) {
               const nameEl = row.querySelector('.compare-probe-name');
-              if (nameEl) nameEl.textContent = `Model ${_slotChar(idx)}`;
+              if (nameEl) nameEl.textContent = `Modelo ${_slotChar(idx)}`;
             }
             const waveFrames2 = WAVE_FRAMES;
             let w2 = 0;
@@ -1122,9 +1122,9 @@ async function showModelSelector() {
 
         // In shuffle/blind mode: auto-swap failed models silently (not for search/research)
         if (!allOk && _shuffled && state._compareMode !== 'search' && state._compareMode !== 'research') {
-          const excluded = getExcludedModels();
-          const usedModels = new Set(selections.filter(Boolean).map(m => m.model));
-          const pool = filteredModels().filter(m => !excluded.includes(m.id) && !usedModels.has(m.id));
+          const excluded = getExcludedModelos();
+          const usedModelos = new Set(selections.filter(Boolean).map(m => m.model));
+          const pool = filteredModelos().filter(m => !excluded.includes(m.id) && !usedModelos.has(m.id));
           let poolIdx = 0;
 
           for (let i = 0; i < results.length; i++) {
@@ -1153,7 +1153,7 @@ async function showModelSelector() {
                 const probeResult = await Promise.race([probePromise, timeoutPromise]);
                 if (probeResult.status === 'ok') {
                   selections[i] = { model: replacement.id, endpoint: replacement.url, endpointId: replacement.endpointId, name: replacement.name };
-                  usedModels.add(replacement.id);
+                  usedModelos.add(replacement.id);
                   if (row && row._waveInterval) { clearInterval(row._waveInterval); row._waveInterval = null; }
                   _updateRow(i, probeResult);
                   swapped = true;
@@ -1173,7 +1173,7 @@ async function showModelSelector() {
           }
 
           // Re-check if all are ok now
-          const finalToProbe = (state._compareMode === 'search') ? (state._searchSynthModels || []).filter(Boolean) : selections.filter(Boolean);
+          const finalToProbe = (state._compareMode === 'search') ? (state._searchSynthModelos || []).filter(Boolean) : selections.filter(Boolean);
           const finalResults = await Promise.all(finalToProbe.map(m => _probeOne(m)));
           allOk = finalResults.every(r => r.status === 'ok');
           failCount = finalResults.filter(r => r.status !== 'ok').length;
@@ -1183,13 +1183,13 @@ async function showModelSelector() {
         if (allOk && (state._compareMode === 'search' || state._compareMode === 'research')) {
           const providers = state._compareMode === 'search'
             ? selected.map(s => ({ id: s.model, label: s.name }))
-            : (state._searchSynthModels || []).map(p => typeof p === 'string' ? { id: p, label: p } : null).filter(Boolean);
+            : (state._searchSynthModelos || []).map(p => typeof p === 'string' ? { id: p, label: p } : null).filter(Boolean);
 
           if (providers.length > 0) {
             const titleEl = probeOverlay.querySelector('.compare-probe-title');
             titleEl.textContent = 'Checking search providers...';
 
-            // Add provider rows
+            // Agregar provider rows
             const providerRows = [];
             providers.forEach((p, i) => {
               const row = document.createElement('div');
@@ -1297,9 +1297,9 @@ async function showModelSelector() {
     });
 
     // ── Fetch models in background ──
-    fetchModels().then(fetched => {
+    fetchModelos().then(fetched => {
       models = fetched;
-      state._cachedModels = fetched;
+      state._cachedModelos = fetched;
       _modelsLoaded = true;
       if (models.length < 1) {
         listContainer.innerHTML = '<div style="color:var(--color-error);font-size:0.85em;padding:12px 0;text-align:center;">No models available</div>';
@@ -1324,7 +1324,7 @@ async function showModelSelector() {
       startBtn.disabled = false;
       startBtn.style.opacity = '1';
       addBtn.style.display = 'flex';
-      renderModelRows();
+      renderModeloRows();
     }).catch(e => {
       console.error('Failed to fetch models for compare:', e);
       listContainer.innerHTML = '<div style="color:var(--color-error);font-size:0.85em;padding:12px 0;text-align:center;">Failed to load models</div>';
@@ -1332,4 +1332,4 @@ async function showModelSelector() {
   });
 }
 
-export { showModelSelector, disableToolToggles, restoreToolToggles, _syncToolbarIndicator };
+export { showModeloSelector, disableToolToggles, restoreToolToggles, _syncToolbarIndicator };

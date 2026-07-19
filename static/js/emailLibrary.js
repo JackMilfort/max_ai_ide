@@ -1,10 +1,10 @@
 /**
- * emailLibrary.js — Email library popup modal.
+ * emailLibrary.js — Correo library popup modal.
  * Similar pattern to documentLibrary.js. Shows emails in a grid with search/filter.
  */
 
 import spinnerModule from './spinner.js';
-import { styledConfirm, showToast, emptyStateIcon } from './ui.js';
+import { styledConfirmar, showToast, emptyStateIcon } from './ui.js';
 import { folderDisplayName, sortedFolders } from './emailInbox.js';
 import settingsModule from './settings.js';
 import * as Modals from './modalManager.js';
@@ -24,30 +24,30 @@ import {
 } from './emailLibrary/signatureFold.js';
 import { state } from './emailLibrary/state.js';
 import { collapseSidebarToRail } from './modalSnap.js';
-import { emailApiUrl } from './emailShared.js';
+import { emailApiUrl } from './emailCompartird.js';
 import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
 
 const API_BASE = window.location.origin;
 let _emailUnreadChipClickWired = false;
 let _libLoadSeq = 0;
 let _libFolderSeq = 0;
-let _libSearchSeq = 0;
-let _libSearchHadResults = false;
-let _libSearchInFlight = false;
-let _activeEmailReaderForSelectAll = null;
+let _libBuscarSeq = 0;
+let _libBuscarHadResults = false;
+let _libBuscarInFlight = false;
+let _activeCorreoReaderForSelectAll = null;
 let _libAccountsLoadedAt = 0;
 const _LIB_ACCOUNTS_TTL_MS = 5 * 60 * 1000;
 
-function _isEmailTypingTarget(t) {
+function _isCorreoTypingTarget(t) {
   return !!(t && (
     t.tagName === 'INPUT' ||
     t.tagName === 'TEXTAREA' ||
     t.tagName === 'SELECT' ||
-    t.isContentEditable
+    t.isContentEditarable
   ));
 }
 
-function _selectEmailReaderContents(reader) {
+function _selectCorreoReaderContents(reader) {
   if (!reader || !reader.isConnected) return false;
   const hiddenModal = reader.closest('.modal.hidden');
   if (hiddenModal) return false;
@@ -59,20 +59,20 @@ function _selectEmailReaderContents(reader) {
   return true;
 }
 
-function _markEmailReaderActive(reader) {
+function _markCorreoReaderActive(reader) {
   if (!reader) return;
-  _activeEmailReaderForSelectAll = reader;
+  _activeCorreoReaderForSelectAll = reader;
   if (reader.dataset.selectAllWired === '1') return;
   reader.dataset.selectAllWired = '1';
-  reader.addEventListener('pointerdown', () => { _activeEmailReaderForSelectAll = reader; }, true);
-  reader.addEventListener('focusin', () => { _activeEmailReaderForSelectAll = reader; }, true);
+  reader.addEventListener('pointerdown', () => { _activeCorreoReaderForSelectAll = reader; }, true);
+  reader.addEventListener('focusin', () => { _activeCorreoReaderForSelectAll = reader; }, true);
 }
 
-function _openCalendarEventFromEmail(uid) {
+function _openCalendarioEventFromCorreo(uid) {
   const target = String(uid || '').trim();
   if (!target) return;
   import('./calendar.js').then(mod => {
-    const open = mod.openCalendarTo || (mod.default && mod.default.openCalendarTo);
+    const open = mod.openCalendarioTo || (mod.default && mod.default.openCalendarioTo);
     if (open) open(target);
   }).catch(() => {});
 }
@@ -81,14 +81,14 @@ function _applyTagFilterFromPill(tag) {
   const normalized = String(tag || '').trim().toLowerCase().replace(/_/g, '-');
   if (!normalized || normalized === 'calendar') return;
   const value = `filter:tag:${normalized}`;
-  const existingIdx = Array.isArray(state._libSearchPills)
-    ? state._libSearchPills.findIndex(p => p?.type === 'filter' && p.value === value)
+  const existingIdx = Array.isArray(state._libBuscarPills)
+    ? state._libBuscarPills.findIndex(p => p?.type === 'filter' && p.value === value)
     : -1;
   if (existingIdx >= 0) {
-    _removeSearchPillAt(existingIdx);
+    _removeBuscarPillAt(existingIdx);
     return;
   }
-  _addSearchPill({
+  _addBuscarPill({
     type: 'filter',
     value,
     label: normalized.replace(/-/g, ' '),
@@ -124,7 +124,7 @@ function _emailTagGroupHtml(tags, em) {
 
 const _DONE_RESPONSE_TAGS = new Set(['urgent', 'reply-soon', 'action-needed']);
 
-function _visibleEmailTagsForRender(em) {
+function _visibleCorreoTagsForRender(em) {
   const tags = Array.isArray(em?.tags) ? em.tags : [];
   if (!em?.is_answered) return tags;
   return tags.filter(t => !_DONE_RESPONSE_TAGS.has(String(t || '').trim().toLowerCase().replace(/_/g, '-')));
@@ -153,10 +153,10 @@ function _stampReaderContext(reader, em, folder, account) {
 // is most likely referring to — the last reader they interacted with, then
 // any open reader-modal as a fallback. Returns null when no email reader
 // is open. Exported below for chat.js to read on submit.
-function _getActiveEmailContext() {
+function _getActiveCorreoContext() {
   const candidates = [];
-  if (_activeEmailReaderForSelectAll && _activeEmailReaderForSelectAll.isConnected) {
-    candidates.push(_activeEmailReaderForSelectAll);
+  if (_activeCorreoReaderForSelectAll && _activeCorreoReaderForSelectAll.isConnected) {
+    candidates.push(_activeCorreoReaderForSelectAll);
   }
   // Visible reader-tab modals (popped-out windows).
   document.querySelectorAll('.modal[id^="email-reader-"]:not(.hidden):not(.modal-minimized) .email-card-reader').forEach(el => candidates.push(el));
@@ -179,7 +179,7 @@ function _getActiveEmailContext() {
 
 // Frontend reads via the global so chat.js doesn't need a separate import
 // path (emailLibrary loads lazily in some entry points).
-try { window.__odysseusGetActiveEmailContext = _getActiveEmailContext; } catch (_) {}
+try { window.__odysseusGetActiveCorreoContext = _getActiveCorreoContext; } catch (_) {}
 
 const _COPY_EMAIL_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
@@ -189,7 +189,7 @@ function _decodeAttrValue(v) {
   return tmp.value;
 }
 
-function _emailAddressFromRecipientText(text) {
+function _emailAgregarressFromRecipientText(text) {
   const raw = String(text || '').trim();
   const angle = raw.match(/<\s*([^<>@\s]+@[^<>\s]+)\s*>/);
   if (angle) return angle[1].trim();
@@ -266,10 +266,10 @@ function _wireMetaToggle(root) {
 
 function _recipientChipHtml(full, label, extraClass = '') {
   const fullText = String(full || '').trim();
-  const addr = _emailAddressFromRecipientText(fullText);
+  const addr = _emailAgregarressFromRecipientText(fullText);
   const labelText = String(label || addr || fullText || '').trim();
   const cls = `recipient-chip${extraClass ? ` ${extraClass}` : ''}`;
-  return `<span class="${cls}" data-full="${_esc(fullText || labelText)}" data-email="${_esc(addr)}" title="Click for details"><span class="recipient-chip-label">${_esc(labelText)}</span><button type="button" class="recipient-chip-copy" title="Copy email" aria-label="Copy email" hidden>${_COPY_EMAIL_ICON}</button></span>`;
+  return `<span class="${cls}" data-full="${_esc(fullText || labelText)}" data-email="${_esc(addr)}" title="Click for details"><span class="recipient-chip-label">${_esc(labelText)}</span><button type="button" class="recipient-chip-copy" title="Copiar email" aria-label="Copiar email" hidden>${_COPY_EMAIL_ICON}</button></span>`;
 }
 
 let _recipientChipPopoverCtl = null;
@@ -286,7 +286,7 @@ function _showRecipientChipPopover(chip) {
   if (!chip) return false;
   _closeRecipientChipPopover();
   const full = _decodeAttrValue(chip.dataset.full || '').trim();
-  const email = chip.dataset.email || _emailAddressFromRecipientText(full);
+  const email = chip.dataset.email || _emailAgregarressFromRecipientText(full);
   const name = chip.dataset.name || chip.querySelector('.recipient-chip-label')?.textContent?.trim() || '';
   const detail = full || email || name;
   if (!detail) return true;
@@ -301,7 +301,7 @@ function _showRecipientChipPopover(chip) {
       ${name && detail !== name ? `<div class="recipient-chip-popover-name">${_esc(name)}</div>` : ''}
       <div class="recipient-chip-popover-detail">${_esc(detail)}</div>
     </div>
-    ${email ? `<button type="button" class="recipient-chip-popover-copy" title="Copy email" aria-label="Copy email">${_COPY_EMAIL_ICON}</button>` : ''}
+    ${email ? `<button type="button" class="recipient-chip-popover-copy" title="Copiar email" aria-label="Copiar email">${_COPY_EMAIL_ICON}</button>` : ''}
   `;
   document.body.appendChild(pop);
 
@@ -325,10 +325,10 @@ function _showRecipientChipPopover(chip) {
       const copied = await _copyTextToClipboard(email);
       if (!copied) throw new Error('copy failed');
       ev.currentTarget.classList.add('copied');
-      showToast?.('Email copied');
+      showToast?.('Correo copied');
       setTimeout(_closeRecipientChipPopover, 650);
     } catch (_) {
-      showToast?.('Copy failed');
+      showToast?.('Copiar failed');
     }
   }, { signal: ctl.signal });
   setTimeout(() => {
@@ -354,20 +354,20 @@ function _wireRecipientChips(root) {
       ev.stopPropagation();
       ev.preventDefault();
       const chip = copyBtn.closest('.recipient-chip');
-      const email = chip?.dataset.email || _emailAddressFromRecipientText(_decodeAttrValue(chip?.dataset.full || ''));
+      const email = chip?.dataset.email || _emailAgregarressFromRecipientText(_decodeAttrValue(chip?.dataset.full || ''));
       if (!email) return;
       try {
         const copied = await _copyTextToClipboard(email);
         if (!copied) throw new Error('copy failed');
         copyBtn.classList.add('copied');
         copyBtn.title = 'Copied';
-        showToast?.('Email copied');
+        showToast?.('Correo copied');
         setTimeout(() => {
           copyBtn.classList.remove('copied');
-          copyBtn.title = 'Copy email';
+          copyBtn.title = 'Copiar email';
         }, 900);
       } catch (_) {
-        showToast?.('Copy failed');
+        showToast?.('Copiar failed');
       }
       return;
     }
@@ -398,28 +398,28 @@ function _wireRecipientChips(root) {
 }
 
 function _emailReaderForSelectAllTarget(target) {
-  if (_isEmailTypingTarget(target)) return null;
+  if (_isCorreoTypingTarget(target)) return null;
   const direct = target?.closest?.('.email-card-reader, #email-lib-modal .doclib-card.doclib-card-expanded');
   if (direct) return direct.querySelector?.('.email-card-reader') || direct;
   const expanded = document.querySelector('#email-lib-modal:not(.hidden) .doclib-card.doclib-card-expanded .email-card-reader');
   if (expanded) return expanded;
-  return _activeEmailReaderForSelectAll;
+  return _activeCorreoReaderForSelectAll;
 }
 
 document.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || String(e.key || '').toLowerCase() !== 'a') return;
   const reader = _emailReaderForSelectAllTarget(e.target);
-  if (!_selectEmailReaderContents(reader)) return;
+  if (!_selectCorreoReaderContents(reader)) return;
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation?.();
 }, true);
 
-function _syncEmailReadState(uid, isRead = true) {
+function _syncCorreoReadState(uid, isRead = true) {
   if (uid == null) return;
   const uidStr = String(uid);
   const read = !!isRead;
-  const match = (state._libEmails || []).find(x => String(x.uid) === uidStr);
+  const match = (state._libCorreos || []).find(x => String(x.uid) === uidStr);
   if (match) match.is_read = read;
 
   document.querySelectorAll('.doclib-card[data-uid="' + CSS.escape(uidStr) + '"]').forEach(card => {
@@ -457,13 +457,13 @@ function _syncEmailReadState(uid, isRead = true) {
 window.addEventListener('email-answered', (e) => {
   const uid = e.detail && e.detail.uid;
   if (uid == null) return;
-  const em = (state._libEmails || []).find(x => String(x.uid) === String(uid));
+  const em = (state._libCorreos || []).find(x => String(x.uid) === String(uid));
   if (em) {
     em.is_answered = true;
     em.is_read = true;
     _clearDoneResponseTagsLocal(em);
   }
-  _syncEmailReadState(uid, true);
+  _syncCorreoReadState(uid, true);
   document.querySelectorAll('.doclib-card[data-uid="' + CSS.escape(String(uid)) + '"]').forEach(card => {
     card.classList.add('email-card-answered');
     card.classList.remove('email-card-unread');
@@ -473,7 +473,7 @@ window.addEventListener('email-answered', (e) => {
   });
 });
 
-function _toggleUnreadEmails() {
+function _toggleUnreadCorreos() {
   if (state._libFolder === '__scheduled__') state._libFolder = 'INBOX';
   state._libFilter = state._libFilter === 'unread' ? 'all' : 'unread';
   _syncUnreadWindowGlow();
@@ -483,7 +483,7 @@ function _toggleUnreadEmails() {
   if (filterEl) filterEl.value = state._libFilter;
   document.getElementById('email-undone-btn')?.classList.remove('active');
   document.getElementById('email-reminder-btn')?.classList.remove('active');
-  _loadEmailsFresh();
+  _loadCorreosFresh();
 }
 
 function _syncUnreadTabBadge(count) {
@@ -494,7 +494,7 @@ function _syncUnreadTabBadge(count) {
       chip.title = `Open ${label}`;
     } else {
       delete chip.dataset.emailUnreadLabel;
-      chip.title = 'Restore Email';
+      chip.title = 'Restaurar Correo';
     }
   });
 }
@@ -519,27 +519,27 @@ function _renderAccountsLoading() {
   } catch (_) {}
 }
 
-function _syncEmailReminderBellVisibility(enabled) {
+function _syncCorreoReminderBellVisibility(enabled) {
   const btn = document.getElementById('email-reminder-btn');
   const wrap = document.querySelector('#email-lib-modal .email-search-wrap');
   btn?.classList.toggle('hidden', !enabled);
   wrap?.classList.toggle('email-reminder-bell-hidden', !enabled);
 }
 
-async function _loadEmailReminderBellVisibility() {
+async function _loadCorreoReminderBellVisibility() {
   try {
     const res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     const settings = await res.json();
-    _syncEmailReminderBellVisibility(settings.reminder_channel === 'email');
+    _syncCorreoReminderBellVisibility(settings.reminder_channel === 'email');
   } catch (_) {
-    _syncEmailReminderBellVisibility(false);
+    _syncCorreoReminderBellVisibility(false);
   }
 }
-// Live-update the bell when the reminder channel changes in Settings,
-// so the user doesn't have to reopen Email to see the change apply.
+// Live-update the bell when the reminder channel changes in Configuración,
+// so the user doesn't have to reopen Correo to see the change apply.
 window.addEventListener('odysseus-reminder-channel-changed', (e) => {
   const ch = e?.detail?.channel;
-  _syncEmailReminderBellVisibility(ch === 'email');
+  _syncCorreoReminderBellVisibility(ch === 'email');
 });
 
 function _readCssPx(name) {
@@ -552,7 +552,7 @@ function _emailSplitLeftEdge() {
   return _readCssPx('--icon-rail-w') + _readCssPx('--sidebar-w');
 }
 
-function _setEmailDocumentSplit(leftEdge, emailWidth) {
+function _setCorreoDocumentSplit(leftEdge, emailWidth) {
   if (window.innerWidth <= 768) return;
   // Zero gap so the doc-pane sits flush against the email's right edge.
   // modalSnap.js's left-dock path publishes the same vars with 0 gap — both
@@ -568,7 +568,7 @@ function _setEmailDocumentSplit(leftEdge, emailWidth) {
   document.documentElement.style.setProperty('--email-doc-split-right-x', `${x}px`);
 }
 
-function _measureEmailDocumentSplit(modal) {
+function _measureCorreoDocumentSplit(modal) {
   if (window.innerWidth <= 768 || !document.body.classList.contains('email-doc-split-active')) return;
   const content = modal?.querySelector?.('.modal-content');
   const rect = content?.getBoundingClientRect?.();
@@ -599,16 +599,16 @@ function _measureEmailDocumentSplit(modal) {
   } catch (_) {}
 }
 
-function _scheduleEmailDocumentSplitMeasure(modal) {
+function _scheduleCorreoDocumentSplitMeasure(modal) {
   requestAnimationFrame(() => {
-    _measureEmailDocumentSplit(modal);
-    requestAnimationFrame(() => _measureEmailDocumentSplit(modal));
+    _measureCorreoDocumentSplit(modal);
+    requestAnimationFrame(() => _measureCorreoDocumentSplit(modal));
   });
-  setTimeout(() => _measureEmailDocumentSplit(modal), 260);
-  setTimeout(() => _measureEmailDocumentSplit(modal), 700);
+  setTimeout(() => _measureCorreoDocumentSplit(modal), 260);
+  setTimeout(() => _measureCorreoDocumentSplit(modal), 700);
 }
 
-function _clearEmailDocumentSplit() {
+function _clearCorreoDocumentSplit() {
   document.body.classList.remove('email-doc-split-active');
   document.documentElement.style.removeProperty('--email-doc-split-left-x');
   document.documentElement.style.removeProperty('--email-doc-split-email-w');
@@ -628,7 +628,7 @@ function _emailSplitLeftEdgeIfSidebarCollapsed() {
   return _readCssPx('--icon-rail-w');
 }
 
-function _hasDesktopRoomForEmailAndDocument(modal, opts = {}) {
+function _hasDesktopRoomForCorreoAndDocument(modal, opts = {}) {
   if (window.innerWidth <= 768) return false;
   if (window.innerWidth >= 1100) return true;
   const content = modal?.querySelector?.('.modal-content');
@@ -647,7 +647,7 @@ function _hasDesktopRoomForEmailAndDocument(modal, opts = {}) {
   return (window.innerWidth - leftEdge - emailWidth) >= (docMinWidth + breathingRoom);
 }
 
-function _prepareEmailWindowForDocument(modal) {
+function _prepareCorreoWindowForDocument(modal) {
   if (window.innerWidth <= 768) return true;
   if (!modal) return false;
   // Try to make breathing room by collapsing the wide sidebar to the rail
@@ -657,10 +657,10 @@ function _prepareEmailWindowForDocument(modal) {
   // longer fall back to clearing the split when even that isn't enough —
   // the user opted out of auto-tab-down, so we proceed with the dock
   // even if it's cramped.
-  if (!_hasDesktopRoomForEmailAndDocument(modal)) {
+  if (!_hasDesktopRoomForCorreoAndDocument(modal)) {
     const sidebar = document.getElementById('sidebar');
     const sidebarWasOpen = sidebar && !sidebar.classList.contains('hidden');
-    if (sidebarWasOpen && _hasDesktopRoomForEmailAndDocument(modal, { assumeSidebarCollapsed: true })) {
+    if (sidebarWasOpen && _hasDesktopRoomForCorreoAndDocument(modal, { assumeSidebarCollapsed: true })) {
       try { collapseSidebarToRail(); } catch (_) {}
     }
   }
@@ -696,13 +696,13 @@ function _prepareEmailWindowForDocument(modal) {
   }
   if (modal.classList.contains('email-snap-left') || modal.classList.contains('modal-left-docked')) {
     const rect = modal.querySelector('.modal-content')?.getBoundingClientRect?.();
-    _setEmailDocumentSplit(rect?.left || _emailSplitLeftEdge(), rect?.width || 420);
-    _scheduleEmailDocumentSplitMeasure(modal);
+    _setCorreoDocumentSplit(rect?.left || _emailSplitLeftEdge(), rect?.width || 420);
+    _scheduleCorreoDocumentSplitMeasure(modal);
     return false;
   }
-  // If Email is fullscreen and there is room, park it left instead of
+  // If Correo is fullscreen and there is room, park it left instead of
   // minimizing so the document/compose pane can open beside it.
-  _snapEmailModalToLeftSidebar(modal);
+  _snapCorreoModalToLeftSidebar(modal);
   return false;
 }
 
@@ -712,22 +712,22 @@ function _wireUnreadTabClick() {
   document.addEventListener('click', (e) => {
     const chip = e.target?.closest?.('.minimized-dock-chip[data-modal-id="email-lib-modal"][data-email-unread-label]');
     if (!chip || e.target?.classList?.contains('minimized-dock-x')) return;
-    setTimeout(_toggleUnreadEmails, 0);
+    setTimeout(_toggleUnreadCorreos, 0);
   });
 }
 
-async function _deleteEmailAndAdvance(em, card, opts = {}) {
+async function _deleteCorreoAndAdvance(em, card, opts = {}) {
   if (!em || em.uid == null) return;
   if (opts.confirm !== false) {
     const subject = em.subject || '(no subject)';
-    const ok = await styledConfirm(`Delete "${subject}"?`, { confirmText: 'Delete', cancelText: 'Cancel', danger: true });
+    const ok = await styledConfirmar(`Eliminar "${subject}"?`, { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true });
     if (!ok) return;
   }
-  const busy = _showEmailDeleteOverlay(card);
+  const busy = _showCorreoEliminarOverlay(card);
   await busy?.ready;
   const wasExpanded = !!card?.classList?.contains('doclib-card-expanded');
   const sibling = wasExpanded
-    ? (_findSiblingEmailCard(card, +1) || _findSiblingEmailCard(card, -1))
+    ? (_findSiblingCorreoCard(card, +1) || _findSiblingCorreoCard(card, -1))
     : null;
   const nextUid = sibling ? sibling.dataset.uid : null;
   try {
@@ -739,17 +739,17 @@ async function _deleteEmailAndAdvance(em, card, opts = {}) {
     return;
   }
   busy?.remove?.();
-  await _animateEmailCardRemoval([em.uid]);
-  state._libEmails = state._libEmails.filter(e => String(e.uid) !== String(em.uid));
+  await _animateCorreoCardRemoval([em.uid]);
+  state._libCorreos = state._libCorreos.filter(e => String(e.uid) !== String(em.uid));
   state._selectedUids.delete(em.uid);
   _updateBulkBar();
   _renderGrid();
   _libCacheWriteBack();
-  showToast('Moved to Trash');
+  showToast('Moverd to Trash');
   if (!wasExpanded || !nextUid) return;
   const grid = document.getElementById('email-lib-grid');
   const nextCard = grid?.querySelector(`.doclib-card[data-uid="${CSS.escape(String(nextUid))}"]`);
-  const nextEm = state._libEmails.find(e => String(e.uid) === String(nextUid));
+  const nextEm = state._libCorreos.find(e => String(e.uid) === String(nextUid));
   if (nextCard && nextEm) {
     await _toggleCardPreview(nextCard, nextEm);
     nextCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -758,7 +758,7 @@ async function _deleteEmailAndAdvance(em, card, opts = {}) {
   }
 }
 
-function _showEmailDeleteOverlay(target) {
+function _showCorreoEliminarOverlay(target) {
   if (!target) return null;
   const wp = spinnerModule.createWhirlpool(18);
   const overlay = document.createElement('div');
@@ -783,7 +783,7 @@ function _showEmailDeleteOverlay(target) {
   };
 }
 
-function _animateEmailCardRemoval(uids, opts = {}) {
+function _animateCorreoCardRemoval(uids, opts = {}) {
   const uidSet = new Set((uids || []).map(uid => String(uid)));
   if (!uidSet.size) return Promise.resolve();
   const grid = document.getElementById('email-lib-grid');
@@ -810,9 +810,9 @@ function _animateEmailCardRemoval(uids, opts = {}) {
 // URL-suffix helper — appends &account_id=... when an account is actively selected.
 // Every email route call in this file goes through here so switching accounts
 // is a single-variable flip.
-// Open the Settings modal and activate a specific tab. Used by empty-state
-// "Set up at: Settings › X" links across email/calendar/etc.
-function _openSettingsTab(tab) {
+// Open the Configuración modal and activate a specific tab. Used by empty-state
+// "Set up at: Configuración › X" links across email/calendar/etc.
+function _openConfiguraciónTab(tab) {
   if (tab === 'integrations' && window.adminModule && typeof window.adminModule.open === 'function') {
     window.adminModule.open('integrations');
     return;
@@ -830,17 +830,17 @@ function _openSettingsTab(tab) {
 
 function _emailSetupHintHtml() {
   return '<div style="margin-top:6px;opacity:0.72;font-size:11px;">' +
-    'Setup: <a href="#" data-open-settings="integrations" style="color:var(--accent,var(--red));text-decoration:underline;">Settings &rsaquo; Integrations</a>' +
+    'Setup: <a href="#" data-open-settings="integrations" style="color:var(--accent,var(--red));text-decoration:underline;">Configuración &rsaquo; Integrations</a>' +
     '</div>';
 }
 
-function _wireEmailSetupHint(root) {
+function _wireCorreoSetupHint(root) {
   root?.querySelectorAll?.('[data-open-settings]').forEach(link => {
     if (link.dataset.emailSetupBound === '1') return;
     link.dataset.emailSetupBound = '1';
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      _openSettingsTab(link.dataset.openSettings || 'integrations');
+      _openConfiguraciónTab(link.dataset.openConfiguración || 'integrations');
     });
   });
 }
@@ -855,7 +855,7 @@ function _acct() {
 // used to wipe its DOM and spinner-from-empty on every open, even when
 // the same view was just visible a second ago.
 //
-// Session-only (lives in module scope, cleared on hard reload). Search
+// Session-only (lives in module scope, cleared on hard reload). Buscar
 // results and __scheduled__ are deliberately not cached.
 const _libListCache = new Map();
 const _LIB_CACHE_MAX = 24;
@@ -889,7 +889,7 @@ function _libRelativeTime(value) {
   return `${days}d ago`;
 }
 
-function _renderEmailSyncStatus() {
+function _renderCorreoSyncStatus() {
   const el = document.getElementById('email-lib-sync-status');
   if (!el) return;
   if (_libSyncStatus.loading) {
@@ -904,7 +904,7 @@ function _renderEmailSyncStatus() {
   el.style.visibility = parts.length ? 'visible' : 'hidden';
 }
 
-function _setEmailSyncStatus(next = {}) {
+function _setCorreoSyncStatus(next = {}) {
   if (Object.prototype.hasOwnProperty.call(next, 'updatedAt')) {
     const updatedAt = next.updatedAt || '';
     if (!updatedAt) {
@@ -922,7 +922,7 @@ function _setEmailSyncStatus(next = {}) {
   if (Object.prototype.hasOwnProperty.call(next, 'loading')) {
     _libSyncStatus.loading = Boolean(next.loading);
   }
-  _renderEmailSyncStatus();
+  _renderCorreoSyncStatus();
 }
 
 function _libCacheKeyFor(accountId, folder, filter, hasAttachments) {
@@ -963,21 +963,21 @@ function _resetBulkSelectionForContextChange({ rerender = false } = {}) {
   }
 }
 
-function _resetEmailListForFreshLoad() {
-  _exitEmailReaderModeForList();
+function _resetCorreoListForFreshLoad() {
+  _exitCorreoReaderModeForList();
   _resetBulkSelectionForContextChange();
   state._libOffset = 0;
-  state._libEmails = [];
+  state._libCorreos = [];
   state._libTotal = 0;
   _libLoadSeq += 1;
   const grid = document.getElementById('email-lib-grid');
-  if (grid) _renderEmailLoading(grid);
+  if (grid) _renderCorreoLoading(grid);
   const stats = document.getElementById('email-lib-stats');
-  if (stats) stats.textContent = 'Loading...';
-  _setEmailSyncStatus({ loading: true });
+  if (stats) stats.textContent = 'Cargando...';
+  _setCorreoSyncStatus({ loading: true });
 }
 
-function _exitEmailReaderModeForList() {
+function _exitCorreoReaderModeForList() {
   const modal = document.getElementById('email-lib-modal');
   modal?.classList.remove('email-reading');
   modal?.style.removeProperty('--email-reading-modal-min-h');
@@ -990,9 +990,9 @@ function _exitEmailReaderModeForList() {
   });
 }
 
-function _loadEmailsFresh() {
-  _resetEmailListForFreshLoad();
-  return _loadEmails({ force: true, useCache: false });
+function _loadCorreosFresh() {
+  _resetCorreoListForFreshLoad();
+  return _loadCorreos({ force: true, useCache: false });
 }
 
 function _isChatInteractionBusy() {
@@ -1005,25 +1005,25 @@ function _isChatInteractionBusy() {
   }
 }
 
-function _loadEmailsWhenChatIdle({ delay = 700, retries = 180, options = {} } = {}) {
+function _loadCorreosWhenChatIdle({ delay = 700, retries = 180, options = {} } = {}) {
   const run = () => {
     if (!state._libOpen || !document.getElementById('email-lib-modal')) return;
     if (_isChatInteractionBusy() && retries > 0) {
-      setTimeout(() => _loadEmailsWhenChatIdle({ delay: 1000, retries: retries - 1, options }), 1000);
+      setTimeout(() => _loadCorreosWhenChatIdle({ delay: 1000, retries: retries - 1, options }), 1000);
       return;
     }
-    _loadEmails(options);
+    _loadCorreos(options);
   };
   setTimeout(run, Math.max(0, Number(delay) || 0));
 }
 
-export function prewarmEmailLibrary({ delay = 2500 } = {}) {
+export function prewarmCorreoLibrary({ delay = 2500 } = {}) {
   if (_libPrewarmTimer || _libPrewarmPromise) return;
   const elapsed = Date.now() - _libLastPrewarmAt;
   if (elapsed >= 0 && elapsed < 5 * 60 * 1000) return;
   _libPrewarmTimer = setTimeout(() => {
     _libPrewarmTimer = null;
-    _libPrewarmPromise = _prewarmEmailViews()
+    _libPrewarmPromise = _prewarmCorreoViews()
       .catch(() => {})
       .finally(() => { _libPrewarmPromise = null; });
   }, Math.max(0, Number(delay) || 0));
@@ -1033,10 +1033,10 @@ function _sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function _prewarmEmailViews() {
+async function _prewarmCorreoViews() {
   if (state._libOpen) return;
   _libLastPrewarmAt = Date.now();
-  _setEmailSyncStatus({ warming: true });
+  _setCorreoSyncStatus({ warming: true });
   const folder = 'INBOX';
   const filter = 'all';
 
@@ -1094,7 +1094,7 @@ async function _prewarmEmailViews() {
             total: data.total || 0,
             sync,
           });
-          _setEmailSyncStatus({
+          _setCorreoSyncStatus({
             updatedAt: sync.updated_at || new Date().toISOString(),
             source: sync.source || '',
             warming: true,
@@ -1104,21 +1104,21 @@ async function _prewarmEmailViews() {
       await _sleep(900);
     }
   } finally {
-    _setEmailSyncStatus({ warming: false });
+    _setCorreoSyncStatus({ warming: false });
   }
 }
 function _libCacheWriteBack() {
-  // After a local mutation that already updated state._libEmails
+  // After a local mutation that already updated state._libCorreos
   // (delete / archive / bulk), sync the change into the cache so the
   // next reopen doesn't briefly show the pre-mutation state before the
   // refetch wins. Skipped during search (results aren't the real list)
   // and on the scheduled virtual folder.
-  if (state._libSearch) return;
+  if (state._libBuscar) return;
   if (state._libFolder === '__scheduled__') return;
   const ck = _libCacheKey();
   if (_libListCache.has(ck)) {
     _libCachePut(ck, {
-      emails: state._libEmails.slice(),
+      emails: state._libCorreos.slice(),
       total: state._libTotal,
       sync: {
         updated_at: _libSyncStatus.updatedAt || new Date().toISOString(),
@@ -1131,7 +1131,7 @@ function _libCacheWriteBack() {
 // Expose the active account id to other modules (document.js uses this when sending).
 // Simple global rather than cross-module import to keep coupling minimal.
 function _publishActiveAccount() {
-  try { window.__odysseusActiveEmailAccount = state._libAccountId || null; } catch (_) {}
+  try { window.__odysseusActiveCorreoAccount = state._libAccountId || null; } catch (_) {}
   // Publish the active account's own address so reply-all can exclude us from
   // the recipient list. This global was read in emailInbox.js but never set.
   try {
@@ -1139,7 +1139,7 @@ function _publishActiveAccount() {
     const active = accts.find(a => a && a.id === state._libAccountId)
       || accts.find(a => a && a.is_default)
       || accts[0];
-    window._myEmailAddress = (active && (active.from_address || active.imap_user)) || '';
+    window._myCorreoAgregarress = (active && (active.from_address || active.imap_user)) || '';
     // Also publish every configured address so reply-all can exclude all of
     // the user's own mailboxes, not just the active one (multi-account users
     // were getting their other addresses added to Cc).
@@ -1148,18 +1148,18 @@ function _publishActiveAccount() {
       if (a && a.from_address) all.push(a.from_address);
       if (a && a.imap_user) all.push(a.imap_user);
     }
-    window._myEmailAddresses = all;
+    window._myCorreoAgregarresses = all;
   } catch (_) {}
 }
 
-export function initEmailLibrary(config) {
+export function initCorreoLibrary(config) {
   state._docModule = config.documentModule;
-  state._onEmailClick = config.onEmailClick;
+  state._onCorreoClick = config.onCorreoClick;
 }
 
 export function isOpen() { return state._libOpen; }
 
-export function openEmailLibrary(opts = {}) {
+export function openCorreoLibrary(opts = {}) {
   // Force-clean any stale state from previous attempts
   const existing = document.getElementById('email-lib-modal');
   if (existing) existing.remove();
@@ -1175,20 +1175,20 @@ export function openEmailLibrary(opts = {}) {
     if (_sb) _sb.classList.add('hidden');
     const _bd = document.getElementById('sidebar-backdrop');
     if (_bd) _bd.classList.remove('visible');
-    // Email was opened last → bring the email windows IN FRONT of any open doc
+    // Correo was opened last → bring the email windows IN FRONT of any open doc
     // (they alternate: whichever was opened last wins). The doc stays open
     // behind it; reopening the doc flips it back on top.
     document.body.classList.add('email-front');
   }
-  state._libEmails = [];
+  state._libCorreos = [];
   state._libOffset = 0;
-  state._libSearch = '';
-  state._libSearchDraft = '';
+  state._libBuscar = '';
+  state._libBuscarDraft = '';
   // Reset select-mode on each open so the toolbar Select button
   // never opens already-toggled-on after a previous session.
   state._selectMode = false;
   if (state._selectedUids) state._selectedUids.clear();
-  state._libSearchPills = [];
+  state._libBuscarPills = [];
   _libSuggestionCache = null;
   state._libFilter = 'all';
   state._libHasAttachments = false;
@@ -1214,7 +1214,7 @@ export function openEmailLibrary(opts = {}) {
             <rect x="2" y="4" width="20" height="16" rx="2"/>
             <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
           </svg>
-          Email
+          Correo
           <span id="email-lib-unread-badge" class="email-lib-unread-badge" role="button" tabindex="0" title="Show unread emails" style="display:none"></span>
           <span id="email-lib-stats" class="memory-count" style="font-size:0.6em;opacity:0.6;font-weight:normal;margin-left:8px;position:relative;top:-2px"></span>
         </h4>
@@ -1279,7 +1279,7 @@ export function openEmailLibrary(opts = {}) {
               <div class="email-lib-chip-bar memory-search-input" id="email-lib-chip-bar" style="width:100%;padding-right:134px;padding-left:26px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;cursor:text;min-height:30px;position:relative;">
                 <svg class="email-lib-chip-bar-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--accent, var(--red));"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
                 <span id="email-lib-pills" style="display:contents"></span>
-                <input type="text" id="email-lib-search" placeholder="Search by name or text" autocomplete="off" style="flex:1;min-width:80px;border:0;outline:none;background:transparent;color:inherit;font:inherit;padding:0;position:relative;top:-1px;" />
+                <input type="text" id="email-lib-search" placeholder="Buscar by name or text" autocomplete="off" style="flex:1;min-width:80px;border:0;outline:none;background:transparent;color:inherit;font:inherit;padding:0;position:relative;top:-1px;" />
               </div>
               <div id="email-lib-suggest" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:60;background:var(--panel,var(--bg));border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.25);max-height:240px;overflow-y:auto;"></div>
               <button class="memory-toolbar-btn email-undone-toggle email-undone-toggle-inline" id="email-undone-btn" title="Show only emails not marked as done (undone)">
@@ -1301,8 +1301,8 @@ export function openEmailLibrary(opts = {}) {
             <label class="memory-bulk-check-all" style="position:relative;top:0px;"><input type="checkbox" id="email-lib-select-all"> All</label>
             <span id="email-lib-selected-count" style="position:relative;top:1px;">0 Selected</span>
             <button class="memory-toolbar-btn" id="email-lib-bulk-actions" style="position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Actions <span style="opacity:0.55;font-size:9px;">▼</span></button>
-            <button class="memory-toolbar-btn" id="email-lib-bulk-delete" style="position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Delete</button>
-            <button class="memory-toolbar-btn" id="email-lib-bulk-cancel" title="Cancel (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            <button class="memory-toolbar-btn" id="email-lib-bulk-delete" style="position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Eliminar</button>
+            <button class="memory-toolbar-btn" id="email-lib-bulk-cancel" title="Cancelar (Esc)" style="margin-left:4px;padding:3px 6px;position:relative;top:-2px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <div id="email-lib-grid" class="doclib-grid"></div>
           <div id="email-lib-sync-status" class="email-lib-sync-status" aria-live="polite"></div>
@@ -1317,9 +1317,9 @@ export function openEmailLibrary(opts = {}) {
 
   document.body.appendChild(modal);
   modal.style.display = 'block';
-  _renderEmailSyncStatus();
+  _renderCorreoSyncStatus();
   if (_libSyncTicker) clearInterval(_libSyncTicker);
-  _libSyncTicker = setInterval(_renderEmailSyncStatus, 30000);
+  _libSyncTicker = setInterval(_renderCorreoSyncStatus, 30000);
   // Make modal background non-blocking so user can interact with rest of the app
   modal.style.cssText += 'pointer-events:none;background:transparent;';
 
@@ -1328,7 +1328,7 @@ export function openEmailLibrary(opts = {}) {
   // expanded inside stays expanded.
   try {
     Modals.register('email-lib-modal', {
-      label: 'Email',
+      label: 'Correo',
       icon: 'M2 4h20v16H2zM22 7l-9.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7',
       closeFn: () => {
         const m = document.getElementById('email-lib-modal');
@@ -1357,12 +1357,12 @@ export function openEmailLibrary(opts = {}) {
   const unreadBadge = document.getElementById('email-lib-unread-badge');
   unreadBadge?.addEventListener('click', (e) => {
     e.stopPropagation();
-    _toggleUnreadEmails();
+    _toggleUnreadCorreos();
   });
   unreadBadge?.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
-    _toggleUnreadEmails();
+    _toggleUnreadCorreos();
   });
   const content = modal.querySelector('.modal-content');
   if (content) {
@@ -1395,7 +1395,7 @@ export function openEmailLibrary(opts = {}) {
   }
 
   // Wire events
-  document.getElementById('email-lib-close').addEventListener('click', closeEmailLibrary);
+  document.getElementById('email-lib-close').addEventListener('click', closeCorreoLibrary);
 
   // Clicking the modal header (anywhere except buttons/inputs) collapses
   // any currently-expanded email card and returns to the inbox list view.
@@ -1409,7 +1409,7 @@ export function openEmailLibrary(opts = {}) {
       if (!g) return;
       g.querySelectorAll('.doclib-card.doclib-card-expanded').forEach(c => {
         const uid = c.dataset.uid;
-        const liveEm = state._libEmails.find(e => String(e.uid) === String(uid));
+        const liveEm = state._libCorreos.find(e => String(e.uid) === String(uid));
         if (liveEm) _toggleCardPreview(c, liveEm);
       });
     });
@@ -1421,13 +1421,13 @@ export function openEmailLibrary(opts = {}) {
 
   document.getElementById('email-lib-folder').addEventListener('change', (e) => {
     state._libFolder = e.target.value;
-    _loadEmailsFresh();
+    _loadCorreosFresh();
   });
   document.getElementById('email-lib-filter').addEventListener('change', (e) => {
     state._libFilter = e.target.value;
     _syncUnreadWindowGlow();
     _syncReminderClearButton();
-    _loadEmailsFresh();
+    _loadCorreosFresh();
     // Sync quick-toggle active states so they mirror the dropdown.
     document.getElementById('email-undone-btn')?.classList.toggle('active', state._libFilter === 'undone');
     document.getElementById('email-reminder-btn')?.classList.toggle('active', state._libFilter === 'reminders');
@@ -1440,7 +1440,7 @@ export function openEmailLibrary(opts = {}) {
     state._libHasAttachments = !state._libHasAttachments;
     btn?.classList.toggle('active', state._libHasAttachments);
     _syncReminderClearButton();
-    _loadEmailsFresh();
+    _loadCorreosFresh();
   });
   const tagsToggle = document.getElementById('email-tags-toggle-btn');
   if (tagsToggle) {
@@ -1456,9 +1456,9 @@ export function openEmailLibrary(opts = {}) {
     });
   }
   document.getElementById('email-reminders-clear-btn')?.addEventListener('click', async () => {
-    const ok = await styledConfirm('Permanently delete all Odysseus reminder emails?', {
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+    const ok = await styledConfirmar('Permanently delete all Odysseus reminder emails?', {
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
       danger: true,
     });
     if (!ok) return;
@@ -1468,19 +1468,19 @@ export function openEmailLibrary(opts = {}) {
         credentials: 'same-origin',
       });
       const data = await res.json().catch(() => ({}));
-      showToast(`Deleted ${data.deleted || 0} reminder email${(data.deleted || 0) === 1 ? '' : 's'}`);
+      showToast(`Eliminard ${data.deleted || 0} reminder email${(data.deleted || 0) === 1 ? '' : 's'}`);
       if ((data.deleted || 0) > 0) {
         const visibleUids = Array.from(document.querySelectorAll('#email-lib-grid .doclib-card[data-uid]'))
           .map(card => card.dataset.uid)
           .filter(Boolean);
-        await _animateEmailCardRemoval(visibleUids);
+        await _animateCorreoCardRemoval(visibleUids);
       }
       state._libFilter = 'all';
       const filterEl = document.getElementById('email-lib-filter');
       if (filterEl) filterEl.value = 'all';
       document.getElementById('email-reminder-btn')?.classList.remove('active');
       _syncReminderClearButton();
-      _loadEmailsFresh();
+      _loadCorreosFresh();
     } catch (err) {
       console.error(err);
       showToast('Failed to clear reminder emails');
@@ -1501,7 +1501,7 @@ export function openEmailLibrary(opts = {}) {
     }
     _syncUnreadWindowGlow();
     _syncReminderClearButton();
-    _loadEmailsFresh();
+    _loadCorreosFresh();
   });
   document.getElementById('email-reminder-btn')?.addEventListener('click', () => {
     const btn = document.getElementById('email-reminder-btn');
@@ -1518,7 +1518,7 @@ export function openEmailLibrary(opts = {}) {
     }
     _syncUnreadWindowGlow();
     _syncReminderClearButton();
-    _loadEmailsFresh();
+    _loadCorreosFresh();
   });
   // The old "sort" dropdown (Latest / Unread first / Favorites first) was merged
   // into the filter dropdown above — "Favorites" is now a filter (server-side
@@ -1529,18 +1529,18 @@ export function openEmailLibrary(opts = {}) {
   // input below drives the autocomplete dropdown. Old behavior — instant
   // local filter on every keystroke + server-side IMAP search after 350ms
   // — is replaced by deterministic local filtering against the snapshot.
-  _initEmailSearchChipBar();
+  _initCorreoBuscarChipBar();
 
   document.getElementById('email-lib-refresh-btn').addEventListener('click', async () => {
     const btn = document.getElementById('email-lib-refresh-btn');
     btn?.classList.add('email-lib-refreshing');
     state._libOffset = 0;
-    // Don't wipe state._libEmails — _loadEmails will paint the cached
+    // Don't wipe state._libCorreos — _loadCorreos will paint the cached
     // list while the forced refetch runs, so the grid doesn't blank out
     // mid-refresh. `force: true` adds the cache-buster so the server's
     // 8s list cache is bypassed for an actually-fresh result.
     try {
-      await _loadEmails({ force: true });
+      await _loadCorreos({ force: true });
     } finally {
       btn?.classList.remove('email-lib-refreshing');
       // Flash a checkmark for ~900ms so the user gets a clear "done" cue.
@@ -1560,14 +1560,14 @@ export function openEmailLibrary(opts = {}) {
 
 
   const _composeNew = () => {
-    // Desktop: keep Email open when there is enough room for it plus the
+    // Desktop: keep Correo open when there is enough room for it plus the
     // compose/document pane. Mobile still tabs down so the doc owns the screen.
-    if (_prepareEmailWindowForDocument(document.getElementById('email-lib-modal'))) {
-      if (!Modals.minimize('email-lib-modal')) closeEmailLibrary();
+    if (_prepareCorreoWindowForDocument(document.getElementById('email-lib-modal'))) {
+      if (!Modals.minimize('email-lib-modal')) closeCorreoLibrary();
     }
-    if (state._onEmailClick) state._onEmailClick({ compose: true });
+    if (state._onCorreoClick) state._onCorreoClick({ compose: true });
     if (document.body.classList.contains('email-doc-split-active')) {
-      _scheduleEmailDocumentSplitMeasure(document.getElementById('email-lib-modal'));
+      _scheduleCorreoDocumentSplitMeasure(document.getElementById('email-lib-modal'));
     }
   };
   document.getElementById('email-lib-compose-btn').addEventListener('click', _composeNew);
@@ -1656,13 +1656,13 @@ export function openEmailLibrary(opts = {}) {
   }
 
   // Select mode toggle — icon + label swap matches the brain memories
-  // select button (dot+Select ↔ X+Cancel).
+  // select button (dot+Select ↔ X+Cancelar).
   const _SELECT_BTN_DOT_SVG = '<svg class="memory-select-btn-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>';
   const _SELECT_BTN_X_SVG = '<svg class="memory-select-btn-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-2px;margin-right:3px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const _setSelectBtnState = (on) => {
     const btn = document.getElementById('email-lib-select-btn');
     if (!btn) return;
-    if (on) { btn.classList.add('active'); btn.innerHTML = _SELECT_BTN_X_SVG + 'Cancel'; }
+    if (on) { btn.classList.add('active'); btn.innerHTML = _SELECT_BTN_X_SVG + 'Cancelar'; }
     else { btn.classList.remove('active'); btn.innerHTML = _SELECT_BTN_DOT_SVG + 'Select'; }
   };
   document.getElementById('email-lib-select-btn').addEventListener('click', () => {
@@ -1674,7 +1674,7 @@ export function openEmailLibrary(opts = {}) {
   });
   document.getElementById('email-lib-select-all').addEventListener('change', (e) => {
     if (e.target.checked) {
-      state._libEmails.forEach(em => state._selectedUids.add(em.uid));
+      state._libCorreos.forEach(em => state._selectedUids.add(em.uid));
     } else {
       state._selectedUids.clear();
     }
@@ -1682,7 +1682,7 @@ export function openEmailLibrary(opts = {}) {
     _renderGrid();
   });
 
-  // Bulk cancel — wired with the same teardown a fresh Cancel-via-toggle does.
+  // Bulk cancel — wired with the same teardown a fresh Cancelar-via-toggle does.
   // Lets the global Esc handler (keyboard-shortcuts.js) close select mode by
   // clicking the visible [id$="-bulk-cancel"] button.
   document.getElementById('email-lib-bulk-cancel')?.addEventListener('click', () => {
@@ -1711,20 +1711,20 @@ export function openEmailLibrary(opts = {}) {
     _bulkAction('delete');
   });
 
-  const selectExpandedEmailText = () => {
+  const selectExpandedCorreoText = () => {
     const expanded = document.querySelector('#email-lib-modal .doclib-card.doclib-card-expanded');
     const reader = expanded?.querySelector('.email-card-reader') || expanded;
-    return _selectEmailReaderContents(reader);
+    return _selectCorreoReaderContents(reader);
   };
 
-  // ESC to close + Arrow nav + Delete on the selected / currently-expanded email.
+  // ESC to close + Arrow nav + Eliminar on the selected / currently-expanded email.
   state._libEscHandler = (e) => {
     const modal = document.getElementById('email-lib-modal');
     if (!modal || modal.classList.contains('hidden')) return;
     if ((e.ctrlKey || e.metaKey) && String(e.key || '').toLowerCase() === 'a') {
       const t = e.target;
-      if (_isEmailTypingTarget(t)) return;
-      if (selectExpandedEmailText()) {
+      if (_isCorreoTypingTarget(t)) return;
+      if (selectExpandedCorreoText()) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
@@ -1737,7 +1737,7 @@ export function openEmailLibrary(opts = {}) {
       e.stopImmediatePropagation?.();
       const expanded = modal.querySelector('.doclib-card.doclib-card-expanded');
       if (expanded) {
-        _exitEmailReaderModeForList();
+        _exitCorreoReaderModeForList();
         expanded.focus?.({ preventScroll: true });
         return;
       }
@@ -1748,14 +1748,14 @@ export function openEmailLibrary(opts = {}) {
         _renderGrid();
         return;
       }
-      closeEmailLibrary();
+      closeCorreoLibrary();
       return;
     }
     // Don't hijack arrows / delete while the user is typing somewhere.
     const t = e.target;
-    if (_isEmailTypingTarget(t)) return;
-    const isDeleteKey = e.key === 'Delete' || e.key === 'Backspace';
-    if (isDeleteKey && state._selectMode && state._selectedUids.size > 0) {
+    if (_isCorreoTypingTarget(t)) return;
+    const isEliminarKey = e.key === 'Eliminar' || e.key === 'Backspace';
+    if (isEliminarKey && state._selectMode && state._selectedUids.size > 0) {
       e.preventDefault();
       _bulkAction('delete');
       return;
@@ -1766,18 +1766,18 @@ export function openEmailLibrary(opts = {}) {
       const dir = e.key === 'ArrowLeft' ? '-1' : '1';
       const btn = expanded.querySelector(`.email-card-nav-btn[data-nav-dir="${dir}"]`);
       if (btn) { e.preventDefault(); btn.click(); }
-    } else if (isDeleteKey) {
-      const em = state._libEmails.find(x => String(x.uid) === String(expanded.dataset.uid));
+    } else if (isEliminarKey) {
+      const em = state._libCorreos.find(x => String(x.uid) === String(expanded.dataset.uid));
       if (em) {
         e.preventDefault();
-        _deleteEmailAndAdvance(em, expanded);
+        _deleteCorreoAndAdvance(em, expanded);
       }
     }
   };
   document.addEventListener('keydown', state._libEscHandler, true);
 
   const grid = document.getElementById('email-lib-grid');
-  if (grid && !grid.children.length) _renderEmailLoading(grid);
+  if (grid && !grid.children.length) _renderCorreoLoading(grid);
   if (Array.isArray(state._libAccounts) && state._libAccounts.length) {
     _renderAccountsStrip();
   } else {
@@ -1789,8 +1789,8 @@ export function openEmailLibrary(opts = {}) {
   (async () => {
     await _loadAccounts();
     _loadFolders();
-    _loadEmailReminderBellVisibility();
-    _loadEmailsWhenChatIdle();
+    _loadCorreoReminderBellVisibility();
+    _loadCorreosWhenChatIdle();
   })();
 }
 
@@ -1855,10 +1855,10 @@ function _renderAccountsStrip() {
     btn.addEventListener('click', async () => {
       state._libAccountId = btn.dataset.accId || null;
       _publishActiveAccount();
-      _resetEmailListForFreshLoad();
+      _resetCorreoListForFreshLoad();
       _renderAccountsStrip();
       await _loadFolders({ resetMissing: true });
-      _loadEmails({ useCache: true });
+      _loadCorreos({ useCache: true });
     });
   });
   // Star handler: POST set-default, then reload accounts + re-render so
@@ -1893,7 +1893,7 @@ function _renderAccountsStrip() {
       strip.scrollLeft += e.deltaY;
     }, { passive: false });
     // Click-and-drag scroll. Track mousedown, then mousemove deltas
-    // bump scrollLeft. Cancel a chip click if the user actually dragged
+    // bump scrollLeft. Cancelar a chip click if the user actually dragged
     // more than a few pixels.
     let dragging = false;
     let startX = 0;
@@ -1930,14 +1930,14 @@ function _renderAccountsStrip() {
   _publishActiveAccount();
 }
 
-export function closeEmailLibrary() {
+export function closeCorreoLibrary() {
   const modal = document.getElementById('email-lib-modal');
   if (modal) modal.remove();
   if (_libSyncTicker) {
     clearInterval(_libSyncTicker);
     _libSyncTicker = null;
   }
-  _clearEmailDocumentSplit();
+  _clearCorreoDocumentSplit();
   if (state._libEscHandler) {
     document.removeEventListener('keydown', state._libEscHandler, true);
     state._libEscHandler = null;
@@ -1997,7 +1997,7 @@ function _makeDraggable(content, modal, fsClass) {
     onDragStart: ({ rect }) => {
       if (!modal.classList.contains('email-snap-left')) return;
       modal.classList.remove('email-snap-left');
-      _clearEmailDocumentSplit();
+      _clearCorreoDocumentSplit();
       content.style.position = 'fixed';
       content.style.left = `${Math.round(rect.left)}px`;
       content.style.top = `${Math.round(rect.top)}px`;
@@ -2012,7 +2012,7 @@ function _makeDraggable(content, modal, fsClass) {
       content.style.margin = '0';
     },
     onEnterFullscreen: fsClass ? enterFullscreen : null,
-    onExitFullscreen: fsClass ? exitFullscreen : null,
+    onSalirFullscreen: fsClass ? exitFullscreen : null,
   });
 }
 
@@ -2021,7 +2021,7 @@ function _makeDraggable(content, modal, fsClass) {
 // the right side of the chat area) is visible side-by-side. Only triggers
 // when the viewport is wide enough to make a true split worthwhile. Returns
 // true if the snap was applied, false otherwise.
-function _snapEmailModalToLeftSidebar(modal) {
+function _snapCorreoModalToLeftSidebar(modal) {
   if (!modal) return false;
   if (window.innerWidth < 900) return false;
   // "Open in new tab" reader modals (id="email-view-…") are explicitly
@@ -2054,8 +2054,8 @@ function _snapEmailModalToLeftSidebar(modal) {
   content.style.borderRadius = '0';
   content.style.transform = 'none';
   content.style.margin = '0';
-  _setEmailDocumentSplit(left, W);
-  _scheduleEmailDocumentSplitMeasure(modal);
+  _setCorreoDocumentSplit(left, W);
+  _scheduleCorreoDocumentSplitMeasure(modal);
   return true;
 }
 
@@ -2072,7 +2072,7 @@ async function _loadFolders({ resetMissing = false } = {}) {
     if (resetMissing && state._libFolder !== '__scheduled__' && !data.folders.includes(state._libFolder)) {
       state._libFolder = data.folders.includes('INBOX') ? 'INBOX' : (data.folders[0] || 'INBOX');
       state._libFilter = 'all';
-      state._libSearch = '';
+      state._libBuscar = '';
       state._libHasAttachments = false;
       _libListCache.clear();
       const searchEl = document.getElementById('email-lib-search');
@@ -2134,12 +2134,12 @@ function _crossFolderCandidates() {
   const candidates = [
     pick(['INBOX'], 'INBOX'),
     pick(['[Gmail]/Sent Mail', 'Sent Mail', 'Sent Items', 'INBOX.Sent', 'Sent'], '[Gmail]/Sent Mail'),
-    pick(['Archive', '[Gmail]/All Mail', 'All Mail'], '[Gmail]/All Mail'),
+    pick(['Archivar', '[Gmail]/All Mail', 'All Mail'], '[Gmail]/All Mail'),
   ];
   return Array.from(new Set(candidates.filter(Boolean)));
 }
 
-function _findEmailFolder(patterns, fallback) {
+function _findCorreoFolder(patterns, fallback) {
   const available = Array.isArray(state._libFolders) ? state._libFolders.filter(Boolean) : [];
   const lower = new Map(available.map(f => [String(f).toLowerCase(), f]));
   for (const p of patterns) {
@@ -2150,10 +2150,10 @@ function _findEmailFolder(patterns, fallback) {
 }
 
 function _sentFolderName() {
-  return _findEmailFolder(['[Gmail]/Sent Mail', 'Sent Mail', 'Sent Items', 'INBOX.Sent', 'Sent'], 'Sent');
+  return _findCorreoFolder(['[Gmail]/Sent Mail', 'Sent Mail', 'Sent Items', 'INBOX.Sent', 'Sent'], 'Sent');
 }
 
-function _deriveSearchScope(rawQuery) {
+function _deriveBuscarScope(rawQuery) {
   const original = String(rawQuery || '').trim();
   const tokens = original.split(/\s+/).filter(Boolean);
   let scope = 'all';
@@ -2193,12 +2193,12 @@ function _deriveSearchScope(rawQuery) {
   };
 }
 
-// Snapshot of state._libEmails taken right before search starts so we
+// Snapshot of state._libCorreos taken right before search starts so we
 // can both filter locally and restore on clear without re-fetching.
-let _libPreSearchEmails = null;
-let _libPreSearchTotal = 0;
-let _libServerSearchEmails = null;
-let _libServerSearchTotal = 0;
+let _libPreBuscarCorreos = null;
+let _libPreBuscarTotal = 0;
+let _libServerBuscarCorreos = null;
+let _libServerBuscarTotal = 0;
 
 // Cached contact suggestions for the chip-input autocomplete. Built on
 // first focus / first keystroke from contacts + currently-loaded senders.
@@ -2219,7 +2219,7 @@ async function _buildSuggestionSource() {
     }
   };
   // 1) Senders / recipients already in the loaded grid.
-  for (const em of (state._libEmails || [])) {
+  for (const em of (state._libCorreos || [])) {
     _add(em.from_name, em.from_address);
     const _parse = (s) => String(s || '').split(',').forEach(seg => {
       const m = seg.match(/^\s*"?([^"<]*)"?\s*<?([^>]+)>?\s*$/);
@@ -2228,7 +2228,7 @@ async function _buildSuggestionSource() {
     _parse(em.to);
     _parse(em.cc);
   }
-  // 2) Address book — best-effort.
+  // 2) Agregarress book — best-effort.
   try {
     const r = await fetch(`${API_BASE}/api/contacts/list`, { credentials: 'same-origin' });
     if (r.ok) {
@@ -2251,7 +2251,7 @@ function _scoreSuggestion(s, needle) {
   return 0;
 }
 
-function _formatEmailSuggestionDate(em) {
+function _formatCorreoSuggestionDate(em) {
   let d = null;
   if (em && em.date) {
     const parsed = new Date(em.date);
@@ -2321,10 +2321,10 @@ function _filterSuggestions(needle, limit = 10) {
   const contactMatches = src
     .map(s => ({ s: { kind: 'contact', ...s }, score: _scoreSuggestion(s, n) }))
     .filter(x => x.score > 0);
-  // Email subject / sender-name matches — use the snapshot (unfiltered
+  // Correo subject / sender-name matches — use the snapshot (unfiltered
   // list) when available so suggestions don't shrink as pills narrow the
   // visible grid. Cap to 4 so contacts + filters stay visible.
-  const emails = _libPreSearchEmails || state._libEmails || [];
+  const emails = _libPreBuscarCorreos || state._libCorreos || [];
   const emailMatches = [];
   for (const em of emails) {
     const subj = String(em.subject || '').toLowerCase();
@@ -2339,7 +2339,7 @@ function _filterSuggestions(needle, limit = 10) {
           uid: em.uid,
           subject: em.subject || '(no subject)',
           from_name: em.from_name || em.from_address || '',
-          date_label: _formatEmailSuggestionDate(em),
+          date_label: _formatCorreoSuggestionDate(em),
         },
         score,
       });
@@ -2377,7 +2377,7 @@ function _emailMatchesPill(em, pill) {
 
 function _matchesQuery(em, q) {
   const needle = q.toLowerCase();
-  const dateNeedle = _formatEmailSuggestionDate(em).toLowerCase();
+  const dateNeedle = _formatCorreoSuggestionDate(em).toLowerCase();
   const dateOnlyNeedle = dateNeedle.replace(/\s+\d{1,2}:\d{2}\s*(am|pm)?$/i, '');
   const rawDate = String(em.date || em.date_display || '').toLowerCase();
   return (
@@ -2397,63 +2397,63 @@ function _matchesQuery(em, q) {
 // email shows up if ANY pill matches (a contact pill matches by from/to/cc
 // equality, a text pill matches by the broad _matchesQuery substring).
 function _applyPillFilter() {
-  _exitEmailReaderModeForList();
-  const pills = state._libSearchPills || [];
-  const draft = (state._libSearchDraft || '').trim();
+  _exitCorreoReaderModeForList();
+  const pills = state._libBuscarPills || [];
+  const draft = (state._libBuscarDraft || '').trim();
   const noPills = pills.length === 0;
   const noDraft = draft.length === 0;
   // First time we apply with anything active: snapshot the loaded list.
   if (!noPills || draft.length >= 1) {
-    if (!_libPreSearchEmails) {
-      _libPreSearchEmails = (state._libEmails || []).slice();
-      _libPreSearchTotal = state._libTotal;
+    if (!_libPreBuscarCorreos) {
+      _libPreBuscarCorreos = (state._libCorreos || []).slice();
+      _libPreBuscarTotal = state._libTotal;
     }
   }
   if (noPills && noDraft) {
-    if (_libPreSearchEmails) {
-      state._libEmails = _libPreSearchEmails;
-      state._libTotal = _libPreSearchTotal;
-      _libPreSearchEmails = null;
-      _libPreSearchTotal = 0;
+    if (_libPreBuscarCorreos) {
+      state._libCorreos = _libPreBuscarCorreos;
+      state._libTotal = _libPreBuscarTotal;
+      _libPreBuscarCorreos = null;
+      _libPreBuscarTotal = 0;
     }
     _renderGrid();
     return;
   }
-  const source = _libServerSearchEmails || _libPreSearchEmails || state._libEmails || [];
+  const source = _libServerBuscarCorreos || _libPreBuscarCorreos || state._libCorreos || [];
   // If the active server search covers a piece of text (either the live
   // draft OR an Enter-committed text pill), skip the local re-filter for
   // it — _emailMatchesPill only checks subject/from_name/from_address/
   // snippet (no BODY), so it was dropping legitimate server hits where
   // the match was in body text. Real pills (contact, filter chips) still
   // apply, and other text pills with different strings still apply.
-  const libSearchLower = (_libSearchHadResults ? (state._libSearch || '').trim().toLowerCase() : '');
-  const hasRefinementBase = !!(_libServerSearchEmails && pills.length > 1);
-  const serverHandledDraft = !hasRefinementBase && !!(libSearchLower && draft && libSearchLower === draft.toLowerCase());
+  const libBuscarLower = (_libBuscarHadResults ? (state._libBuscar || '').trim().toLowerCase() : '');
+  const hasRefinementBase = !!(_libServerBuscarCorreos && pills.length > 1);
+  const serverHandledDraft = !hasRefinementBase && !!(libBuscarLower && draft && libBuscarLower === draft.toLowerCase());
   const draftPill = (!serverHandledDraft && draft.length >= 1) ? { type: 'text', text: draft } : null;
   // Filter out text pills whose text matches the active server search —
   // those were the trigger for the IMAP query and don't need re-checking.
-  const effectiveBasePills = (libSearchLower && !hasRefinementBase)
-    ? pills.filter(p => !(p.type === 'text' && (p.text || '').toLowerCase() === libSearchLower))
+  const effectiveBasePills = (libBuscarLower && !hasRefinementBase)
+    ? pills.filter(p => !(p.type === 'text' && (p.text || '').toLowerCase() === libBuscarLower))
     : pills;
   const effective = draftPill ? effectiveBasePills.concat([draftPill]) : effectiveBasePills;
   // AND across pills — "alice + bob" should mean both alice AND bob are
   // somewhere on the email (from/to/cc), not "from alice OR from bob".
   const filtered = source.filter(em => effective.every(p => _emailMatchesPill(em, p)));
-  state._libEmails = filtered;
+  state._libCorreos = filtered;
   _renderGrid();
 }
-// Back-compat shim: older call sites still expect _localSearchFilter.
-function _localSearchFilter(query) {
-  state._libSearchDraft = String(query || '');
+// Back-compat shim: older call sites still expect _localBuscarFilter.
+function _localBuscarFilter(query) {
+  state._libBuscarDraft = String(query || '');
   _applyPillFilter();
 }
 
 // Render the active pills inside the chip bar. Each pill carries a × to
 // remove individually. Backspace on empty input also pops the last one.
-function _renderSearchPills() {
+function _renderBuscarPills() {
   const wrap = document.getElementById('email-lib-pills');
   if (!wrap) return;
-  const pills = state._libSearchPills || [];
+  const pills = state._libBuscarPills || [];
   const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   wrap.innerHTML = pills.map((p, i) => {
     // Filter pills render as icon-only (the icon is the affordance);
@@ -2475,7 +2475,7 @@ function _renderSearchPills() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const idx = Number(btn.dataset.pillIdx);
-      if (Number.isFinite(idx)) _removeSearchPillAt(idx);
+      if (Number.isFinite(idx)) _removeBuscarPillAt(idx);
     });
   });
 }
@@ -2483,7 +2483,7 @@ function _renderSearchPills() {
 function _applyFilterPillSideEffect(pill) {
   // Filter pills drive the existing has-attachments toggle / filter
   // dropdown so the server returns the right list. Only one filter
-  // pill is active at a time (see _addSearchPill).
+  // pill is active at a time (see _addBuscarPill).
   const sel = document.getElementById('email-lib-filter');
   const attachBtn = document.getElementById('email-attach-btn');
   if (pill.value === 'filter:has-attachments') {
@@ -2517,86 +2517,86 @@ function _clearFilterPillSideEffect() {
   }
 }
 
-function _addSearchPill(pill) {
+function _addBuscarPill(pill) {
   if (!pill) return;
   _resetBulkSelectionForContextChange({ rerender: true });
-  if (!Array.isArray(state._libSearchPills)) state._libSearchPills = [];
+  if (!Array.isArray(state._libBuscarPills)) state._libBuscarPills = [];
   // Dedup by email (contact), text (text pill), or filter value.
   if (pill.type === 'contact') {
     const key = (pill.email || '').toLowerCase();
     if (!key) return;
-    if (state._libSearchPills.some(p => p.type === 'contact' && (p.email || '').toLowerCase() === key)) return;
+    if (state._libBuscarPills.some(p => p.type === 'contact' && (p.email || '').toLowerCase() === key)) return;
   } else if (pill.type === 'text') {
     const t = (pill.text || '').toLowerCase();
     if (!t) return;
-    if (state._libSearchPills.some(p => p.type === 'text' && (p.text || '').toLowerCase() === t)) return;
+    if (state._libBuscarPills.some(p => p.type === 'text' && (p.text || '').toLowerCase() === t)) return;
   } else if (pill.type === 'filter') {
     // Single-filter rule — drop any existing filter pill before adding.
-    state._libSearchPills = state._libSearchPills.filter(p => p.type !== 'filter');
-    state._libSearchPills.push(pill);
+    state._libBuscarPills = state._libBuscarPills.filter(p => p.type !== 'filter');
+    state._libBuscarPills.push(pill);
     _applyFilterPillSideEffect(pill);
-    _renderSearchPills();
+    _renderBuscarPills();
     return;
   }
-  state._libSearchPills.push(pill);
-  _renderSearchPills();
+  state._libBuscarPills.push(pill);
+  _renderBuscarPills();
   _applyPillFilter();
 }
 
 function _searchQueryFromPills() {
   const parts = [];
-  for (const p of state._libSearchPills || []) {
+  for (const p of state._libBuscarPills || []) {
     if (p.type === 'text' && p.text) parts.push(String(p.text).trim());
     else if (p.type === 'contact' && (p.email || p.name)) parts.push(String(p.email || p.name).trim());
   }
   return parts.filter(Boolean).join(' ').trim();
 }
 
-function _removeSearchPillAt(idx) {
-  if (!Array.isArray(state._libSearchPills)) return;
+function _removeBuscarPillAt(idx) {
+  if (!Array.isArray(state._libBuscarPills)) return;
   _resetBulkSelectionForContextChange({ rerender: true });
-  const removed = state._libSearchPills[idx];
-  state._libSearchPills.splice(idx, 1);
+  const removed = state._libBuscarPills[idx];
+  state._libBuscarPills.splice(idx, 1);
   if (removed && removed.type === 'filter') _clearFilterPillSideEffect();
-  _renderSearchPills();
+  _renderBuscarPills();
   // Pill cleared all the way: if we got into search-result mode via the
   // IMAP search, the pre-search snapshot is now those results too (set
-  // in _doSearch). Restoring from it would leave the user staring at
+  // in _doBuscar). Restoring from it would leave the user staring at
   // the same results with the pill bar empty. Re-fetch the real inbox
   // so removing the last pill genuinely "goes back".
-  const noPillsLeft = (state._libSearchPills || []).length === 0
-    && !(state._libSearchDraft || '').trim();
-  if (noPillsLeft && _libSearchHadResults) {
-    _libSearchHadResults = false;
-    _libPreSearchEmails = null;
-    _libPreSearchTotal = 0;
-    _libServerSearchEmails = null;
-    _libServerSearchTotal = 0;
-    state._libSearch = '';
+  const noPillsLeft = (state._libBuscarPills || []).length === 0
+    && !(state._libBuscarDraft || '').trim();
+  if (noPillsLeft && _libBuscarHadResults) {
+    _libBuscarHadResults = false;
+    _libPreBuscarCorreos = null;
+    _libPreBuscarTotal = 0;
+    _libServerBuscarCorreos = null;
+    _libServerBuscarTotal = 0;
+    state._libBuscar = '';
     state._libOffset = 0;
     const _searchInput = document.getElementById('email-lib-search');
     if (_searchInput) _searchInput.value = '';
-    _loadEmails({ useCache: true });
+    _loadCorreos({ useCache: true });
     return;
   }
   const remainingQuery = _searchQueryFromPills();
   if (remainingQuery.length >= 2) {
-    state._libSearch = remainingQuery;
+    state._libBuscar = remainingQuery;
     const _searchInput = document.getElementById('email-lib-search');
     if (_searchInput) _searchInput.value = '';
-    state._libSearchDraft = '';
-    _doSearch();
+    state._libBuscarDraft = '';
+    _doBuscar();
     return;
   }
-  if ((state._libSearchPills || []).length && _libSearchHadResults) {
-    _libSearchHadResults = false;
-    _libPreSearchEmails = null;
-    _libPreSearchTotal = 0;
-    _libServerSearchEmails = null;
-    _libServerSearchTotal = 0;
-    state._libSearch = '';
+  if ((state._libBuscarPills || []).length && _libBuscarHadResults) {
+    _libBuscarHadResults = false;
+    _libPreBuscarCorreos = null;
+    _libPreBuscarTotal = 0;
+    _libServerBuscarCorreos = null;
+    _libServerBuscarTotal = 0;
+    state._libBuscar = '';
     state._libOffset = 0;
-    _loadEmails({ useCache: true });
+    _loadCorreos({ useCache: true });
     return;
   }
   _applyPillFilter();
@@ -2604,7 +2604,7 @@ function _removeSearchPillAt(idx) {
 
 // Render the autocomplete dropdown below the input. focusIdx highlights
 // the active row; Tab autocompletes / Enter accepts that row.
-function _renderSearchSuggestions(items) {
+function _renderBuscarSuggestions(items) {
   const menu = document.getElementById('email-lib-suggest');
   if (!menu) return;
   if (!items.length) { menu.style.display = 'none'; menu.innerHTML = ''; return; }
@@ -2642,7 +2642,7 @@ function _renderSearchSuggestions(items) {
   });
 }
 
-function _hideSearchSuggestions() {
+function _hideBuscarSuggestions() {
   const menu = document.getElementById('email-lib-suggest');
   if (menu) { menu.style.display = 'none'; menu.innerHTML = ''; }
   _libSuggestionFocusIdx = 0;
@@ -2651,48 +2651,48 @@ function _hideSearchSuggestions() {
 function _acceptSuggestion(s) {
   const input = document.getElementById('email-lib-search');
   if (s.kind === 'filter') {
-    _addSearchPill({ type: 'filter', value: s.value, label: s.label });
+    _addBuscarPill({ type: 'filter', value: s.value, label: s.label });
   } else if (s.kind === 'email') {
     // Clear the draft + dropdown and open the matching card directly.
     if (input) input.value = '';
-    state._libSearchDraft = '';
-    _hideSearchSuggestions();
+    state._libBuscarDraft = '';
+    _hideBuscarSuggestions();
     _applyPillFilter();
     const grid = document.getElementById('email-lib-grid');
     const card = grid?.querySelector(`.doclib-card[data-uid="${CSS.escape(String(s.uid))}"]`);
-    const em = (state._libEmails || []).find(x => String(x.uid) === String(s.uid))
-            || (_libPreSearchEmails || []).find(x => String(x.uid) === String(s.uid));
+    const em = (state._libCorreos || []).find(x => String(x.uid) === String(s.uid))
+            || (_libPreBuscarCorreos || []).find(x => String(x.uid) === String(s.uid));
     if (card && em) {
       card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       _toggleCardPreview(card, em);
     }
     return;
   } else {
-    _addSearchPill({ type: 'contact', name: s.name, email: s.email });
+    _addBuscarPill({ type: 'contact', name: s.name, email: s.email });
     // Same as the text-pill path in the Enter handler: trigger the IMAP
     // search so unloaded emails (older than the current page) show up
     // when picking a contact. The local pill filter then narrows the
     // search results to that contact's address.
     const _q = (s.email || s.name || '').trim();
     if (_q && _q.length >= 2) {
-      state._libSearch = _q;
-      _doSearch();
+      state._libBuscar = _q;
+      _doBuscar();
     }
   }
   if (input) input.value = '';
-  state._libSearchDraft = '';
-  _hideSearchSuggestions();
+  state._libBuscarDraft = '';
+  _hideBuscarSuggestions();
   _applyPillFilter();
   if (input) input.focus();
 }
 
-async function _initEmailSearchChipBar() {
+async function _initCorreoBuscarChipBar() {
   const bar = document.getElementById('email-lib-chip-bar');
   const input = document.getElementById('email-lib-search');
   if (!bar || !input) return;
-  state._libSearchPills = state._libSearchPills || [];
-  state._libSearchDraft = '';
-  _renderSearchPills();
+  state._libBuscarPills = state._libBuscarPills || [];
+  state._libBuscarDraft = '';
+  _renderBuscarPills();
 
   // Lazy-load suggestion source on first focus / keystroke.
   const _ensureSuggestionCache = async () => {
@@ -2714,7 +2714,7 @@ async function _initEmailSearchChipBar() {
     // regular search; the user has to ArrowDown / Tab explicitly to
     // pick a contact. Enter without a focused row commits as text.
     _libSuggestionFocusIdx = -1;
-    _renderSearchSuggestions(_itemsRef);
+    _renderBuscarSuggestions(_itemsRef);
   };
 
   input.addEventListener('focus', _refreshSuggestions);
@@ -2730,39 +2730,39 @@ async function _initEmailSearchChipBar() {
   // the typing path — debounced server search drives the grid. Pill
   // add/remove still re-runs the local filter through _applyPillFilter
   // directly.
-  let _libSearchTypingTimer = null;
+  let _libBuscarTypingTimer = null;
   input.addEventListener('input', async () => {
     _resetBulkSelectionForContextChange({ rerender: true });
-    state._libSearchDraft = input.value;
+    state._libBuscarDraft = input.value;
     await _refreshSuggestions();
-    if (_libSearchTypingTimer) clearTimeout(_libSearchTypingTimer);
+    if (_libBuscarTypingTimer) clearTimeout(_libBuscarTypingTimer);
     const v = input.value.trim();
     if (v.length >= 2) {
-      _libSearchTypingTimer = setTimeout(() => {
+      _libBuscarTypingTimer = setTimeout(() => {
         const cur = (input.value || '').trim();
         if (cur === v && cur.length >= 2) {
-          state._libSearch = cur;
-          _doSearch();
+          state._libBuscar = cur;
+          _doBuscar();
         }
       }, 500);
-    } else if (!v && _libSearchHadResults) {
+    } else if (!v && _libBuscarHadResults) {
       // Cleared the input → restore the inbox the same way the pill-clear
       // path does. Otherwise the stale search results stayed up after the
       // user backspaced everything out.
-      _libSearchHadResults = false;
-      _libPreSearchEmails = null;
-      _libPreSearchTotal = 0;
-      state._libSearch = '';
+      _libBuscarHadResults = false;
+      _libPreBuscarCorreos = null;
+      _libPreBuscarTotal = 0;
+      state._libBuscar = '';
       state._libOffset = 0;
-      _loadEmails({ useCache: true });
+      _loadCorreos({ useCache: true });
     }
   });
   input.addEventListener('keydown', (e) => {
     const menu = document.getElementById('email-lib-suggest');
     const menuOpen = menu && menu.style.display !== 'none';
-    if (e.key === 'Backspace' && !input.value && (state._libSearchPills || []).length) {
+    if (e.key === 'Backspace' && !input.value && (state._libBuscarPills || []).length) {
       e.preventDefault();
-      _removeSearchPillAt(state._libSearchPills.length - 1);
+      _removeBuscarPillAt(state._libBuscarPills.length - 1);
       return;
     }
     if (e.key === 'ArrowDown' && menuOpen) {
@@ -2770,7 +2770,7 @@ async function _initEmailSearchChipBar() {
       // -1 → 0 → 1 → … → length-1, then wraps back to -1 (no selection)
       const next = _libSuggestionFocusIdx + 1;
       _libSuggestionFocusIdx = next >= _itemsRef.length ? -1 : next;
-      _renderSearchSuggestions(_itemsRef);
+      _renderBuscarSuggestions(_itemsRef);
       return;
     }
     if (e.key === 'ArrowUp' && menuOpen) {
@@ -2778,7 +2778,7 @@ async function _initEmailSearchChipBar() {
       // -1 → length-1 → length-2 → … → 0 → -1
       const next = _libSuggestionFocusIdx - 1;
       _libSuggestionFocusIdx = next < -1 ? _itemsRef.length - 1 : next;
-      _renderSearchSuggestions(_itemsRef);
+      _renderBuscarSuggestions(_itemsRef);
       return;
     }
     if (e.key === 'Tab' && menuOpen) {
@@ -2799,18 +2799,18 @@ async function _initEmailSearchChipBar() {
       }
       const v = input.value.trim();
       if (v) {
-        _addSearchPill({ type: 'text', text: v });
+        _addBuscarPill({ type: 'text', text: v });
         input.value = '';
-        state._libSearchDraft = '';
-        _hideSearchSuggestions();
+        state._libBuscarDraft = '';
+        _hideBuscarSuggestions();
         // Pill-only filtering used to only check emails already loaded into
-        // state._libEmails (the visible page of the inbox). Searches for
+        // state._libCorreos (the visible page of the inbox). Buscares for
         // names/text that aren't in the current page returned "no emails"
         // even when matches existed on the server. Trigger the IMAP
-        // search so state._libEmails is replaced with the actual hits,
+        // search so state._libCorreos is replaced with the actual hits,
         // then the pill filter narrows to matches.
-        state._libSearch = v;
-        _doSearch();
+        state._libBuscar = v;
+        _doBuscar();
       }
       return;
     }
@@ -2820,7 +2820,7 @@ async function _initEmailSearchChipBar() {
         // next Esc to actually dismiss the library.
         e.preventDefault();
         e.stopPropagation();
-        _hideSearchSuggestions();
+        _hideBuscarSuggestions();
       } else {
         // Blur first so the modal Esc handler doesn't get suppressed by
         // any IME / typing-target check, and let the event propagate.
@@ -2848,8 +2848,8 @@ window.addEventListener('click', (e) => {
     if (!email) return;
     e.preventDefault();
     e.stopPropagation();
-    try { window.openEmailLibrary && window.openEmailLibrary(); } catch (_) {}
-    _addSearchPill({ type: 'contact', name, email });
+    try { window.openCorreoLibrary && window.openCorreoLibrary(); } catch (_) {}
+    _addBuscarPill({ type: 'contact', name, email });
     return;
   }
   // 2) Sender name in a library list card row (only when the library is open)
@@ -2861,24 +2861,24 @@ window.addEventListener('click', (e) => {
       if (!email) return;
       e.preventDefault();
       e.stopPropagation();
-      _addSearchPill({ type: 'contact', name, email });
+      _addBuscarPill({ type: 'contact', name, email });
     }
   }
 }, true);
 
-async function _doSearch() {
-  _exitEmailReaderModeForList();
+async function _doBuscar() {
+  _exitCorreoReaderModeForList();
   _resetBulkSelectionForContextChange({ rerender: true });
-  const seq = ++_libSearchSeq;
-  const derived = _deriveSearchScope(state._libSearch);
+  const seq = ++_libBuscarSeq;
+  const derived = _deriveBuscarScope(state._libBuscar);
   const q = derived.q;
   if (q.length < 2 && !derived.forced) {
     // Empty or too short — restore the normal folder if a previous search
     // had replaced the grid contents.
-    if (_libSearchHadResults) {
-      _libSearchHadResults = false;
+    if (_libBuscarHadResults) {
+      _libBuscarHadResults = false;
       state._libOffset = 0;
-      await _loadEmails({ useCache: true });
+      await _loadCorreos({ useCache: true });
       return;
     }
     _renderGrid();
@@ -2892,21 +2892,21 @@ async function _doSearch() {
   // the server search is still grinding.
   const stats = document.getElementById('email-lib-stats');
   const originalStatsText = stats?.textContent || '';
-  if (stats) stats.textContent = 'Searching…';
-  _libSearchInFlight = true;
-  _setEmailSyncStatus({ loading: true });
-  // Force a re-render so the "Searching…" empty-state shows (and any
+  if (stats) stats.textContent = 'Buscaring…';
+  _libBuscarInFlight = true;
+  _setCorreoSyncStatus({ loading: true });
+  // Force a re-render so the "Buscaring…" empty-state shows (and any
   // existing "No emails" gets replaced) while the fetch is in flight.
   _renderGrid();
 
   const stillCurrent = () => (
-    seq === _libSearchSeq &&
-    q === _deriveSearchScope(state._libSearch).q &&
+    seq === _libBuscarSeq &&
+    q === _deriveBuscarScope(state._libBuscar).q &&
     accountAtStart === (state._libAccountId || '') &&
-    folderAtStart === (_deriveSearchScope(state._libSearch).folder || state._libFolder || 'INBOX')
+    folderAtStart === (_deriveBuscarScope(state._libBuscar).folder || state._libFolder || 'INBOX')
   );
   const searchUrl = (localOnly = false) => {
-    const params = new URLSearchParams({
+    const params = new URLBuscarParams({
       folder: folderAtStart,
       q,
       limit: '100',
@@ -2917,7 +2917,7 @@ async function _doSearch() {
     return `${API_BASE}/api/email/search?${params.toString()}`;
   };
   const folderListUrl = () => {
-    const params = new URLSearchParams({
+    const params = new URLBuscarParams({
       folder: folderAtStart,
       limit: '100',
       offset: '0',
@@ -2926,7 +2926,7 @@ async function _doSearch() {
     if (accountAtStart) params.set('account_id', accountAtStart);
     return `${API_BASE}/api/email/list?${params.toString()}`;
   };
-  const mergeSearchResults = (painted, incoming) => {
+  const mergeBuscarResults = (painted, incoming) => {
     const byKey = new Map();
     const out = [];
     const add = (em) => {
@@ -2955,42 +2955,42 @@ async function _doSearch() {
     return out.concat(additions);
   };
   let paintedInterimResults = false;
-  const paintSearchData = (data, interim = false) => {
+  const paintBuscarData = (data, interim = false) => {
     if (!stillCurrent()) return false;
     if (data.error) throw new Error(data.error);
     let results = data.emails || [];
     if (!interim && paintedInterimResults) {
-      results = mergeSearchResults(state._libEmails || [], results);
+      results = mergeBuscarResults(state._libCorreos || [], results);
     }
     if (!interim && paintedInterimResults && results.length === 0) {
       if (stats) {
-        const count = state._libTotal || (state._libEmails || []).length;
+        const count = state._libTotal || (state._libCorreos || []).length;
         stats.textContent = `${count} cached match${count === 1 ? '' : 'es'}`;
       }
-      _setEmailSyncStatus({
+      _setCorreoSyncStatus({
         updatedAt: data.sync?.updated_at || '',
         source: data.sync?.source || data.source || '',
         loading: false,
       });
       return true;
     }
-    _libSearchHadResults = true;
-    const pills = state._libSearchPills || [];
-    const preservingBase = !!(_libServerSearchEmails && pills.length > 1);
+    _libBuscarHadResults = true;
+    const pills = state._libBuscarPills || [];
+    const preservingBase = !!(_libServerBuscarCorreos && pills.length > 1);
     if (!preservingBase) {
-      _libServerSearchEmails = results.slice();
-      _libServerSearchTotal = Math.max(Number(data.total || 0), results.length);
-      _libPreSearchEmails = results.slice();
-      _libPreSearchTotal = _libServerSearchTotal;
-      state._libEmails = results;
-      state._libTotal = _libServerSearchTotal;
+      _libServerBuscarCorreos = results.slice();
+      _libServerBuscarTotal = Math.max(Number(data.total || 0), results.length);
+      _libPreBuscarCorreos = results.slice();
+      _libPreBuscarTotal = _libServerBuscarTotal;
+      state._libCorreos = results;
+      state._libTotal = _libServerBuscarTotal;
     } else {
-      state._libEmails = _libServerSearchEmails.slice();
-      state._libTotal = _libServerSearchTotal;
+      state._libCorreos = _libServerBuscarCorreos.slice();
+      state._libTotal = _libServerBuscarTotal;
     }
     if (pills.length) {
       _applyPillFilter();
-      if (!(state._libEmails || []).length && !preservingBase) state._libEmails = results;
+      if (!(state._libCorreos || []).length && !preservingBase) state._libCorreos = results;
     }
     _renderGrid();
     const count = Math.max(Number(data.total || 0), results.length);
@@ -3002,7 +3002,7 @@ async function _doSearch() {
         stats.textContent = `${count}${source} match${count === 1 ? '' : 'es'}`;
       }
     }
-    _setEmailSyncStatus({
+    _setCorreoSyncStatus({
       updatedAt: interim ? '' : (data.sync?.updated_at || ''),
       source: data.sync?.source || data.source || '',
       loading: interim,
@@ -3016,7 +3016,7 @@ async function _doSearch() {
       const res = await fetch(folderListUrl());
       const data = await res.json();
       if (!stillCurrent()) return;
-      paintSearchData({
+      paintBuscarData({
         emails: (data.emails || []).map(em => ({ ...em, folder: folderAtStart })),
         total: data.total || (data.emails || []).length,
         source: 'folder',
@@ -3024,27 +3024,27 @@ async function _doSearch() {
       }, false);
       return;
     }
-    const fullSearchPromise = fetch(searchUrl(false)).then(res => res.json());
-    const localSearchPromise = fetch(searchUrl(true)).then(res => res.json());
+    const fullBuscarPromise = fetch(searchUrl(false)).then(res => res.json());
+    const localBuscarPromise = fetch(searchUrl(true)).then(res => res.json());
     try {
-      const localData = await localSearchPromise;
+      const localData = await localBuscarPromise;
       if (!stillCurrent()) return;
       if (!localData.error && (localData.emails || []).length) {
-        paintSearchData(localData, true);
+        paintBuscarData(localData, true);
       }
     } catch (_) {
       if (!stillCurrent()) return;
     }
 
-    const data = await fullSearchPromise;
+    const data = await fullBuscarPromise;
     if (!stillCurrent()) return;
-    paintSearchData(data, false);
+    paintBuscarData(data, false);
   } catch (e) {
-    if (stats) stats.textContent = originalStatsText || 'Search failed';
+    if (stats) stats.textContent = originalStatsText || 'Buscar failed';
     try { console.error('[email-search] fetch failed:', e); } catch {}
   } finally {
-    _libSearchInFlight = false;
-    _setEmailSyncStatus({ loading: false });
+    _libBuscarInFlight = false;
+    _setCorreoSyncStatus({ loading: false });
   }
 }
 
@@ -3146,7 +3146,7 @@ function _initFilterPicker() {
   _renderFilterPickerCurrent();
 }
 
-function _renderEmailLoading(grid) {
+function _renderCorreoLoading(grid) {
   if (!grid) return null;
   grid.innerHTML = '';
   const wrap = document.createElement('div');
@@ -3199,13 +3199,13 @@ function _emailReaderSkeletonHtml() {
   `;
 }
 
-function _appendEmailSearchProgressRow(grid) {
-  if (!grid || !_libSearchInFlight || grid.querySelector('.email-search-progress-row')) return;
+function _appendCorreoBuscarProgressRow(grid) {
+  if (!grid || !_libBuscarInFlight || grid.querySelector('.email-search-progress-row')) return;
   const row = document.createElement('div');
   row.className = 'email-search-progress-row';
   row.innerHTML = `
     <span class="email-search-progress-dot"></span>
-    <span>Searching more mail...</span>
+    <span>Buscaring more mail...</span>
   `;
   grid.appendChild(row);
 }
@@ -3250,14 +3250,14 @@ async function _refreshUnreadBadge() {
   } catch (_) { _syncUnreadTabBadge(0); }
 }
 
-async function _loadEmails({ force = false, useCache = true } = {}) {
+async function _loadCorreos({ force = false, useCache = true } = {}) {
   const seq = ++_libLoadSeq;
   state._libLoading = true;
   const accountAtStart = state._libAccountId || '';
   const folderAtStart = state._libFolder;
   const filterAtStart = state._libFilter;
   const offsetAtStart = state._libOffset;
-  const searchAtStart = state._libSearch;
+  const searchAtStart = state._libBuscar;
   const hasAttachmentsAtStart = state._libHasAttachments;
 
   const grid = document.getElementById('email-lib-grid');
@@ -3280,7 +3280,7 @@ async function _loadEmails({ force = false, useCache = true } = {}) {
 
   let sp = null;
   if (cached) {
-    state._libEmails = cached.emails || [];
+    state._libCorreos = cached.emails || [];
     state._libTotal = cached.total || 0;
     // Suppress the open-cascade animation when we're painting from
     // cache — the data was already on screen a moment ago, so sliding
@@ -3294,13 +3294,13 @@ async function _loadEmails({ force = false, useCache = true } = {}) {
     const stats = document.getElementById('email-lib-stats');
     if (stats) stats.textContent = `${state._libTotal} emails`;
     const sync = cached.sync || {};
-    _setEmailSyncStatus({
+    _setCorreoSyncStatus({
       updatedAt: sync.updated_at || '',
       source: sync.source || 'client_cache',
       loading: false,
     });
   } else {
-    sp = _renderEmailLoading(grid);
+    sp = _renderCorreoLoading(grid);
   }
 
   try {
@@ -3318,31 +3318,31 @@ async function _loadEmails({ force = false, useCache = true } = {}) {
       const data = await res.json();
       if (seq !== _libLoadSeq || accountAtStart !== (state._libAccountId || '')) return;
       if (data.error) throw new Error(data.error);
-      state._libEmails = data.emails || [];
+      state._libCorreos = data.emails || [];
       state._libTotal = data.total || 0;
       const sync = data.sync || {};
       if (sp) sp.destroy();
       // If chip-bar pills are active, swap the snapshot to the freshly
       // loaded list and re-apply the filter so pills persist across
       // refreshes / folder switches instead of getting wiped.
-      const _activePills = (state._libSearchPills || []).length > 0
-                       || (state._libSearchDraft || '').length > 0;
+      const _activePills = (state._libBuscarPills || []).length > 0
+                       || (state._libBuscarDraft || '').length > 0;
       if (_activePills) {
-        _libPreSearchEmails = state._libEmails.slice();
-        _libPreSearchTotal = state._libTotal;
+        _libPreBuscarCorreos = state._libCorreos.slice();
+        _libPreBuscarTotal = state._libTotal;
         _applyPillFilter();
       } else {
         _renderGrid();
       }
       const stats = document.getElementById('email-lib-stats');
       if (stats) stats.textContent = `${state._libTotal} emails`;
-      _setEmailSyncStatus({
+      _setCorreoSyncStatus({
         updatedAt: sync.updated_at || '',
         source: sync.source || '',
         loading: false,
       });
       _refreshUnreadBadge();
-      if (cacheable) _libCachePut(ck, { emails: state._libEmails.slice(), total: state._libTotal, sync });
+      if (cacheable) _libCachePut(ck, { emails: state._libCorreos.slice(), total: state._libTotal, sync });
     }
   } catch (e) {
     if (seq !== _libLoadSeq || accountAtStart !== (state._libAccountId || '')) return;
@@ -3352,7 +3352,7 @@ async function _loadEmails({ force = false, useCache = true } = {}) {
     if (!cached) {
       const msg = e && e.message ? `Failed to load: ${e.message}` : 'Failed to load';
       grid.innerHTML = `<div class="email-loading">${_esc(msg)}${_emailSetupHintHtml()}</div>`;
-      _wireEmailSetupHint(grid);
+      _wireCorreoSetupHint(grid);
     }
   } finally {
     if (seq === _libLoadSeq) state._libLoading = false;
@@ -3367,7 +3367,7 @@ async function _loadScheduled(grid, sp) {
   grid.innerHTML = '';
   const stats = document.getElementById('email-lib-stats');
   if (stats) stats.textContent = `${items.length} scheduled`;
-  _setEmailSyncStatus({
+  _setCorreoSyncStatus({
     updatedAt: new Date().toISOString(),
     source: 'local',
     loading: false,
@@ -3404,19 +3404,19 @@ async function _loadScheduled(grid, sp) {
     `;
     card.appendChild(content);
 
-    // Cancel button
+    // Cancelar button
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'memory-item-btn';
-    cancelBtn.title = 'Cancel scheduled send';
+    cancelBtn.title = 'Cancelar scheduled send';
     cancelBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     cancelBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const { styledConfirm } = await import('./ui.js');
-      const ok = await styledConfirm(`Cancel scheduled email "${subject}"?`, { confirmText: 'Cancel Send', cancelText: 'Keep', danger: true });
+      const { styledConfirmar } = await import('./ui.js');
+      const ok = await styledConfirmar(`Cancelar scheduled email "${subject}"?`, { confirmText: 'Cancelar Send', cancelText: 'Keep', danger: true });
       if (!ok) return;
       try {
         await fetch(`${API_BASE}/api/email/scheduled/${it.id}`, { method: 'DELETE' });
-        _loadEmails();
+        _loadCorreos();
       } catch (err) { console.error(err); }
     });
     const actionsWrap = document.createElement('div');
@@ -3438,7 +3438,7 @@ function _emailDateBucketLabel(value) {
   const day = dayStart(d);
   const diff = Math.round((today - day) / 86400000);
   if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
+  if (diff === 1) return 'Síterday';
   if (diff > 1 && diff < 7) return d.toLocaleDateString([], { weekday: 'long' });
   if (diff >= 365) {
     const years = Math.floor(diff / 365);
@@ -3450,14 +3450,14 @@ function _emailDateBucketLabel(value) {
   return d.toLocaleDateString([], sameYear ? { month: 'long', day: 'numeric' } : { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function _createEmailDateHeader(label) {
+function _createCorreoDateHeader(label) {
   const el = document.createElement('div');
   el.className = 'date-section-header email-date-section-header';
   el.textContent = label;
   return el;
 }
 
-function _dateGroupEmailsWithPinned(items, mode = 'recent') {
+function _dateGroupCorreosWithPinned(items, mode = 'recent') {
   const ordered = [];
   let groupLabel = null;
   let groupItems = [];
@@ -3489,47 +3489,47 @@ function _renderGrid() {
   if (!grid) return;
   grid.innerHTML = '';
 
-  let filtered = state._libEmails;
-  try { console.log('[email-search] _renderGrid: state._libEmails.length=', (state._libEmails || []).length, 'pills=', (state._libSearchPills || []).length, 'draft=', JSON.stringify(state._libSearchDraft || ''), 'libSearch=', JSON.stringify(state._libSearch || '')); } catch {}
+  let filtered = state._libCorreos;
+  try { console.log('[email-search] _renderGrid: state._libCorreos.length=', (state._libCorreos || []).length, 'pills=', (state._libBuscarPills || []).length, 'draft=', JSON.stringify(state._libBuscarDraft || ''), 'libBuscar=', JSON.stringify(state._libBuscar || '')); } catch {}
 
   // 'recent' is the default order from the API. Date stays the primary
   // grouping; unread/favorite priorities float inside each date section.
-  filtered = _dateGroupEmailsWithPinned([...filtered], state._libSort);
+  filtered = _dateGroupCorreosWithPinned([...filtered], state._libSort);
 
   if (filtered.length === 0) {
     // Active search — don't flash "No emails": the IMAP fetch is still
-    // running. Show a "Searching…" placeholder until _doSearch resolves
+    // running. Show a "Buscaring…" placeholder until _doBuscar resolves
     // and renders again. Without this the user saw an empty state
     // smiley for ~500ms between the optimistic pill-filter clear and
     // the server response landing.
-    if (_libSearchInFlight) {
-      _renderEmailLoading(grid);
+    if (_libBuscarInFlight) {
+      _renderCorreoLoading(grid);
       return;
     }
     // Inbox-zero is a win — pair the message with a small smiley so the
     // empty state reads as "all caught up", not "something's broken".
     const _smileyIco = '<span style="vertical-align:-3px;margin-left:6px;">' + emptyStateIcon('smiley') + '</span>';
-    // Only show the "Set up at Settings › Integrations" hint when the inbox
+    // Only show the "Set up at Configuración › Integrations" hint when the inbox
     // is TRULY empty — no filter, no search, no source emails. A sub-filter
     // (reminders, unread, etc.) that happens to be empty isn't a setup
     // problem; the link there reads as nonsense.
     const _isTrulyEmpty = (
-      state._libEmails.length === 0
+      state._libCorreos.length === 0
       && (!state._libFilter || state._libFilter === 'all')
-      && !(state._libSearch || '').trim()
+      && !(state._libBuscar || '').trim()
     );
     if (_isTrulyEmpty) {
       grid.innerHTML =
         '<div class="email-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;">' +
           '<span>No emails' + _smileyIco + '</span>' +
           '<span style="opacity:0.7;font-size:11px;">' +
-            'Set up at: <a href="#" data-open-settings="integrations" style="color:var(--accent,var(--red));text-decoration:underline;">Settings &rsaquo; Integrations</a>' +
+            'Set up at: <a href="#" data-open-settings="integrations" style="color:var(--accent,var(--red));text-decoration:underline;">Configuración &rsaquo; Integrations</a>' +
           '</span>' +
         '</div>';
       const _link = grid.querySelector('[data-open-settings]');
       if (_link) _link.addEventListener('click', (e) => {
         e.preventDefault();
-        _openSettingsTab(_link.dataset.openSettings || 'integrations');
+        _openConfiguraciónTab(_link.dataset.openConfiguración || 'integrations');
       });
     } else {
       grid.innerHTML =
@@ -3556,12 +3556,12 @@ function _renderGrid() {
   for (const em of filtered) {
     const dateLabel = _emailDateBucketLabel(em?.date);
     if (dateLabel !== lastDateLabel) {
-      grid.appendChild(_createEmailDateHeader(dateLabel));
+      grid.appendChild(_createCorreoDateHeader(dateLabel));
       lastDateLabel = dateLabel;
     }
     grid.appendChild(_createCard(em));
   }
-  _appendEmailSearchProgressRow(grid);
+  _appendCorreoBuscarProgressRow(grid);
 
   // If a deep-link asked us to expand a specific email, do it now and clear.
   if (state._libPendingExpandUid) {
@@ -3604,22 +3604,22 @@ function _createCard(em) {
   }
 
   // In Sent results, show the recipient(s) — the sender is always you and
-  // hides the actually useful info. Search results can be stamped with their
+  // hides the actually useful info. Buscar results can be stamped with their
   // real folder while the visible folder selector still says INBOX, so use the
   // email's folder first.
   const cardFolder = em.folder || state._libFolder || 'INBOX';
   const isSentFolderEarly = /sent/i.test(cardFolder);
   let senderName;
-  let senderAddress;
+  let senderAgregarress;
   if (isSentFolderEarly) {
     senderName = _formatRecipients(em.to) || em.to || '(no recipient)';
     // First address out of em.to for click-to-pill targeting.
     const _firstTo = String(em.to || '').split(',')[0] || '';
     const _m = _firstTo.match(/<([^>]+)>/);
-    senderAddress = (_m ? _m[1] : _firstTo).trim();
+    senderAgregarress = (_m ? _m[1] : _firstTo).trim();
   } else {
     senderName = em.from_name || em.from_address;
-    senderAddress = em.from_address || '';
+    senderAgregarress = em.from_address || '';
   }
   const color = _senderColor(senderName);
 
@@ -3662,7 +3662,7 @@ function _createCard(em) {
     titleRow.appendChild(att);
   }
 
-  const tags = state._libShowTags ? _visibleEmailTagsForRender(em) : [];
+  const tags = state._libShowTags ? _visibleCorreoTagsForRender(em) : [];
   if (state._libShowTags && (tags.length || em.is_spam_verdict)) {
     const tagWrap = document.createElement('span');
     tagWrap.className = 'email-tags email-card-tags' + (tags.length > 1 ? ' email-tags-collapsed' : '');
@@ -3680,7 +3680,7 @@ function _createCard(em) {
       if (moreBtn) {
         const expanded = tagWrap.classList.toggle('email-tags-expanded');
         moreBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      } else if (calBtn) _openCalendarEventFromEmail(calBtn.dataset.calendarEventUid);
+      } else if (calBtn) _openCalendarioEventFromCorreo(calBtn.dataset.calendarEventUid);
       else _applyTagFilterFromPill(tagBtn.dataset.emailFilterTag);
     });
     titleRow.appendChild(tagWrap);
@@ -3713,7 +3713,7 @@ function _createCard(em) {
       if (newState) {
         _clearDoneResponseTagsLocal(em);
         titleRow.querySelectorAll('.email-tag-urgent, .email-tag-reply-soon, .email-tag-action-needed').forEach(n => n.remove());
-        _syncEmailReadState(em.uid, true);
+        _syncCorreoReadState(em.uid, true);
       }
       try {
         if (newState) {
@@ -3758,9 +3758,9 @@ function _createCard(em) {
     const card = navArrows.closest('.doclib-card');
     if (!card) return;
     const dir = parseInt(btn.dataset.navDir, 10);
-    const sibling = _findSiblingEmailCard(card, dir);
+    const sibling = _findSiblingCorreoCard(card, dir);
     if (!sibling) return;
-    const nextEm = state._libEmails.find(e => String(e.uid) === String(sibling.dataset.uid));
+    const nextEm = state._libCorreos.find(e => String(e.uid) === String(sibling.dataset.uid));
     if (!nextEm) return;
     await _toggleCardPreview(card, em);
     await _toggleCardPreview(sibling, nextEm);
@@ -3776,14 +3776,14 @@ function _createCard(em) {
   const meta = document.createElement('div');
   meta.className = 'memory-item-meta';
   meta.style.cssText = 'font-size:10px;opacity:0.7;margin-top:2px;';
-  const showFolderChip = !!(_libSearchHadResults && cardFolder);
+  const showFolderChip = !!(_libBuscarHadResults && cardFolder);
   const prettyFolder = folderDisplayName(cardFolder);
   const sentChip = isSentFolderEarly ? '<span class="email-sent-chip" title="Sent email">Sent</span>' : '';
   const folderChip = showFolderChip && !isSentFolderEarly
     ? `<span class="email-folder-chip" title="${_esc(cardFolder)}">${_esc(prettyFolder)}</span>`
     : '';
   const senderPrefix = isSentFolderEarly ? 'to ' : '';
-  meta.innerHTML = `${sentChip}${folderChip}<span class="email-meta-sender" data-email="${_esc(senderAddress || '')}" data-name="${_esc(senderName || '')}"><span style="opacity:0.55">${senderPrefix}</span><span style="color:${color};font-weight:600">${_esc(senderName)}</span></span><span class="email-meta-sep"> · </span><span class="email-meta-date">${_esc(dateStr)}</span>`;
+  meta.innerHTML = `${sentChip}${folderChip}<span class="email-meta-sender" data-email="${_esc(senderAgregarress || '')}" data-name="${_esc(senderName || '')}"><span style="opacity:0.55">${senderPrefix}</span><span style="color:${color};font-weight:600">${_esc(senderName)}</span></span><span class="email-meta-sep"> · </span><span class="email-meta-date">${_esc(dateStr)}</span>`;
   content.appendChild(meta);
 
   card.appendChild(content);
@@ -3848,7 +3848,7 @@ function _createCard(em) {
   return card;
 }
 
-function _findSiblingEmailCard(card, dir) {
+function _findSiblingCorreoCard(card, dir) {
   const grid = card.closest('.doclib-grid');
   if (!grid) return null;
   const cards = [...grid.querySelectorAll('.doclib-card[data-uid]')];
@@ -3860,14 +3860,14 @@ function _findSiblingEmailCard(card, dir) {
 function _syncCardNavArrows(card) {
   const prev = card.querySelector('.email-card-nav-btn[data-nav-dir="-1"]');
   const next = card.querySelector('.email-card-nav-btn[data-nav-dir="1"]');
-  if (prev) prev.disabled = !_findSiblingEmailCard(card, -1);
-  if (next) next.disabled = !_findSiblingEmailCard(card, 1);
+  if (prev) prev.disabled = !_findSiblingCorreoCard(card, -1);
+  if (next) next.disabled = !_findSiblingCorreoCard(card, 1);
 }
 
 const _emailReadPrefetching = new Set();
 let _emailReadPrefetchTimer = null;
 
-function _prefetchAdjacentEmails(card, count = 1) {
+function _prefetchAdjacentCorreos(card, count = 1) {
   if (!card || state._libFolder === '__scheduled__') return;
   const grid = card.closest('.doclib-grid');
   if (!grid) return;
@@ -3887,7 +3887,7 @@ function _prefetchAdjacentEmails(card, count = 1) {
   // Use the email's actual folder when it was stamped by the search
   // endpoint; otherwise default to the currently-selected folder.
   const _emFold = (() => {
-    const emObj = (state._libEmails || []).find(e => String(e.uid) === String(uid));
+    const emObj = (state._libCorreos || []).find(e => String(e.uid) === String(uid));
     return (emObj && emObj.folder) || state._libFolder || 'INBOX';
   })();
   const key = `${state._libAccountId || ''}|${_emFold}|${uid}`;
@@ -3957,7 +3957,7 @@ async function _toggleCardPreview(card, em) {
     try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
   });
   if (!em.is_read) {
-    _syncEmailReadState(em.uid, true);
+    _syncCorreoReadState(em.uid, true);
     fetch(`${API_BASE}/api/email/mark-read/${em.uid}?folder=${encodeURIComponent(folderAtStart)}${_acct()}`, { method: 'POST' })
       .catch(err => console.error('Failed to mark email read:', err));
   }
@@ -3975,7 +3975,7 @@ async function _toggleCardPreview(card, em) {
   reader.style.minHeight = `${Math.max(180, Math.round(stableOpenHeight - 70))}px`;
   reader.innerHTML = _emailReaderSkeletonHtml();
   card.appendChild(reader);
-  _markEmailReaderActive(reader);
+  _markCorreoReaderActive(reader);
 
   try {
     const res = await fetch(`${API_BASE}/api/email/read/${em.uid}?folder=${encodeURIComponent(folderAtStart)}${_acct()}`);
@@ -3994,8 +3994,8 @@ async function _toggleCardPreview(card, em) {
       return;
     }
     // Mark as read locally
-    _syncEmailReadState(em.uid, true);
-    _prefetchAdjacentEmails(card);
+    _syncCorreoReadState(em.uid, true);
+    _prefetchAdjacentCorreos(card);
     _stampReaderContext(reader, { ...em, ...data }, state._libFolder, state._libAccountId);
 
     // Build the attachments wrap using the shared helper so the signature-
@@ -4056,31 +4056,31 @@ async function _toggleCardPreview(card, em) {
         </div>
       </div>
       ${attsHtml}
-      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderEmailBody(data)}</div>
+      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderCorreoBody(data)}</div>
     `;
-    _markEmailReaderActive(reader);
+    _markCorreoReaderActive(reader);
     reader.classList.remove('email-card-reader-loading');
     reader.style.minHeight = '';
 
-    _wireEmailAttachmentWrap(reader, folderAtStart);
-    _wireEmailInlineImages(reader);
+    _wireCorreoAttachmentWrap(reader, folderAtStart);
+    _wireCorreoInlineImages(reader);
     _loadDeferredAttachmentsIntoReader(reader, em.uid, folderAtStart, data, !!em.has_attachments);
-    _maybeAutoTranslateEmail(reader);
+    _maybeAutoTranslateCorreo(reader);
 
     reader.querySelector('[data-act="reply"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply' });
     });
     reader.querySelector('[data-act="reply-all"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply-all' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply-all' });
     });
     reader.querySelector('[data-act="ai-reply"]')?.addEventListener('click', (ev) => _handleAiReplyButton(ev, em, data));
     reader.querySelector('[data-act="forward"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'forward' });
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'forward' });
     });
     reader.querySelector('[data-act="close"]')?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -4092,10 +4092,10 @@ async function _toggleCardPreview(card, em) {
     });
     reader.querySelector('[data-act="summarize"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      await _summarizeEmail(reader, data, ev.currentTarget);
+      await _summarizeCorreo(reader, data, ev.currentTarget);
     });
     _wireMetaToggle(reader);
-    // from-sender / thread-search Search button is DISABLED for now —
+    // from-sender / thread-search Buscar button is DISABLED for now —
     // the search + threaded sidebar UX is too buggy to ship. Physically
     // remove it from every reader render path. Re-enable by deleting
     // these .remove() lines + the CSS rule.
@@ -4230,12 +4230,12 @@ function _setBubblesDisabled(v) {
   try { localStorage.setItem(_BUBBLES_DISABLED_KEY, v ? '1' : '0'); } catch {}
 }
 
-function _renderEmailBody(data) {
+function _renderCorreoBody(data) {
   const plain = (typeof data?.body === 'string' && data.body.length) ? data.body : '';
   const folder = String(data?.folder || '').toLowerCase();
   const isSentFolder = folder.includes('sent');
-  const fromAddr = String(data?.from_address || '').toLowerCase().trim();
-  const isMine = !!fromAddr && _meEmailAddrs().has(fromAddr);
+  const fromAgregarr = String(data?.from_address || '').toLowerCase().trim();
+  const isMine = !!fromAgregarr && _meCorreoAgregarrs().has(fromAgregarr);
 
   // Messages authored by the user (Sent folder or self-sent copies in INBOX)
   // are current authored text. Do not let cached boundaries or HTML
@@ -4318,23 +4318,23 @@ function _renderEmailBody(data) {
     rendered = _escLinkify(data.body || '').replace(/\n/g, '<br>');
   }
   const threaded = _renderThreadStructure(rendered);
-  if (threaded) return _prepareEmailInlineImages(_foldSignature(threaded, hintSig));
-  return _prepareEmailInlineImages(_foldSignature(_foldQuotedReplies(rendered), hintSig));
+  if (threaded) return _prepareCorreoInlineImages(_foldSignature(threaded, hintSig));
+  return _prepareCorreoInlineImages(_foldSignature(_foldQuotedReplies(rendered), hintSig));
 }
 
-function _safeRenderEmailBody(data) {
+function _safeRenderCorreoBody(data) {
   try {
-    return _prepareEmailInlineImages(_renderEmailBody(data));
+    return _prepareCorreoInlineImages(_renderCorreoBody(data));
   } catch (e) {
     console.error('email body render failed:', e);
     const plain = (typeof data?.body === 'string') ? data.body : '';
     if (plain) return _escLinkify(plain).replace(/\n/g, '<br>');
-    if (data?.body_html) return _prepareEmailInlineImages(_sanitizeHtml(data.body_html));
+    if (data?.body_html) return _prepareCorreoInlineImages(_sanitizeHtml(data.body_html));
     return '<span style="opacity:.65">No body</span>';
   }
 }
 
-function _prepareEmailInlineImages(html) {
+function _prepareCorreoInlineImages(html) {
   const raw = String(html || '');
   if (!/<img[\s>]/i.test(raw)) return raw;
   const doc = new DOMParser().parseFromString(`<div>${raw}</div>`, 'text/html');
@@ -4364,8 +4364,8 @@ function _prepareEmailInlineImages(html) {
         <span class="email-inline-image-sub">${isHttp ? 'Remote image blocked' : isCid ? 'Inline image hidden' : 'Image unavailable'}</span>
       </span>
       <span class="email-inline-image-actions">
-        ${isHttp ? `<button type="button" class="email-inline-image-btn" data-email-img-load="${idx}">Load</button><a class="email-inline-image-btn email-inline-image-download-btn" href="${_esc(src)}" target="_blank" rel="noopener noreferrer" download title="Download" aria-label="Download"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>` : ''}
-        ${isCid ? `<button type="button" class="email-inline-image-btn" data-email-img-load="${idx}">Load</button><button type="button" class="email-inline-image-btn email-inline-image-download-btn" data-email-img-download="${idx}" title="Download" aria-label="Download"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>` : ''}
+        ${isHttp ? `<button type="button" class="email-inline-image-btn" data-email-img-load="${idx}">Load</button><a class="email-inline-image-btn email-inline-image-download-btn" href="${_esc(src)}" target="_blank" rel="noopener noreferrer" download title="Descargar" aria-label="Descargar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>` : ''}
+        ${isCid ? `<button type="button" class="email-inline-image-btn" data-email-img-load="${idx}">Load</button><button type="button" class="email-inline-image-btn email-inline-image-download-btn" data-email-img-download="${idx}" title="Descargar" aria-label="Descargar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>` : ''}
       </span>
     `;
     img.replaceWith(ph);
@@ -4373,7 +4373,7 @@ function _prepareEmailInlineImages(html) {
   return root.innerHTML;
 }
 
-function _wireEmailInlineImages(reader) {
+function _wireCorreoInlineImages(reader) {
   if (!reader) return;
   const placeholders = Array.from(reader.querySelectorAll('.email-inline-image-placeholder'));
   const visiblePlaceholders = placeholders.filter(ph => (
@@ -4421,7 +4421,7 @@ function _wireEmailInlineImages(reader) {
     const uid = ctxRoot?.dataset?.emailUid || reader.dataset?.emailUid || '';
     const inlineUrl = () => {
       if (!uid || !cid) return '';
-      const params = new URLSearchParams({ cid, folder });
+      const params = new URLBuscarParams({ cid, folder });
       if (account) params.set('account_id', account);
       return `${API_BASE}/api/email/inline-image/${encodeURIComponent(uid)}?${params.toString()}`;
     };
@@ -4552,7 +4552,7 @@ function _wireEmailInlineImages(reader) {
 // conversation and the newest (the message currently being read) sits
 // at the bottom — matches the mental model people have from chat.
 
-function _meEmailAddrs() {
+function _meCorreoAgregarrs() {
   const set = new Set();
   for (const a of (state._libAccounts || [])) {
     if (a && a.from_address) set.add(String(a.from_address).toLowerCase().trim());
@@ -4566,9 +4566,9 @@ function _meEmailAddrs() {
 
 function _renderTurnsAsBubbles(turns, data) {
   if (!Array.isArray(turns) || !turns.length) return '';
-  const mineSet = _meEmailAddrs();
-  const lvl0Email = String(data && data.from_address || '').toLowerCase().trim();
-  const lvl0Mine = !!lvl0Email && mineSet.has(lvl0Email);
+  const mineSet = _meCorreoAgregarrs();
+  const lvl0Correo = String(data && data.from_address || '').toLowerCase().trim();
+  const lvl0Mine = !!lvl0Correo && mineSet.has(lvl0Correo);
   const lvl0Author = (data && (data.from_name || data.from_address)) || '';
   const lvl0Date = _formatBubbleDate(data && data.date);
 
@@ -4580,7 +4580,7 @@ function _renderTurnsAsBubbles(turns, data) {
   // Gather per-turn sender identity + frequency for the no-self case below.
   const turnIdentity = ordered.map((t) => {
     if (t.level === 0) {
-      return { email: lvl0Email, author: lvl0Author };
+      return { email: lvl0Correo, author: lvl0Author };
     }
     const p = _parseTurnMeta(t.meta || '');
     return { email: p.email, author: p.author };
@@ -4635,7 +4635,7 @@ function _renderTurnsAsBubbles(turns, data) {
     }
     const side = isMine ? 'mine' : 'theirs';
     const initials = _initials(author);
-    const color = _senderColor(author || (t.level === 0 ? lvl0Email : ''));
+    const color = _senderColor(author || (t.level === 0 ? lvl0Correo : ''));
     const head =
       `<div class="email-bubble-head">`
       + `<span class="email-bubble-author" style="color:${color}">${_esc(author)}</span>`
@@ -5058,7 +5058,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     });
   };
 
-  // Already open? Close it.
+  // Already open? Cerrar it.
   const existing = reader.querySelector('.from-sender-panel');
   if (existing) {
     existing.remove();
@@ -5068,15 +5068,15 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     return;
   }
 
-  const fromAddr = String(data.from_address || '').trim();
-  if (!fromAddr) {
+  const fromAgregarr = String(data.from_address || '').trim();
+  if (!fromAgregarr) {
     if (typeof showError === 'function') showError('No sender address available');
     return;
   }
 
   const panel = document.createElement('div');
   panel.className = 'from-sender-panel';
-  const displayName = (data.from_name && data.from_name.trim()) || fromAddr;
+  const displayName = (data.from_name && data.from_name.trim()) || fromAgregarr;
   const firstName = displayName.split(' ')[0] || displayName;
   panel.innerHTML = `
     <div class="from-sender-header">
@@ -5085,10 +5085,10 @@ async function _toggleFromSenderPanel(reader, data, btn) {
       <button type="button" class="from-sender-toggle" data-toggle="attachments" title="Show only emails with attachments" aria-pressed="false">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 17.93 8.8l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
-      <button type="button" class="from-sender-close" title="Close" aria-label="Close sender panel">&times;</button>
+      <button type="button" class="from-sender-close" title="Cerrar" aria-label="Cerrar sender panel">&times;</button>
     </div>
     <div class="from-sender-search-wrap">
-      <input type="text" class="from-sender-search" placeholder="Search ${_esc(firstName)}…" autocomplete="off" />
+      <input type="text" class="from-sender-search" placeholder="Buscar ${_esc(firstName)}…" autocomplete="off" />
       <div class="from-sender-suggest" hidden></div>
     </div>
     <div class="from-sender-list">
@@ -5102,9 +5102,9 @@ async function _toggleFromSenderPanel(reader, data, btn) {
 
   // Header close — same as the toolbar funnel button so the close path
   // stays single-sourced (panel removal + active class drop).
-  const headerClose = panel.querySelector('.from-sender-close');
-  if (headerClose) {
-    headerClose.addEventListener('click', (ev) => {
+  const headerCerrar = panel.querySelector('.from-sender-close');
+  if (headerCerrar) {
+    headerCerrar.addEventListener('click', (ev) => {
       ev.stopPropagation();
       const toolbarBtn = reader.querySelector('[data-act="from-sender"]');
       if (toolbarBtn) toolbarBtn.click();
@@ -5113,13 +5113,13 @@ async function _toggleFromSenderPanel(reader, data, btn) {
   }
 
   const listEl = panel.querySelector('.from-sender-list');
-  // Hoisted so panel._originalEmails (assigned later, outside the try) can see it.
+  // Hoisted so panel._originalCorreos (assigned later, outside the try) can see it.
   let emails = [];
 
   // Multi-tag model — the header is now a list of {name, address} chips.
   // Filter logic: an email matches when EVERY tag's address appears in
   // from/to/cc (case-insensitive substring on the joined header strings).
-  panel._tags = [{ name: displayName, address: fromAddr }];
+  panel._tags = [{ name: displayName, address: fromAgregarr }];
   panel._attachmentsOnly = false;
   const searchEl = panel.querySelector('.from-sender-search');
   const chipsContainer = panel.querySelector('.from-sender-chips');
@@ -5192,8 +5192,8 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     const loading = panel.querySelector('.from-sender-loading');
     loading.appendChild(sp.element);
 
-    const params = new URLSearchParams({
-      q: fromAddr,
+    const params = new URLBuscarParams({
+      q: fromAgregarr,
       folder: state._libFolder || 'INBOX',
       limit: '25',
     });
@@ -5202,7 +5202,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     const res = await fetch(`${API_BASE}/api/email/search?${params.toString()}${acctSuffix}`);
     const j = await res.json();
     let raw = Array.isArray(j.emails) ? j.emails : [];
-    const target = fromAddr.toLowerCase();
+    const target = fromAgregarr.toLowerCase();
     raw = raw.filter(e => String(e.from_address || '').toLowerCase() === target);
     raw = raw.filter(e => String(e.uid) !== String(data.uid));
     emails = raw;
@@ -5218,8 +5218,8 @@ async function _toggleFromSenderPanel(reader, data, btn) {
   const updatePlaceholder = () => {
     if (!searchEl) return;
     searchEl.placeholder = panel._tags.length
-      ? 'Add another person…'
-      : 'Search people or emails…';
+      ? 'Agregar another person…'
+      : 'Buscar people or emails…';
   };
   updatePlaceholder();
   _renderChips();
@@ -5238,7 +5238,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
       const sp = spinnerModule.createWhirlpool(18);
       listEl.querySelector('.from-sender-loading')?.appendChild(sp.element);
       const results = await Promise.all(folders.map(async (f) => {
-        const params = new URLSearchParams({ folder: f, limit: '40', offset: '0', filter: 'all' });
+        const params = new URLBuscarParams({ folder: f, limit: '40', offset: '0', filter: 'all' });
         const res = await fetch(`${API_BASE}/api/email/list?${params.toString()}${acctSuffix}`);
         const j = await res.json();
         return (j.emails || []).map(em => ({ ...em, _folder: f }));
@@ -5260,7 +5260,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     }
   };
 
-  // Adds a contact as a tag, clears input, refreshes the list.
+  // Agregars a contact as a tag, clears input, refreshes the list.
   const _addTag = (contact) => {
     if (!contact || !contact.address) return;
     const addr = String(contact.address).toLowerCase();
@@ -5284,14 +5284,14 @@ async function _toggleFromSenderPanel(reader, data, btn) {
 
     // Free-text email search across folders. Tag filter is applied via
     // _applyToggles inside panel._setResults.
-    const runSearch = async (q) => {
+    const runBuscar = async (q) => {
       const myToken = ++searchToken;
       const folders = _crossFolderCandidates();
       const acct = _acct();
       const acctSuffix = acct ? acct.replace(/^&?/, '&') : '';
       try {
         const results = await Promise.all(folders.map(async (f) => {
-          const params = new URLSearchParams({ q, folder: f, limit: '15' });
+          const params = new URLBuscarParams({ q, folder: f, limit: '15' });
           const res = await fetch(`${API_BASE}/api/email/search?${params.toString()}${acctSuffix}`);
           const j = await res.json();
           return (j.emails || []).map(em => ({ ...em, _folder: f }));
@@ -5310,7 +5310,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
         panel._setResults(merged, { showFolder: true });
       } catch (err) {
         if (myToken !== searchToken) return;
-        listEl.innerHTML = `<div class="from-sender-empty" style="color:var(--red, #e55)">Search failed: ${_esc(String(err))}</div>`;
+        listEl.innerHTML = `<div class="from-sender-empty" style="color:var(--red, #e55)">Buscar failed: ${_esc(String(err))}</div>`;
       }
     };
 
@@ -5318,7 +5318,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     // path matches the current input state.
     _refreshList = () => {
       const q = (searchEl.value || '').trim();
-      if (q.length >= 2) runSearch(q);
+      if (q.length >= 2) runBuscar(q);
       else _loadRecentAcross();
     };
 
@@ -5389,7 +5389,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
       }
       // Fire suggestions immediately (cheap SQL) and defer the email search.
       _fetchSuggestions(q);
-      debounceTimer = setTimeout(() => runSearch(q), 220);
+      debounceTimer = setTimeout(() => runBuscar(q), 220);
     });
 
     searchEl.addEventListener('keydown', (ev) => {
@@ -5431,7 +5431,7 @@ async function _toggleFromSenderPanel(reader, data, btn) {
     });
   }
   // Stash the sender's emails for restoring after a search is cleared.
-  panel._originalEmails = (typeof emails !== 'undefined') ? emails : [];
+  panel._originalCorreos = (typeof emails !== 'undefined') ? emails : [];
 }
 
 const _ATT_ICON = '<svg class="from-sender-att" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Has attachments"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
@@ -5478,7 +5478,7 @@ function _renderFromSenderRows(emails, listEl, reader, opts = {}) {
       // Look up the row's email in any cache we know about; the menu just
       // needs uid + subject + folder for its actions.
       const em = (typeof emails !== 'undefined' ? emails : []).find(e => String(e.uid) === String(uid))
-        || state._libEmails.find(e => String(e.uid) === String(uid))
+        || state._libCorreos.find(e => String(e.uid) === String(uid))
         || { uid, subject: row.querySelector('.from-sender-subj')?.textContent || '' };
       const card = reader.closest('.doclib-card');
       if (card) _showReaderMoreMenu(em, card, reader, more);
@@ -5493,7 +5493,7 @@ function _wireAttachmentHandlers(reader, folder) {
   const useFolder = folder || state._libFolder;
   // Detect mobile here so the attachment-chip handler doesn't blow up with
   // a ReferenceError when this fn is called from contexts that don't have
-  // _isMobileUA in scope (e.g. _openEmailAsTab, _openEmailWindow).
+  // _isMobileUA in scope (e.g. _openCorreoAsTab, _openCorreoWindow).
   const _isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   reader.querySelectorAll('.email-attachments-download-all').forEach(btn => {
     if (btn.dataset.wired === '1') return;
@@ -5540,7 +5540,7 @@ function _wireAttachmentHandlers(reader, folder) {
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-        try { uiModule.showToast && uiModule.showToast(`Downloading ${count || 'all'} attachments`); } catch (_) {}
+        try { uiModule.showToast && uiModule.showToast(`Descargaring ${count || 'all'} attachments`); } catch (_) {}
       } catch (e) {
         console.error('attachments zip download error', e);
         try { const { showError } = await import('./ui.js'); showError('Could not download attachments'); } catch (_) {}
@@ -5589,10 +5589,10 @@ function _wireAttachmentHandlers(reader, folder) {
         }
         try {
           // Tab the email modal down only when the viewport cannot fit both
-          // Email and the document pane. Desktop keeps a side-by-side layout
+          // Correo and the document pane. Desktop keeps a side-by-side layout
           // when there is room; mobile still gives the document the screen.
           const ownerModal = openBtn.closest('.modal');
-          if (ownerModal && ownerModal.id && _prepareEmailWindowForDocument(ownerModal)) {
+          if (ownerModal && ownerModal.id && _prepareCorreoWindowForDocument(ownerModal)) {
             try {
               const ok = Modals.minimize(ownerModal.id);
               if (!ok) ownerModal.classList.add('hidden');
@@ -5648,7 +5648,7 @@ function _wireAttachmentHandlers(reader, folder) {
       }
       // Swap the paperclip icon for a whirlpool spinner while the
       // download is in flight, so large attachments give a clear cue
-      // they're loading. Restore on completion.
+      // they're loading. Restaurar on completion.
       const iconSvg = chip.querySelector(':scope > svg');
       const origIconHtml = iconSvg ? iconSvg.outerHTML : '';
       let _wp = null;
@@ -5756,7 +5756,7 @@ function _buildAttsHtmlFor(uid, data) {
       : `Hidden inline attachments (${hidden.length})`;
   const startCollapsed = !visible.length && !related.length;
   const downloadAllBtn = visible.length > 4
-    ? `<button type="button" class="email-attachments-download-all" title="Download all attachments" data-att-uid="${_esc(uid)}" data-att-folder="${_esc(data.folder || state._libFolder || 'INBOX')}" data-att-count="${visible.length}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>All</span></button>`
+    ? `<button type="button" class="email-attachments-download-all" title="Descargar all attachments" data-att-uid="${_esc(uid)}" data-att-folder="${_esc(data.folder || state._libFolder || 'INBOX')}" data-att-count="${visible.length}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>All</span></button>`
     : '';
   return (
     `<div class="email-reader-atts-wrap${startCollapsed ? ' collapsed' : ''}">`
@@ -5773,7 +5773,7 @@ function _buildAttsHtmlFor(uid, data) {
   );
 }
 
-async function _ensureEmailAttachmentData(uid, folder, data, knownHasAttachments = false) {
+async function _ensureCorreoAttachmentData(uid, folder, data, knownHasAttachments = false) {
   if (!data) return data;
   const current = Array.isArray(data.attachments) ? data.attachments : [];
   const related = Array.isArray(data.related_attachments) ? data.related_attachments : [];
@@ -5807,7 +5807,7 @@ async function _ensureEmailAttachmentData(uid, folder, data, knownHasAttachments
   }
 }
 
-function _wireEmailAttachmentWrap(reader, folder) {
+function _wireCorreoAttachmentWrap(reader, folder) {
   if (!reader) return;
   const attsWrap = reader.querySelector('.email-reader-atts-wrap');
   if (attsWrap && !attsWrap.dataset.wired) {
@@ -5836,7 +5836,7 @@ function _loadDeferredAttachmentsIntoReader(reader, uid, folder, data, knownHasA
   if (!data.attachments_deferred && !(knownHasAttachments && !current.length && !related.length)) return;
   const body = reader.querySelector('.email-reader-body');
   if (!body) return;
-  _ensureEmailAttachmentData(uid, folder, data, knownHasAttachments).then(fullData => {
+  _ensureCorreoAttachmentData(uid, folder, data, knownHasAttachments).then(fullData => {
     if (!reader.isConnected || !fullData || fullData === data) return;
     const attsHtml = _buildAttsHtmlFor(uid, fullData);
     if (!attsHtml) return;
@@ -5848,7 +5848,7 @@ function _loadDeferredAttachmentsIntoReader(reader, uid, folder, data, knownHasA
     } else {
       body.insertAdjacentHTML('beforebegin', attsHtml);
     }
-    _wireEmailAttachmentWrap(reader, folder);
+    _wireCorreoAttachmentWrap(reader, folder);
   }).catch(() => {});
 }
 
@@ -5878,7 +5878,7 @@ function _freeReaderSlot(modalId) {
 
 // JS-driven gate: sets [data-email-tabs="N"] on <body> so CSS can show
 // the per-chip number badge only when 2+ tabs exist.
-function _syncEmailTabsCount() {
+function _syncCorreoTabsCount() {
   const tabs = document.querySelectorAll('.minimized-dock-chip[data-modal-id^="email-view-"]');
   document.body.dataset.emailTabs = String(tabs.length);
 }
@@ -5888,7 +5888,7 @@ function _syncEmailTabsCount() {
 // at body level (free-positioned chips on mobile). Result is written to
 // the email-lib-modal chip's data-tab-count attribute; CSS reads it via
 // attr() to render the badge.
-function _syncEmailTabBadge() {
+function _syncCorreoTabBadge() {
   const readers = document.querySelectorAll('.minimized-dock-chip[data-modal-id^="email-reader-"]');
   document.body.dataset.emailReaders = String(readers.length);
   // Stamp each chip with its persistent slot number. CSS reads
@@ -5901,7 +5901,7 @@ function _syncEmailTabBadge() {
 }
 let _emailTabObserverWired = false;
 let _badgeSyncScheduled = false;
-function _ensureEmailTabObserver() {
+function _ensureCorreoTabObserver() {
   if (_emailTabObserverWired) return;
   _emailTabObserverWired = true;
   // Debounce so a burst of mutations (e.g. _renderDock rebuilding the
@@ -5913,7 +5913,7 @@ function _ensureEmailTabObserver() {
     _badgeSyncScheduled = true;
     requestAnimationFrame(() => {
       _badgeSyncScheduled = false;
-      _syncEmailTabBadge();
+      _syncCorreoTabBadge();
     });
   };
   const tryWire = () => {
@@ -5942,7 +5942,7 @@ function _ensureEmailTabObserver() {
 //     (id "email-reader-{uid}-{seq}") with the SAME structure & classes
 //     as the library's inline reader, so they look identical. Each
 //     reader registers its own dock chip with a number badge.
-async function _openEmailAsTab(em, folder) {
+async function _openCorreoAsTab(em, folder) {
   const useFolder = folder || state._libFolder || 'INBOX';
   _emailTabSeq += 1;
   const modalId = `email-reader-${em.uid}-${_emailTabSeq}`;
@@ -5962,7 +5962,7 @@ async function _openEmailAsTab(em, folder) {
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px;">${_esc(em.subject || '(no subject)')}</span>
         </h4>
         <button class="minimize-btn" type="button" title="Minimize">_</button>
-        <button class="close-btn" type="button" title="Close">&#x2716;</button>
+        <button class="close-btn" type="button" title="Cerrar">&#x2716;</button>
       </div>
       <div class="modal-body email-reader-tab-body" style="display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;padding:0;">
         <div class="email-card-reader email-card-expanded" style="flex:1;min-height:0;display:flex;flex-direction:column;">
@@ -5979,12 +5979,12 @@ async function _openEmailAsTab(em, folder) {
   document.body.classList.add('email-front');
 
   Modals.register(modalId, {
-    label: 'Email',
+    label: 'Correo',
     icon: _EMAIL_ICON_PATH,
     closeFn: () => {
       modal.remove();
       _freeReaderSlot(modalId);
-      Promise.resolve().then(_syncEmailTabBadge);
+      Promise.resolve().then(_syncCorreoTabBadge);
     },
     restoreFn: () => {
       // Reopened last → bring the email windows in front of any open doc.
@@ -6077,13 +6077,13 @@ async function _openEmailAsTab(em, folder) {
       } catch {}
     });
   }
-  _ensureEmailTabObserver();
-  _syncEmailTabBadge();
+  _ensureCorreoTabObserver();
+  _syncCorreoTabBadge();
 
   // Fetch + render the email body using the exact same template as
   // _toggleCardPreview so the visuals match perfectly.
   const reader = modal.querySelector('.email-card-reader');
-  _markEmailReaderActive(reader);
+  _markCorreoReaderActive(reader);
   const loading = modal.querySelector('.email-reader-tab-loading');
   if (loading) loading.remove();
   if (reader) {
@@ -6097,7 +6097,7 @@ async function _openEmailAsTab(em, folder) {
       reader.innerHTML = `<div style="padding:20px;color:var(--red,#e55)">Error: ${_esc(data.error)}</div>`;
       return;
     }
-    _syncEmailReadState(em.uid, true);
+    _syncCorreoReadState(em.uid, true);
     _stampReaderContext(reader, { ...em, ...data }, useFolder, state._libAccountId);
     const buildChips = (str) => {
       if (!str) return '';
@@ -6126,7 +6126,7 @@ async function _openEmailAsTab(em, folder) {
             ${_hasMultipleRecipients(data) ? `<button class="memory-toolbar-btn reader-icon-btn" data-act="reply-all" title="Reply All"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 17 2 12 7 7"/><polyline points="12 17 7 12 12 7"/><path d="M22 18v-2a4 4 0 0 0-4-4H7"/></svg><span class="reader-btn-label">Reply all</span></button>` : ''}
             <button class="memory-toolbar-btn reader-icon-btn" data-act="forward" title="Forward"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg><span class="reader-btn-label">Forward</span></button>
             <button class="memory-toolbar-btn reader-icon-btn" data-act="summarize" title="Summarize">${_summaryIcon(data)}<span class="reader-btn-label">Summary</span></button>
-            <button class="memory-toolbar-btn reader-icon-btn" data-act="from-sender" title="Search text in this thread"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="reader-btn-label">Search</span></button>
+            <button class="memory-toolbar-btn reader-icon-btn" data-act="from-sender" title="Buscar text in this thread"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="reader-btn-label">Buscar</span></button>
             <div class="email-reader-more-wrap" style="position:relative">
               <button class="memory-toolbar-btn reader-icon-btn" data-act="more" title="More actions"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg><span class="reader-btn-label">More</span></button>
             </div>
@@ -6134,33 +6134,33 @@ async function _openEmailAsTab(em, folder) {
         </div>
       </div>
       ${attsHtml}
-      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderEmailBody(data)}</div>
+      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderCorreoBody(data)}</div>
     `;
-    _markEmailReaderActive(reader);
+    _markCorreoReaderActive(reader);
     reader.classList.remove('email-card-reader-loading');
     _wireRecipientChips(reader);
-    _wireEmailAttachmentWrap(reader, useFolder);
-    _wireEmailInlineImages(reader);
+    _wireCorreoAttachmentWrap(reader, useFolder);
+    _wireCorreoInlineImages(reader);
     _loadDeferredAttachmentsIntoReader(reader, em.uid, useFolder, data, !!em.has_attachments);
-    _maybeAutoTranslateEmail(reader);
+    _maybeAutoTranslateCorreo(reader);
     reader.querySelector('[data-act="reply"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply' });
     });
     reader.querySelector('[data-act="reply-all"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply-all' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply-all' });
     });
     reader.querySelector('[data-act="ai-reply"]')?.addEventListener('click', (ev) => _handleAiReplyButton(ev, em, data));
     reader.querySelector('[data-act="forward"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'forward' });
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'forward' });
     });
     reader.querySelector('[data-act="summarize"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      try { await _summarizeEmail(reader, data, ev.currentTarget); } catch {}
+      try { await _summarizeCorreo(reader, data, ev.currentTarget); } catch {}
     });
     _wireMetaToggle(reader);
     reader.querySelector('[data-act="from-sender"]')?.remove();
@@ -6181,10 +6181,10 @@ async function _openEmailAsTab(em, folder) {
 // "Open in new window" — spawns a floating draggable modal that shows just
 // the email content. Multiple windows can stack; each has its own DOM id
 // and close button. Uses `_makeDraggable` so dragging the header pans the
-// window around. Renders the body via _renderEmailBody for parity with the
+// window around. Renders the body via _renderCorreoBody for parity with the
 // expanded reader.
 let _emailWindowSeq = 0;
-async function _openEmailWindow(em, folder) {
+async function _openCorreoWindow(em, folder) {
   const useFolder = folder || state._libFolder || 'INBOX';
   _emailWindowSeq += 1;
   const winId = `email-window-${em.uid}-${_emailWindowSeq}`;
@@ -6199,7 +6199,7 @@ async function _openEmailWindow(em, folder) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <span class="email-window-subject" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(em.subject || '(no subject)')}</span>
         </h4>
-        <button class="close-btn" type="button" title="Close">&#x2716;</button>
+        <button class="close-btn" type="button" title="Cerrar">&#x2716;</button>
       </div>
       <div class="modal-body email-window-body" style="overflow:auto;padding:14px 16px;flex:1;min-height:0;">
         <div class="email-window-loading" style="display:flex;justify-content:center;padding:24px;"></div>
@@ -6247,7 +6247,7 @@ async function _openEmailWindow(em, folder) {
       bodyEl.innerHTML = `<div style="color:var(--red,#e55);padding:16px;">${_esc(data.error)}</div>`;
       return;
     }
-    _syncEmailReadState(em.uid, true);
+    _syncCorreoReadState(em.uid, true);
     const subjEl = modal.querySelector('.email-window-subject');
     if (subjEl && data.subject) subjEl.textContent = data.subject;
     // Build recipient chips the same way the inline reader does so the
@@ -6268,7 +6268,7 @@ async function _openEmailWindow(em, folder) {
     bodyEl.classList.add('email-card-reader');
     bodyEl.classList.remove('email-card-reader-loading');
     _stampReaderContext(bodyEl, { ...em, ...data }, useFolder, state._libAccountId);
-    _markEmailReaderActive(bodyEl);
+    _markCorreoReaderActive(bodyEl);
     bodyEl.style.padding = '0';
     bodyEl.innerHTML = `
       <div class="email-reader-header">
@@ -6294,33 +6294,33 @@ async function _openEmailWindow(em, folder) {
         </div>
       </div>
       ${attsHtml}
-      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderEmailBody(data)}</div>
+      <div class="email-reader-body${data.body_html ? ' html-body' : ''}">${_safeRenderCorreoBody(data)}</div>
     `;
-    _markEmailReaderActive(bodyEl);
+    _markCorreoReaderActive(bodyEl);
     _wireRecipientChips(bodyEl);
     // Wire all the same action handlers the inline reader has.
-    _wireEmailAttachmentWrap(bodyEl, useFolder);
-    _wireEmailInlineImages(bodyEl);
+    _wireCorreoAttachmentWrap(bodyEl, useFolder);
+    _wireCorreoInlineImages(bodyEl);
     _loadDeferredAttachmentsIntoReader(bodyEl, em.uid, useFolder, data, !!em.has_attachments);
-    _maybeAutoTranslateEmail(bodyEl);
+    _maybeAutoTranslateCorreo(bodyEl);
     bodyEl.querySelector('[data-act="reply"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply' });
     });
     bodyEl.querySelector('[data-act="reply-all"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      _snapEmailModalToLeftSidebar(ev.currentTarget.closest('.modal'));
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'reply-all' });
+      _snapCorreoModalToLeftSidebar(ev.currentTarget.closest('.modal'));
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'reply-all' });
     });
     bodyEl.querySelector('[data-act="ai-reply"]')?.addEventListener('click', (ev) => _handleAiReplyButton(ev, em, data));
     bodyEl.querySelector('[data-act="forward"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode: 'forward' });
+      if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode: 'forward' });
     });
     bodyEl.querySelector('[data-act="summarize"]')?.addEventListener('click', async (ev) => {
       ev.stopPropagation();
-      try { await _summarizeEmail(bodyEl, data, ev.currentTarget); } catch {}
+      try { await _summarizeCorreo(bodyEl, data, ev.currentTarget); } catch {}
     });
     _wireMetaToggle(bodyEl);
     bodyEl.querySelector('[data-act="from-sender"]')?.remove();
@@ -6363,9 +6363,9 @@ async function _swapReaderToUid(reader, uid, folder) {
       body.innerHTML = `<div style="padding:20px;color:var(--red,#e55)">${_esc(data.error)}</div>`;
       return;
     }
-    _syncEmailReadState(uid, true);
+    _syncCorreoReadState(uid, true);
     _stampReaderContext(reader, { ...data, uid }, useFolder, state._libAccountId);
-    // Update the header meta (From/To/Subject) so it matches the new email.
+    // Actualizar the header meta (From/To/Subject) so it matches the new email.
     const headerMeta = reader.querySelector('.email-reader-meta');
     if (headerMeta) {
       const subj = data.subject || '(no subject)';
@@ -6401,22 +6401,22 @@ async function _swapReaderToUid(reader, uid, folder) {
       } else {
         body.insertAdjacentHTML('beforebegin', newAttsHtml);
       }
-      _wireEmailAttachmentWrap(reader, useFolder);
+      _wireCorreoAttachmentWrap(reader, useFolder);
     } else if (oldAtts) {
       oldAtts.remove();
     }
-    body.innerHTML = _safeRenderEmailBody(data);
+    body.innerHTML = _safeRenderCorreoBody(data);
     body.classList.toggle('html-body', !!data.body_html);
-    _wireEmailInlineImages(reader);
-    _wireEmailAttachmentWrap(reader, useFolder);
+    _wireCorreoInlineImages(reader);
+    _wireCorreoAttachmentWrap(reader, useFolder);
     _loadDeferredAttachmentsIntoReader(reader, uid, useFolder, data, !!data.attachments_deferred);
-    _maybeAutoTranslateEmail(reader);
+    _maybeAutoTranslateCorreo(reader);
   } catch (err) {
     body.innerHTML = `<div style="padding:20px;color:var(--red,#e55)">${_esc(String(err))}</div>`;
   }
 }
 
-async function _summarizeEmail(reader, data, btn) {
+async function _summarizeCorreo(reader, data, btn) {
   const body = reader.querySelector('.email-reader-body');
   if (!body) return;
 
@@ -6457,7 +6457,7 @@ async function _summarizeEmail(reader, data, btn) {
       const label = btn.querySelector('.btn-label');
       if (label) label.textContent = 'Summary';
     }
-    // No Cancel button — toggling the Summary button again hides this panel
+    // No Cancelar button — toggling the Summary button again hides this panel
     // (handled by the existing-panel branch above), so it'd be redundant.
     prompt.querySelector('[data-act="summary-generate"]').addEventListener('click', async (ev) => {
       ev.stopPropagation();
@@ -6550,7 +6550,7 @@ function _emailBodyTextForTranslate(reader) {
   return (clone.innerText || clone.textContent || '').trim();
 }
 
-async function _translateEmail(reader, language, opts = {}) {
+async function _translateCorreo(reader, language, opts = {}) {
   const body = reader?.querySelector?.('.email-reader-body');
   if (!body) return;
   const existing = body.querySelector('.email-translation-panel');
@@ -6558,7 +6558,7 @@ async function _translateEmail(reader, language, opts = {}) {
     if (opts.auto && !opts.force) return;
     existing.remove();
   }
-  const targetLanguage = language || 'English';
+  const targetIdioma = language || 'English';
   const sourceText = _emailBodyTextForTranslate(reader);
   if (!sourceText) {
     try { uiModule?.showError?.('No email body to translate'); } catch {}
@@ -6571,7 +6571,7 @@ async function _translateEmail(reader, language, opts = {}) {
   panel.innerHTML =
     '<div class="email-summary-header email-summary-toggle" role="button" tabindex="0">'
     +   '<svg class="email-translation-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>'
-    +   `<span>Translation · ${_esc(targetLanguage)}</span>`
+    +   `<span>Translation · ${_esc(targetIdioma)}</span>`
     +   '<svg class="email-summary-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;transition:transform .15s ease;"><polyline points="6 9 12 15 18 9"/></svg>'
     + '</div>'
     + '<div class="email-summary-content email-translation-loading"><span class="email-translation-busy"><span class="email-translation-spinner"></span><span class="email-translation-loading-text">Translating...</span></span></div>';
@@ -6596,7 +6596,7 @@ async function _translateEmail(reader, language, opts = {}) {
         body: sourceText,
         subject: reader.dataset.emailSubject || '',
         from: reader.dataset.emailFrom || '',
-        target_language: targetLanguage,
+        target_language: targetIdioma,
         auto: !!opts.auto,
       }),
     });
@@ -6621,14 +6621,14 @@ async function _translateEmail(reader, language, opts = {}) {
   }
 }
 
-async function _maybeAutoTranslateEmail(reader) {
+async function _maybeAutoTranslateCorreo(reader) {
   if (reader) reader.dataset.autoTranslateChecked = '1';
 }
 
 // Keep an email ⋮ dropdown inside the viewport: when it would spill past the
 // bottom (e.g. an email low on a phone screen), flip it above the anchor if
 // there's more room up there, and cap height + scroll if it still overflows.
-function _fitEmailDropdown(dropdown, rect) {
+function _fitCorreoDropdown(dropdown, rect) {
   requestAnimationFrame(() => {
     const margin = 8;
     // Horizontal clamp — keep the dropdown inside the viewport regardless of
@@ -6693,17 +6693,17 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
     // Pick the next neighbour BEFORE we re-render so we know which email to
     // jump to. Prefer the next card; fall back to the previous one if this
     // was the last card.
-    const sibling = _findSiblingEmailCard(card, +1) || _findSiblingEmailCard(card, -1);
+    const sibling = _findSiblingCorreoCard(card, +1) || _findSiblingCorreoCard(card, -1);
     const nextUid = sibling ? sibling.dataset.uid : null;
-    await _animateEmailCardRemoval([em.uid]);
-    state._libEmails = state._libEmails.filter(e => String(e.uid) !== String(em.uid));
+    await _animateCorreoCardRemoval([em.uid]);
+    state._libCorreos = state._libCorreos.filter(e => String(e.uid) !== String(em.uid));
     _renderGrid();
     _libCacheWriteBack();
     if (!nextUid) return;
     // After _renderGrid, the card nodes are fresh — re-resolve and expand.
     const grid = document.getElementById('email-lib-grid');
     const nextCard = grid?.querySelector(`.doclib-card[data-uid="${CSS.escape(String(nextUid))}"]`);
-    const nextEm = state._libEmails.find(e => String(e.uid) === String(nextUid));
+    const nextEm = state._libCorreos.find(e => String(e.uid) === String(nextUid));
     if (nextCard && nextEm) {
       _toggleCardPreview(nextCard, nextEm);
       nextCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -6714,15 +6714,15 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
   const _contactIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>';
   // Three groups separated by dividers:
   //   1. Open / Mark Unread / Remind — the per-email view actions
-  //   2. Save sender / Not Done / Archive — non-destructive state changes
-  //   3. Move to Spam / Move to Trash / Delete — destructive
+  //   2. Guardar sender / Not Done / Archivar — non-destructive state changes
+  //   3. Mover to Spam / Mover to Trash / Eliminar — destructive
   const actions = [
     {
       label: 'Open in new tab',
       icon: _newTabIcon,
       action: async () => {
         const folder = state._libFolder || 'INBOX';
-        await _openEmailAsTab(em, folder);
+        await _openCorreoAsTab(em, folder);
       },
     },
     {
@@ -6741,7 +6741,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
       icon: _unreadIcon,
       action: async () => {
         const newRead = !em.is_read;
-        _syncEmailReadState(em.uid, newRead);
+        _syncCorreoReadState(em.uid, newRead);
         try {
           if (newRead) {
             await fetch(`${API_BASE}/api/email/mark-read/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'POST' });
@@ -6781,7 +6781,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
         em.is_answered = newState;
         if (newState) {
           _clearDoneResponseTagsLocal(em);
-          _syncEmailReadState(em.uid, true);
+          _syncCorreoReadState(em.uid, true);
         }
         try {
           if (newState) {
@@ -6795,7 +6795,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
       },
     },
     {
-      label: 'Move to Archive',
+      label: 'Mover to Archivar',
       icon: _archIcon,
       action: async () => {
         try {
@@ -6805,9 +6805,9 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
       },
     },
     {
-      // Save the sender to CardDAV contacts. Pulls name + address off the
+      // Guardar the sender to CardDAV contacts. Pulls name + address off the
       // list-item (em); falls back to splitting the local-part for a name.
-      label: 'Save sender to contacts',
+      label: 'Guardar sender to contacts',
       icon: _contactIcon,
       action: async () => {
         const email = (em.from_address || em.from || '').trim();
@@ -6826,7 +6826,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
           import('./ui.js').then(m => {
             if (!m.showToast) return;
             if (d.success && d.message === 'Already exists') m.showToast('Already in contacts');
-            else if (d.success) m.showToast('Saved to contacts');
+            else if (d.success) m.showToast('Guardard to contacts');
             else m.showError && m.showError('Failed to save contact');
           }).catch(() => {});
         } catch (_) {
@@ -6836,7 +6836,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
     },
     { separator: true },
     {
-      label: 'Move to Spam',
+      label: 'Mover to Spam',
       icon: _spamIcon,
       action: async () => {
         try {
@@ -6846,10 +6846,10 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
       },
     },
     {
-      label: 'Move to Trash',
+      label: 'Mover to Trash',
       icon: _trashIcon,
       action: async () => {
-        const busy = _showEmailDeleteOverlay(card);
+        const busy = _showCorreoEliminarOverlay(card);
         await busy?.ready;
         try {
           await fetch(`${API_BASE}/api/email/delete/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'DELETE' });
@@ -6864,17 +6864,17 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
       },
     },
     {
-      label: 'Delete Permanently',
+      label: 'Eliminar Permanently',
       icon: _deleteForeverIcon,
       danger: true,
       action: async () => {
         const subject = em.subject || '(no subject)';
-        const ok = await styledConfirm(
+        const ok = await styledConfirmar(
           `Permanently delete "${subject}"? This cannot be undone.`,
-          { confirmText: 'Delete', cancelText: 'Cancel', danger: true }
+          { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true }
         );
         if (!ok) return;
-        const busy = _showEmailDeleteOverlay(card);
+        const busy = _showCorreoEliminarOverlay(card);
         await busy?.ready;
         try {
           await fetch(`${API_BASE}/api/email/delete-permanent/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'DELETE' });
@@ -6908,7 +6908,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
         return;
       }
       if (a.submenu === 'translate') {
-        _showEmailTranslateSubmenu(reader, dropdown);
+        _showCorreoTranslateSubmenu(reader, dropdown);
         return;
       }
       close();
@@ -6916,12 +6916,12 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
     });
     dropdown.appendChild(item);
   }
-  // Mobile-only Cancel item — explicit close for touch users. CSS hides it
+  // Mobile-only Cancelar item — explicit close for touch users. CSS hides it
   // on desktop where outside-click already dismisses cleanly.
   const _cancelIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const cancelItem = document.createElement('div');
   cancelItem.className = 'dropdown-item-compact dropdown-cancel-mobile';
-  cancelItem.innerHTML = _icon(_cancelIco) + '<span>Cancel</span>';
+  cancelItem.innerHTML = _icon(_cancelIco) + '<span>Cancelar</span>';
   cancelItem.addEventListener('click', (e) => {
     e.stopPropagation();
     close();
@@ -6929,7 +6929,7 @@ function _showReaderMoreMenu(em, card, reader, anchor) {
   dropdown.appendChild(cancelItem);
 
   document.body.appendChild(dropdown);
-  _fitEmailDropdown(dropdown, rect);
+  _fitCorreoDropdown(dropdown, rect);
   const close = bindMenuDismiss(dropdown, () => {
     dropdown.remove();
     anchor.classList.remove('reader-more-active');
@@ -6968,7 +6968,7 @@ function _showCardMenu(em, anchor) {
       // chip — multiple emails can be opened simultaneously, each gets
       // its own chip in the minimized dock.
       const folder = state._libFolder || 'INBOX';
-      await _openEmailAsTab(em, folder);
+      await _openCorreoAsTab(em, folder);
     }},
     { label: 'Remind to reply', icon: _cardBellIcon, submenu: 'remind' },
   ];
@@ -6991,7 +6991,7 @@ function _showCardMenu(em, anchor) {
         em.is_answered = newState;
         if (newState) {
           _clearDoneResponseTagsLocal(em);
-          _syncEmailReadState(em.uid, true); // mark-done implies mark-read
+          _syncCorreoReadState(em.uid, true); // mark-done implies mark-read
         }
         try {
           if (newState) {
@@ -7004,7 +7004,7 @@ function _showCardMenu(em, anchor) {
         if (card) {
           if (check) check.classList.toggle('active', newState);
           if (newState) {
-            _syncEmailReadState(em.uid, true);
+            _syncCorreoReadState(em.uid, true);
             card.querySelectorAll('.email-tag-urgent, .email-tag-reply-soon, .email-tag-action-needed').forEach(n => n.remove());
           }
         }
@@ -7027,12 +7027,12 @@ function _showCardMenu(em, anchor) {
       },
     });
     actions.push({
-      label: 'Archive',
+      label: 'Archivar',
       icon: _archIcon,
       action: async () => {
         await fetch(`${API_BASE}/api/email/archive/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'POST' });
-        await _animateEmailCardRemoval([em.uid]);
-        state._libEmails = state._libEmails.filter(e => String(e.uid) !== String(em.uid));
+        await _animateCorreoCardRemoval([em.uid]);
+        state._libCorreos = state._libCorreos.filter(e => String(e.uid) !== String(em.uid));
         _renderGrid();
         _libCacheWriteBack();
       },
@@ -7055,12 +7055,12 @@ function _showCardMenu(em, anchor) {
       },
     });
     actions.push({
-      label: 'Archive',
+      label: 'Archivar',
       icon: _archIcon,
       action: async () => {
         await fetch(`${API_BASE}/api/email/archive/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'POST' });
-        await _animateEmailCardRemoval([em.uid]);
-        state._libEmails = state._libEmails.filter(e => String(e.uid) !== String(em.uid));
+        await _animateCorreoCardRemoval([em.uid]);
+        state._libCorreos = state._libCorreos.filter(e => String(e.uid) !== String(em.uid));
         _renderGrid();
         _libCacheWriteBack();
       },
@@ -7085,12 +7085,12 @@ function _showCardMenu(em, anchor) {
   });
 
   actions.push(
-    { label: 'Delete', icon: _delIcon, danger: true, action: async () => {
+    { label: 'Eliminar', icon: _delIcon, danger: true, action: async () => {
       const subject = em.subject || '(no subject)';
-      const ok = await styledConfirm(`Delete "${subject}"?`, { confirmText: 'Delete', cancelText: 'Cancel', danger: true });
+      const ok = await styledConfirmar(`Eliminar "${subject}"?`, { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true });
       if (!ok) return;
       const card = document.querySelector(`#email-lib-grid .doclib-card[data-uid="${CSS.escape(String(em.uid))}"]`);
-      const busy = _showEmailDeleteOverlay(card);
+      const busy = _showCorreoEliminarOverlay(card);
       await busy?.ready;
       try {
         await fetch(`${API_BASE}/api/email/delete/${em.uid}?folder=${encodeURIComponent(state._libFolder)}${_acct()}`, { method: 'DELETE' });
@@ -7100,8 +7100,8 @@ function _showCardMenu(em, anchor) {
         throw e;
       }
       busy?.remove?.();
-      await _animateEmailCardRemoval([em.uid]);
-      state._libEmails = state._libEmails.filter(e => String(e.uid) !== String(em.uid));
+      await _animateCorreoCardRemoval([em.uid]);
+      state._libCorreos = state._libCorreos.filter(e => String(e.uid) !== String(em.uid));
       _renderGrid();
       _libCacheWriteBack();
     }},
@@ -7123,12 +7123,12 @@ function _showCardMenu(em, anchor) {
     });
     dropdown.appendChild(item);
   }
-  // Mobile-only Cancel item — explicit close for touch users. CSS hides it
+  // Mobile-only Cancelar item — explicit close for touch users. CSS hides it
   // on desktop where outside-click already dismisses cleanly.
   const _cancelIco = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const cancelItem = document.createElement('div');
   cancelItem.className = 'dropdown-item-compact dropdown-cancel-mobile';
-  cancelItem.innerHTML = _icon(_cancelIco) + '<span>Cancel</span>';
+  cancelItem.innerHTML = _icon(_cancelIco) + '<span>Cancelar</span>';
   cancelItem.addEventListener('click', (e) => {
     e.stopPropagation();
     close();
@@ -7136,14 +7136,14 @@ function _showCardMenu(em, anchor) {
   dropdown.appendChild(cancelItem);
 
   document.body.appendChild(dropdown);
-  _fitEmailDropdown(dropdown, rect);
+  _fitCorreoDropdown(dropdown, rect);
   const close = bindMenuDismiss(dropdown, () => {
     dropdown.remove();
     anchor.classList.remove('reader-more-active');
   }, (ev) => !dropdown.contains(ev.target) && ev.target !== anchor);
 }
 
-// Bulk "Actions" dropdown for select mode — Delete is a separate visible button.
+// Bulk "Actions" dropdown for select mode — Eliminar is a separate visible button.
 function _showBulkActionsMenu(anchor) {
   document.querySelectorAll('.email-card-dropdown').forEach(dismissOrRemove);
   const dropdown = document.createElement('div');
@@ -7165,15 +7165,15 @@ function _showBulkActionsMenu(anchor) {
     it.addEventListener('click', (e) => { e.stopPropagation(); close(); a.action(); });
     dropdown.appendChild(it);
   }
-  // Mobile-only Cancel — matches the per-card and sidebar dropdowns.
+  // Mobile-only Cancelar — matches the per-card and sidebar dropdowns.
   const _cancelIco2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const cancelIt = document.createElement('div');
   cancelIt.className = 'dropdown-item-compact dropdown-cancel-mobile';
-  cancelIt.innerHTML = `<span class="dropdown-icon">${_cancelIco2}</span><span>Cancel</span>`;
+  cancelIt.innerHTML = `<span class="dropdown-icon">${_cancelIco2}</span><span>Cancelar</span>`;
   cancelIt.addEventListener('click', (e) => {
     e.stopPropagation();
     close();
-    // Cancel inside the bulk-Actions menu also exits select mode — matches the
+    // Cancelar inside the bulk-Actions menu also exits select mode — matches the
     // documents bulk dropdown.
     state._selectMode = false;
     state._selectedUids.clear();
@@ -7182,7 +7182,7 @@ function _showBulkActionsMenu(anchor) {
   });
   dropdown.appendChild(cancelIt);
   document.body.appendChild(dropdown);
-  _fitEmailDropdown(dropdown, rect);
+  _fitCorreoDropdown(dropdown, rect);
   const close = bindMenuDismiss(dropdown, () => {
     dropdown.remove();
   }, (ev) => !dropdown.contains(ev.target) && ev.target !== anchor);
@@ -7193,13 +7193,13 @@ function _updateBulkBar() {
   const selectBtn = document.getElementById('email-lib-select-btn');
   if (bar) bar.classList.toggle('hidden', !state._selectMode);
   if (selectBtn) {
-    selectBtn.textContent = state._selectMode ? 'Cancel' : 'Select';
+    selectBtn.textContent = state._selectMode ? 'Cancelar' : 'Select';
     selectBtn.classList.toggle('active', state._selectMode);
   }
   const count = document.getElementById('email-lib-selected-count');
   if (count) count.textContent = `${state._selectedUids.size} Selected`;
   const all = document.getElementById('email-lib-select-all');
-  if (all) all.checked = state._libEmails.length > 0 && state._libEmails.every(e => state._selectedUids.has(e.uid));
+  if (all) all.checked = state._libCorreos.length > 0 && state._libCorreos.every(e => state._selectedUids.has(e.uid));
   // When something's selected, brighten Actions to the same full --fg color as
   // the "N Selected" count (the button is a dimmer 60% --fg by default).
   const actions = document.getElementById('email-lib-bulk-actions');
@@ -7213,9 +7213,9 @@ async function _bulkAction(action) {
   if (uids.length === 0) return;
   let failedReadSync = 0;
   if (action === 'delete') {
-    const ok = await styledConfirm(
-      `Delete ${uids.length} selected email${uids.length === 1 ? '' : 's'}?`,
-      { confirmText: 'Delete', cancelText: 'Cancel', danger: true },
+    const ok = await styledConfirmar(
+      `Eliminar ${uids.length} selected email${uids.length === 1 ? '' : 's'}?`,
+      { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true },
     );
     if (!ok) return;
   }
@@ -7225,13 +7225,13 @@ async function _bulkAction(action) {
   const cancelBtn = document.getElementById('email-lib-bulk-cancel');
   const selectAll = document.getElementById('email-lib-select-all');
   const countEl = document.getElementById('email-lib-selected-count');
-  const originalDeleteHtml = deleteBtn?.innerHTML || '';
+  const originalEliminarHtml = deleteBtn?.innerHTML || '';
   const originalCountText = countEl?.textContent || '';
   let busySpinner = null;
   // Loading state for every bulk action, not just delete — large
   // selections (e.g. 90+ Dones) used to silently hammer the server
   // with sequential requests and the user got zero feedback. Now the
-  // Actions button (or Delete button) shows a whirlpool + verb-ing
+  // Actions button (or Eliminar button) shows a whirlpool + verb-ing
   // label, and the count surfaces progress.
   const verbing = {
     delete: 'Deleting',
@@ -7261,7 +7261,7 @@ async function _bulkAction(action) {
   const deleteOverlays = action === 'delete'
     ? uids.map(uid => {
         const card = document.querySelector(`#email-lib-grid .doclib-card[data-uid="${CSS.escape(String(uid))}"]`);
-        return _showEmailDeleteOverlay(card);
+        return _showCorreoEliminarOverlay(card);
       }).filter(Boolean)
     : [];
   if (deleteOverlays.length) {
@@ -7280,7 +7280,7 @@ async function _bulkAction(action) {
         // numeric (or vice versa) — coerce both sides so the in-memory
         // state actually flips and the post-loop re-render shows the
         // done checkmark.
-        const em = state._libEmails.find(e => String(e.uid) === String(uid));
+        const em = state._libCorreos.find(e => String(e.uid) === String(uid));
         if (em) {
           em.is_answered = true;
           em.is_read = true;
@@ -7297,7 +7297,7 @@ async function _bulkAction(action) {
         if (!res.ok || data?.success === false) {
           throw new Error(data?.error || `HTTP ${res.status}`);
         }
-        _syncEmailReadState(uid, action === 'read');
+        _syncCorreoReadState(uid, action === 'read');
       }
     } catch (e) {
       if (action === 'read' || action === 'unread') failedReadSync += 1;
@@ -7336,22 +7336,22 @@ async function _bulkAction(action) {
       if (action === 'delete') {
         deleteOverlays.forEach(busy => busy.remove?.());
       }
-      await _animateEmailCardRemoval(uids);
+      await _animateCorreoCardRemoval(uids);
       const removed = new Set(uids.map(uid => String(uid)));
-      state._libEmails = state._libEmails.filter(e => !removed.has(String(e.uid)));
+      state._libCorreos = state._libCorreos.filter(e => !removed.has(String(e.uid)));
     } else if (action === 'done' && state._libFilter === 'undone') {
       // The undone filter is a "show only not-done" view — after marking
       // selected emails done, they no longer match. Animate them out and
       // drop them from the local list so the view reflects the filter
       // instead of leaving freshly-done cards sitting there.
-      await _animateEmailCardRemoval(uids);
+      await _animateCorreoCardRemoval(uids);
       const removed = new Set(uids.map(uid => String(uid)));
-      state._libEmails = state._libEmails.filter(e => !removed.has(String(e.uid)));
+      state._libCorreos = state._libCorreos.filter(e => !removed.has(String(e.uid)));
     }
   } finally {
     deleteOverlays.forEach(busy => busy.remove?.());
     if (busySpinner) busySpinner.destroy();
-    // Restore whichever button we hijacked (delete vs actions).
+    // Restaurar whichever button we hijacked (delete vs actions).
     if (targetBtn) {
       targetBtn.disabled = false;
       targetBtn.classList.remove('email-bulk-loading');
@@ -7359,7 +7359,7 @@ async function _bulkAction(action) {
     }
     if (deleteBtn && deleteBtn !== targetBtn) {
       deleteBtn.disabled = false;
-      deleteBtn.innerHTML = originalDeleteHtml || deleteBtn.innerHTML;
+      deleteBtn.innerHTML = originalEliminarHtml || deleteBtn.innerHTML;
     }
     if (actionsBtn && actionsBtn !== targetBtn) actionsBtn.disabled = false;
     if (cancelBtn) cancelBtn.disabled = false;
@@ -7392,7 +7392,7 @@ function _summaryIcon(data) {
   return `<svg width="14" height="14" viewBox="0 0 24 24" fill="${fill}"><path d="M12 0L14.59 8.41L23 12L14.59 15.59L12 24L9.41 15.59L1 12L9.41 8.41Z"/></svg>`;
 }
 
-async function _emailTranslateLanguage() {
+async function _emailTranslateIdioma() {
   try {
     const res = await fetch(`${API_BASE}/api/email/config`);
     const cfg = await res.json();
@@ -7403,7 +7403,7 @@ async function _emailTranslateLanguage() {
 }
 
 async function _runAiReplyFromButton(btn, em, data, mode, noteHint = '') {
-  _snapEmailModalToLeftSidebar(btn.closest('.modal'));
+  _snapCorreoModalToLeftSidebar(btn.closest('.modal'));
   btn.disabled = true;
   const orig = btn.innerHTML;
   let wp = null;
@@ -7414,7 +7414,7 @@ async function _runAiReplyFromButton(btn, em, data, mode, noteHint = '') {
     btn.appendChild(wp.element);
   } catch (_) {}
   try {
-    if (state._onEmailClick) await state._onEmailClick({ email: em, emailData: data, mode, noteHint });
+    if (state._onCorreoClick) await state._onCorreoClick({ email: em, emailData: data, mode, noteHint });
   } finally {
     try { wp && wp.stop(); } catch (_) {}
     btn.disabled = false;
@@ -7471,7 +7471,7 @@ function _showAiReplyChoice(btn, em, data) {
   // filled circle so it reads as a complement to the lightning, not as a "stop".
   menu.innerHTML = `
     <div class="email-ai-reply-row" style="display:flex;flex-direction:column;gap:6px;min-width:180px;">
-      <textarea data-note-input rows="2" placeholder="Add context (optional)" style="width:100%;box-sizing:border-box;resize:vertical;min-height:42px;font-family:inherit;font-size:11px;padding:5px 6px;border-radius:5px;border:1px solid var(--border,#333);background:var(--bg-elev,#1a1a1a);color:var(--fg);"></textarea>
+      <textarea data-note-input rows="2" placeholder="Agregar context (optional)" style="width:100%;box-sizing:border-box;resize:vertical;min-height:42px;font-family:inherit;font-size:11px;padding:5px 6px;border-radius:5px;border:1px solid var(--border,#333);background:var(--bg-elev,#1a1a1a);color:var(--fg);"></textarea>
       <div style="display:flex;align-items:center;gap:4px;">
         <button class="memory-toolbar-btn" data-mode="ai-reply-fast" title="Shorter, faster draft" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:1;">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent, var(--red))" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -7503,12 +7503,12 @@ function _showAiReplyChoice(btn, em, data) {
   // Outside-click closer: only fires when the click target is OUTSIDE
   // the menu. The original handler closed on any click which made
   // focusing the textarea immediately dismiss the popover.
-  const outsideClose = (ev) => {
+  const outsideCerrar = (ev) => {
     if (menu.contains(ev.target)) return;
-    document.removeEventListener('click', outsideClose, true);
+    document.removeEventListener('click', outsideCerrar, true);
     _closeAiReplyChoice();
   };
-  setTimeout(() => document.addEventListener('click', outsideClose, true), 0);
+  setTimeout(() => document.addEventListener('click', outsideCerrar, true), 0);
 }
 
 function _handleAiReplyButton(ev, em, data) {
@@ -7532,22 +7532,22 @@ function _handleAiReplyButton(ev, em, data) {
 function _hasMultipleRecipients(data) {
   // Count distinct addresses in To + Cc (minus the current user). Empty
   // fallback when the user's address isn't yet known — no exclusion.
-  const myAddress = (window._myEmailAddress || '').toLowerCase();
-  const extractEmails = (str) => {
+  const myAgregarress = (window._myCorreoAgregarress || '').toLowerCase();
+  const extractCorreos = (str) => {
     if (!str) return [];
     return str.split(',')
       .map(s => {
         const m = s.match(/<([^>]+)>/);
         return (m ? m[1] : s).trim().toLowerCase();
       })
-      .filter(e => e && e !== myAddress);
+      .filter(e => e && e !== myAgregarress);
   };
   const recipients = new Set([
-    ...extractEmails(data.to),
-    ...extractEmails(data.cc),
+    ...extractCorreos(data.to),
+    ...extractCorreos(data.cc),
   ]);
   // Sender counts as one other person too
-  if (data.from_address && data.from_address.toLowerCase() !== myAddress) {
+  if (data.from_address && data.from_address.toLowerCase() !== myAgregarress) {
     recipients.add(data.from_address.toLowerCase());
   }
   return recipients.size > 1;
@@ -7555,7 +7555,7 @@ function _hasMultipleRecipients(data) {
 
 // _esc lives in ./emailLibrary/utils.js
 
-function _showEmailTranslateSubmenu(reader, parentDropdown) {
+function _showCorreoTranslateSubmenu(reader, parentDropdown) {
   parentDropdown.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'dropdown-item-compact';
@@ -7580,7 +7580,7 @@ function _showEmailTranslateSubmenu(reader, parentDropdown) {
       return;
     }
     parentDropdown.remove();
-    await _translateEmail(reader, language);
+    await _translateCorreo(reader, language);
   };
   customRow.addEventListener('click', e => e.stopPropagation());
   go?.addEventListener('click', async e => {
@@ -7594,7 +7594,7 @@ function _showEmailTranslateSubmenu(reader, parentDropdown) {
       await runCustom();
     }
   });
-  _emailTranslateLanguage().then(language => {
+  _emailTranslateIdioma().then(language => {
     if (input && !input.value) input.value = language || 'English';
   }).catch(() => {});
 
@@ -7606,7 +7606,7 @@ function _showEmailTranslateSubmenu(reader, parentDropdown) {
     item.addEventListener('click', async (e) => {
       e.stopPropagation();
       parentDropdown.remove();
-      await _translateEmail(reader, language);
+      await _translateCorreo(reader, language);
     });
     parentDropdown.appendChild(item);
   }
@@ -7642,7 +7642,7 @@ function _showLibRemindSubmenu(em, parentDropdown) {
     item.addEventListener('click', async (e) => {
       e.stopPropagation();
       parentDropdown.remove();
-      await _createEmailReplyReminder(em, p.date);
+      await _createCorreoReplyReminder(em, p.date);
     });
     parentDropdown.appendChild(item);
   }
@@ -7662,7 +7662,7 @@ function _showLibRemindSubmenu(em, parentDropdown) {
     tmp.focus();
     if (typeof tmp.showPicker === 'function') { try { tmp.showPicker(); } catch {} }
     tmp.addEventListener('change', async () => {
-      if (tmp.value) await _createEmailReplyReminder(em, new Date(tmp.value));
+      if (tmp.value) await _createCorreoReplyReminder(em, new Date(tmp.value));
       tmp.remove();
     });
     tmp.addEventListener('blur', () => setTimeout(() => tmp.remove(), 200));
@@ -7676,12 +7676,12 @@ function _showLibRemindSubmenu(em, parentDropdown) {
   noteItem.addEventListener('click', (e) => {
     e.stopPropagation();
     parentDropdown.remove();
-    _promptEmailNote(em);
+    _promptCorreoNote(em);
   });
   parentDropdown.appendChild(noteItem);
 }
 
-function _promptEmailNote(em) {
+function _promptCorreoNote(em) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
   const card = document.createElement('div');
@@ -7691,8 +7691,8 @@ function _promptEmailNote(em) {
     <div style="font-size:11px;opacity:0.6;">Note about ${_esc(subject)}</div>
     <textarea data-note placeholder="Write your note…" rows="4" style="resize:vertical;min-height:80px;font-family:inherit;font-size:12px;padding:7px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-elev,#1a1a1a);color:var(--fg);box-sizing:border-box;width:100%;"></textarea>
     <div style="display:flex;gap:6px;justify-content:flex-end;">
-      <button class="memory-toolbar-btn" data-act="cancel">Cancel</button>
-      <button class="memory-toolbar-btn active" data-act="save">Save</button>
+      <button class="memory-toolbar-btn" data-act="cancel">Cancelar</button>
+      <button class="memory-toolbar-btn active" data-act="save">Guardar</button>
     </div>
   `;
   overlay.appendChild(card);
@@ -7706,7 +7706,7 @@ function _promptEmailNote(em) {
     const text = (ta.value || '').trim();
     if (!text) { ta.focus(); return; }
     close();
-    await _createEmailReplyReminder(em, null, text);
+    await _createCorreoReplyReminder(em, null, text);
   });
   ta.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') close();
@@ -7714,7 +7714,7 @@ function _promptEmailNote(em) {
   });
 }
 
-async function _createEmailReplyReminder(em, dueDate, customText = '') {
+async function _createCorreoReplyReminder(em, dueDate, customText = '') {
   const pad = n => String(n).padStart(2,'0');
   const iso = dueDate
     ? `${dueDate.getFullYear()}-${pad(dueDate.getMonth()+1)}-${pad(dueDate.getDate())}T${pad(dueDate.getHours())}:${pad(dueDate.getMinutes())}`
@@ -7773,7 +7773,7 @@ async function _createEmailReplyReminder(em, dueDate, customText = '') {
 // Denylist sanitizer — has to block every well-known XSS sink:
 //   - <script>, <iframe>, <object>, <embed>, <form>, <style>, <link>
 //   - SVG entirely (event handlers, <use href="javascript:">, <foreignObject>,
-//     <animate>, <set>, etc.). Email clients don't need SVG.
+//     <animate>, <set>, etc.). Correo clients don't need SVG.
 //   - <math> (MathML can carry handlers).
 //   - <base href="...">, <meta http-equiv="refresh">, <noscript>, <frame>,
 //     <frameset>, <applet>, <portal>.

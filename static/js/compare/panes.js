@@ -18,16 +18,16 @@ var escapeHtml = uiModule.esc;
 let _setSendBtn = null;
 let _deactivate = null;
 let _streamToPane = null;
-let _renderSearchResults = null;
-let _fetchModels = null;
+let _renderBuscarResults = null;
+let _fetchModelos = null;
 
 /** Register external functions that live in compare.js or sibling modules. */
-function registerPaneActions({ setSendBtn, deactivate, streamToPane, renderSearchResults, fetchModels }) {
+function registerPaneActions({ setSendBtn, deactivate, streamToPane, renderBuscarResults, fetchModelos }) {
   if (setSendBtn) _setSendBtn = setSendBtn;
   if (deactivate) _deactivate = deactivate;
   if (streamToPane) _streamToPane = streamToPane;
-  if (renderSearchResults) _renderSearchResults = renderSearchResults;
-  if (fetchModels) _fetchModels = fetchModels;
+  if (renderBuscarResults) _renderBuscarResults = renderBuscarResults;
+  if (fetchModelos) _fetchModelos = fetchModelos;
 }
 
 /** Slot label: A/B/C in parallel mode, 1/2/3 in sequential. */
@@ -99,21 +99,21 @@ async function rerollPane(paneIdx, overrideTimeout) {
   const timer = document.getElementById('cmp-timer-' + paneIdx);
   if (timer) timer.textContent = '';
 
-  // Search mode: re-query the search provider
+  // Buscar mode: re-query the search provider
   if (state._compareMode === 'search') {
     const aiMsg = document.createElement('div');
     aiMsg.className = 'msg msg-ai';
-    aiMsg.innerHTML = '<div class="role">Search</div><div class="body"></div>';
+    aiMsg.innerHTML = '<div class="role">Buscar</div><div class="body"></div>';
     const aiBody = aiMsg.querySelector('.body');
     if (spinnerModule) {
-      const spinner = spinnerModule.create('Searching...', 'right');
+      const spinner = spinnerModule.create('Buscaring...', 'right');
       aiBody.appendChild(spinner.createElement());
       spinner.start();
     }
     hist.appendChild(aiMsg);
     hist.scrollTop = hist.scrollHeight;
 
-    const m = state._selectedModels[paneIdx];
+    const m = state._selectedModelos[paneIdx];
     const fd = new FormData();
     fd.append('query', firstUserText);
     fd.append('provider', m.model);
@@ -131,7 +131,7 @@ async function rerollPane(paneIdx, overrideTimeout) {
       } else if (!data.results || data.results.length === 0) {
         aiBody.innerHTML = '<div style="color:color-mix(in srgb, var(--fg) 50%, transparent);font-size:0.85em;font-style:italic;">No results found</div>';
       } else {
-        aiBody.appendChild(_renderSearchResults(data));
+        aiBody.appendChild(_renderBuscarResults(data));
       }
       const footer = document.createElement('div');
       footer.className = 'msg-footer';
@@ -269,16 +269,16 @@ async function copyPaneResponse(paneIdx) {
     ta.value = text; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); ta.remove();
   }
-  if (uiModule) uiModule.showToast(lastAi._imageData ? 'Prompt copied!' : 'Copied!');
+  if (uiModule) uiModule.showToast(lastAi._imageData ? 'Prompt copied!' : '¡Copiado!');
 }
 
-// ── Add / create / remove panes ──
+// ── Agregar / create / remove panes ──
 
 /** Show a model picker dropdown anchored to the "+" button in the pane header. */
 async function _addPane(anchorBtn) {
   if (state._streaming) return;
   const _effectiveType = (state._compareMode === 'agent' || state._compareMode === 'research') ? 'chat' : state._compareMode;
-  const filtered = state._cachedModels.filter(m => m.type === _effectiveType);
+  const filtered = state._cachedModelos.filter(m => m.type === _effectiveType);
   if (!filtered.length) return;
 
   // Toggle existing dropdown
@@ -289,11 +289,11 @@ async function _addPane(anchorBtn) {
   dropdown.className = 'add-pane-dropdown';
   let closeMenu = () => dropdown.remove();
 
-  // Search input for large model lists
+  // Buscar input for large model lists
   if (filtered.length >= 5) {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = 'Search models\u2026';
+    searchInput.placeholder = 'Buscar models\u2026';
     searchInput.className = 'add-pane-search';
     searchInput.addEventListener('input', () => {
       const q = searchInput.value.toLowerCase().trim();
@@ -323,7 +323,7 @@ async function _addPane(anchorBtn) {
     item.className = 'pane-model-item';
     const label = m.endpointName ? m.name + ' (' + m.endpointName + ')' : m.name;
     item.textContent = label;
-    const alreadyUsed = state._selectedModels.some(s => s.model === m.id && s.endpointId === m.endpointId);
+    const alreadyUsed = state._selectedModelos.some(s => s.model === m.id && s.endpointId === m.endpointId);
     if (alreadyUsed) item.classList.add('current');
 
     item.addEventListener('click', async (e) => {
@@ -373,17 +373,17 @@ async function _addPane(anchorBtn) {
   dropdown.style.bottom = 'auto';
   dropdown.style.maxHeight = Math.min(ddH, vh - margin * 2) + 'px';
 
-  // Close on outside click or Escape (the latter via the registry).
+  // Cerrar on outside click or Escape (the latter via the registry).
   closeMenu = bindMenuDismiss(dropdown, () => dropdown.remove(), (e) => !dropdown.contains(e.target) && e.target !== anchorBtn);}
 
-/** Create a new pane for the given model and append it to the compare grid. */
+/** Crear a new pane for the given model and append it to the compare grid. */
 async function _createAndAppendPane(m) {
-  const i = state._selectedModels.length;  // New index
+  const i = state._selectedModelos.length;  // New index
 
-  // Create session
+  // Crear session
   const fd = new FormData();
   // Blind mode: neutral slot name only — never leak the model (issue #1285).
-  fd.append('name', '[CMP] ' + (state._blindMode ? 'Model ' + _slotChar(i) : m.name));
+  fd.append('name', '[CMP] ' + (state._blindMode ? 'Modelo ' + _slotChar(i) : m.name));
   fd.append('endpoint_url', m.url || '');
   fd.append('model', m.id || '');
   if (m.endpointId) {
@@ -394,8 +394,8 @@ async function _createAndAppendPane(m) {
   if (!res.ok) return;
   const data = await res.json();
 
-  // Update arrays
-  state._selectedModels.push({ model: m.id, endpoint: m.url, endpointId: m.endpointId, name: m.name, endpointName: m.endpointName || '' });
+  // Actualizar arrays
+  state._selectedModelos.push({ model: m.id, endpoint: m.url, endpointId: m.endpointId, name: m.name, endpointName: m.endpointName || '' });
   state._paneSessionIds.push(data.id);
   state._paneMetrics.push(null);
   state._abortControllers.push(null);
@@ -403,7 +403,7 @@ async function _createAndAppendPane(m) {
   if (window._updateCheckBtnState) window._updateCheckBtnState();
 
   // Build pane DOM
-  const label = state._blindMode ? 'Model ' + _slotChar(i) : m.name;
+  const label = state._blindMode ? 'Modelo ' + _slotChar(i) : m.name;
   const pane = document.createElement('div');
   pane.className = 'compare-pane';
   pane.dataset.pane = String(i);
@@ -415,7 +415,7 @@ async function _createAndAppendPane(m) {
       '<div class="pane-actions">' +
         '<button class="pane-action-btn pane-preview-btn" data-action="preview" data-pane="' + i + '" id="cmp-preview-' + i + '" title="Run preview" style="display:none;">' + ICON_PLAY + '</button>' +
         '<button class="pane-action-btn" data-action="reroll" data-pane="' + i + '" title="Re-roll">' + ICON_REROLL + '</button>' +
-        '<button class="pane-action-btn" data-action="copy" data-pane="' + i + '" title="Copy">' + ICON_COPY + '</button>' +
+        '<button class="pane-action-btn" data-action="copy" data-pane="' + i + '" title="Copiar">' + ICON_COPY + '</button>' +
         '<button class="pane-action-btn" data-action="expand" data-pane="' + i + '" title="Expand">' + ICON_EXPAND + '</button>' +
         '<button class="pane-action-btn pane-close-btn" data-action="close" data-pane="' + i + '" title="Remove pane">' + ICON_CLOSE + '</button>' +
       '</div>' +
@@ -433,11 +433,11 @@ async function _createAndAppendPane(m) {
   const grid = document.querySelector('.compare-grid');
   grid.appendChild(pane);
 
-  // Update grid columns
-  const n = state._selectedModels.length;
+  // Actualizar grid columns
+  const n = state._selectedModelos.length;
   grid.dataset.cols = String(Math.min(n, 4));
 
-  // Update header label
+  // Actualizar header label
   const headerSpan = document.querySelector('.compare-active > div:first-child span');
   if (headerSpan) {
     const modeLabel = ({ search: ' search providers', agent: ' agents', research: ' research models' }[state._compareMode] || ' models');
@@ -470,14 +470,14 @@ function _removePane(paneIdx) {
   // Abort if streaming
   if (state._abortControllers[paneIdx]) state._abortControllers[paneIdx].abort();
 
-  // Delete the session
+  // Eliminar the session
   const sid = state._paneSessionIds[paneIdx];
   if (sid) {
     fetch(`${state.API_BASE}/api/session/${sid}`, { method: 'DELETE' }).catch(() => {});
   }
 
   // Remove from arrays
-  state._selectedModels.splice(paneIdx, 1);
+  state._selectedModelos.splice(paneIdx, 1);
   state._paneSessionIds.splice(paneIdx, 1);
   state._paneMetrics.splice(paneIdx, 1);
   state._abortControllers.splice(paneIdx, 1);
@@ -485,7 +485,7 @@ function _removePane(paneIdx) {
   if (window._updateCheckBtnState) window._updateCheckBtnState();
 
   // If no panes left, exit compare mode
-  if (state._selectedModels.length === 0) {
+  if (state._selectedModelos.length === 0) {
     if (_deactivate) _deactivate(true);
     return;
   }
@@ -494,9 +494,9 @@ function _removePane(paneIdx) {
   const grid = document.querySelector('.compare-grid');
   grid.querySelectorAll('.compare-pane').forEach(p => p.remove());
 
-  const n = state._selectedModels.length;
+  const n = state._selectedModelos.length;
   for (let i = 0; i < n; i++) {
-    const label = state._blindMode ? 'Model ' + _slotChar(i) : state._selectedModels[i].name;
+    const label = state._blindMode ? 'Modelo ' + _slotChar(i) : state._selectedModelos[i].name;
     const pane = document.createElement('div');
     pane.className = 'compare-pane';
     pane.dataset.pane = String(i);
@@ -509,7 +509,7 @@ function _removePane(paneIdx) {
           '<button class="pane-action-btn pane-stop-btn" data-action="stop" data-pane="' + i + '" title="Stop" style="display:none;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>' +
           '<button class="pane-action-btn pane-preview-btn" data-action="preview" data-pane="' + i + '" id="cmp-preview-' + i + '" title="Run preview" style="display:none;">' + ICON_PLAY + '</button>' +
           '<button class="pane-action-btn pane-needs-response" data-action="reroll" data-pane="' + i + '" title="Re-roll" style="display:none;">' + ICON_REROLL + '</button>' +
-          '<button class="pane-action-btn pane-needs-response" data-action="copy" data-pane="' + i + '" title="Copy" style="display:none;">' + ICON_COPY + '</button>' +
+          '<button class="pane-action-btn pane-needs-response" data-action="copy" data-pane="' + i + '" title="Copiar" style="display:none;">' + ICON_COPY + '</button>' +
           '<button class="pane-action-btn" data-action="expand" data-pane="' + i + '" title="Expand">' + ICON_EXPAND + '</button>' +
           '<button class="pane-action-btn pane-close-btn" data-action="close" data-pane="' + i + '" title="Remove pane">' + ICON_CLOSE + '</button>' +
         '</div>' +
@@ -525,10 +525,10 @@ function _removePane(paneIdx) {
     grid.appendChild(pane);
   }
 
-  // Update grid columns
+  // Actualizar grid columns
   grid.dataset.cols = String(Math.min(n, 4));
 
-  // Update header label
+  // Actualizar header label
   const headerSpan = document.querySelector('.compare-active > div:first-child span');
   if (headerSpan) {
     const modeLabel = ({ search: ' search providers', agent: ' agents', research: ' research models' }[state._compareMode] || ' models');
@@ -541,7 +541,7 @@ function _removePane(paneIdx) {
 }
 
 /** Show a dropdown under the pane title to swap the model for that pane. */
-function _showModelSwapDropdown(paneIdx, titleBtn) {
+function _showModeloSwapDropdown(paneIdx, titleBtn) {
   // Don't allow swaps while streaming
   if (state._streaming) return;
 
@@ -550,7 +550,7 @@ function _showModelSwapDropdown(paneIdx, titleBtn) {
   if (existing) { if (typeof existing._dismiss === 'function') existing._dismiss(); else existing.remove(); return; }
 
   const _effectiveType = (state._compareMode === 'agent' || state._compareMode === 'research') ? 'chat' : state._compareMode;
-  const filtered = state._cachedModels.filter(m => m.type === _effectiveType);
+  const filtered = state._cachedModelos.filter(m => m.type === _effectiveType);
   if (filtered.length === 0) return;
 
   const dropdown = document.createElement('div');
@@ -564,29 +564,29 @@ function _showModelSwapDropdown(paneIdx, titleBtn) {
     const label = m.endpointName ? m.name + ' (' + m.endpointName + ')' : m.name;
     item.textContent = label;
     // Highlight current model
-    if (state._selectedModels[paneIdx] && state._selectedModels[paneIdx].model === m.id
-        && state._selectedModels[paneIdx].endpointId === m.endpointId) {
+    if (state._selectedModelos[paneIdx] && state._selectedModelos[paneIdx].model === m.id
+        && state._selectedModelos[paneIdx].endpointId === m.endpointId) {
       item.classList.add('current');
     }
     item.addEventListener('click', async (e) => {
       e.stopPropagation();
       closeMenu();
 
-      // Update the model for this pane and persist
-      state._selectedModels[paneIdx] = {
+      // Actualizar the model for this pane and persist
+      state._selectedModelos[paneIdx] = {
         model: m.id, endpoint: m.url, endpointId: m.endpointId, name: m.name,
       };
       _persistSelections();
       if (window._updateCheckBtnState) window._updateCheckBtnState();
 
-      // Delete old session, create new one
+      // Eliminar old session, create new one
       const oldSid = state._paneSessionIds[paneIdx];
       if (oldSid) {
         fetch(`${state.API_BASE}/api/session/${oldSid}`, { method: 'DELETE' }).catch(() => {});
       }
       const fd = new FormData();
       // Blind mode: neutral slot name only — never leak the model (issue #1285).
-      fd.append('name', '[CMP] ' + (state._blindMode ? 'Model ' + _slotChar(paneIdx) : m.name));
+      fd.append('name', '[CMP] ' + (state._blindMode ? 'Modelo ' + _slotChar(paneIdx) : m.name));
       fd.append('endpoint_url', m.url || '');
       fd.append('model', m.id || '');
       if (m.endpointId) {
@@ -601,11 +601,11 @@ function _showModelSwapDropdown(paneIdx, titleBtn) {
         console.error('Failed to create session for swapped model:', err);
       }
 
-      // Update title display
+      // Actualizar title display
       const titleEl = document.getElementById('cmp-title-' + paneIdx);
       if (titleEl) {
         const displayName = state._blindMode
-          ? 'Model ' + _slotChar(paneIdx)
+          ? 'Modelo ' + _slotChar(paneIdx)
           : m.name;
         titleEl.innerHTML = escapeHtml(displayName) + ' <span class="pane-title-caret">&#x25BE;</span>';
       }
@@ -651,7 +651,7 @@ function _showModelSwapDropdown(paneIdx, titleBtn) {
   dropdown.style.top = top + 'px';
   dropdown.style.maxHeight = Math.min(ddH, vh - margin * 2) + 'px';
 
-  // Close on outside click or Escape (the latter via the registry).
+  // Cerrar on outside click or Escape (the latter via the registry).
   closeMenu = bindMenuDismiss(dropdown, () => dropdown.remove(), (e) => !dropdown.contains(e.target) && e.target !== titleBtn);}
 
 // ── Shuffle / reset ──
@@ -661,7 +661,7 @@ function shufflePanePositions() {
   // Remove shuffle prompt bubble if present
   const shuffleBtn = document.getElementById('compare-shuffle-btn');
   if (shuffleBtn) { const b = shuffleBtn.querySelector('div'); if (b) b.remove(); }
-  const n = state._selectedModels.length;
+  const n = state._selectedModelos.length;
   if (n < 2) return;
 
   // Fisher-Yates shuffle to get new order
@@ -672,7 +672,7 @@ function shufflePanePositions() {
   }
 
   // Reorder internal state
-  const newModels = indices.map(i => state._selectedModels[i]);
+  const newModelos = indices.map(i => state._selectedModelos[i]);
   const newSessionIds = indices.map(i => state._paneSessionIds[i]);
   const newMetrics = indices.map(i => state._paneMetrics[i]);
 
@@ -687,7 +687,7 @@ function shufflePanePositions() {
   }
 
   // Apply shuffled state
-  state._selectedModels = newModels;
+  state._selectedModelos = newModelos;
   state._paneSessionIds = newSessionIds;
   state._paneMetrics = newMetrics;
 
@@ -733,7 +733,7 @@ function shufflePanePositions() {
 
       if (hist) hist.innerHTML = paneContents[src];
       if (titleEl) {
-        const lbl = state._blindMode ? 'Model ' + _slotChar(i) : state._selectedModels[i].name;
+        const lbl = state._blindMode ? 'Modelo ' + _slotChar(i) : state._selectedModelos[i].name;
         titleEl.innerHTML = escapeHtml(lbl) + ' <span class="pane-title-caret">&#x25BE;</span>';
         titleEl.style.transition = 'opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)';
         titleEl.style.opacity = '1';
@@ -760,7 +760,7 @@ function shufflePanePositions() {
 
 function resetCompare() {
   if (state._streaming) stopAll();
-  const n = state._selectedModels.length;
+  const n = state._selectedModelos.length;
 
   // Clear last prompt so vote buttons are disabled until next prompt
   state._lastPrompt = '';
@@ -774,7 +774,7 @@ function resetCompare() {
     if (badge) { badge.textContent = ''; badge.style.color = ''; }
     const titleEl = document.getElementById('cmp-title-' + i);
     if (titleEl) {
-      const lbl = state._blindMode ? 'Model ' + _slotChar(i) : state._selectedModels[i].name;
+      const lbl = state._blindMode ? 'Modelo ' + _slotChar(i) : state._selectedModelos[i].name;
       titleEl.innerHTML = escapeHtml(lbl) + ' <span class="pane-title-caret">&#x25BE;</span>';
     }
     if (panes[i]) { panes[i].classList.remove('winner', 'loser'); }
@@ -811,7 +811,7 @@ export {
   _addPane,
   _createAndAppendPane,
   _removePane,
-  _showModelSwapDropdown,
+  _showModeloSwapDropdown,
   shufflePanePositions,
   resetCompare,
 };

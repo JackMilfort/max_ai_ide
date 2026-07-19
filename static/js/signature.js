@@ -66,7 +66,7 @@ class SmoothPad {
     const c = this.canvas;
     c.style.touchAction = 'none';
     c.addEventListener('pointerdown', (e) => this._onDown(e));
-    c.addEventListener('pointermove', (e) => this._onMove(e));
+    c.addEventListener('pointermove', (e) => this._onMover(e));
     c.addEventListener('pointerup',   (e) => this._onUp(e));
     c.addEventListener('pointercancel', (e) => this._onUp(e));
     c.addEventListener('pointerleave', (e) => this._onUp(e));
@@ -94,7 +94,7 @@ class SmoothPad {
     this._isEmpty = false;
   }
 
-  _onMove(e) {
+  _onMover(e) {
     if (!this._current) return;
     e.preventDefault();
     const raw = this._toLocal(e);
@@ -383,7 +383,7 @@ export function capture(opts = {}) {
       <div class="modal-content" style="width:min(560px,94vw);">
         <div class="modal-header">
           <h4>Draw your signature</h4>
-          <button class="sig-close modal-close" title="Close">×</button>
+          <button class="sig-close modal-close" title="Cerrar">×</button>
         </div>
         <div class="modal-body">
           <canvas class="sig-canvas" width="900" height="280" data-no-swipe-dismiss></canvas>
@@ -398,8 +398,8 @@ export function capture(opts = {}) {
           <button class="sig-clear confirm-btn confirm-btn-secondary">Clear</button>
           <button class="sig-undo confirm-btn confirm-btn-secondary">Undo</button>
           <span style="flex:1;"></span>
-          <button class="sig-cancel confirm-btn confirm-btn-secondary">Cancel</button>
-          <button class="sig-save confirm-btn confirm-btn-primary" disabled>Save</button>
+          <button class="sig-cancel confirm-btn confirm-btn-secondary">Cancelar</button>
+          <button class="sig-save confirm-btn confirm-btn-primary" disabled>Guardar</button>
         </div>
       </div>
     `);
@@ -417,16 +417,16 @@ export function capture(opts = {}) {
     const saveBtn = overlay.querySelector('.sig-save');
     const nameInput = overlay.querySelector('.sig-name');
 
-    const refreshSaveBtn = () => { saveBtn.disabled = pad.isEmpty(); };
-    canvas.addEventListener('pointerup', refreshSaveBtn);
-    canvas.addEventListener('pointerleave', refreshSaveBtn);
-    canvas.addEventListener('pointercancel', refreshSaveBtn);
+    const refreshGuardarBtn = () => { saveBtn.disabled = pad.isEmpty(); };
+    canvas.addEventListener('pointerup', refreshGuardarBtn);
+    canvas.addEventListener('pointerleave', refreshGuardarBtn);
+    canvas.addEventListener('pointercancel', refreshGuardarBtn);
 
     const close = (val) => { overlay.remove(); resolve(val); };
     overlay.querySelector('.sig-close').onclick = () => close(null);
     overlay.querySelector('.sig-cancel').onclick = () => close(null);
-    overlay.querySelector('.sig-clear').onclick = () => { pad.clear(); refreshSaveBtn(); };
-    overlay.querySelector('.sig-undo').onclick = () => { pad.undo(); refreshSaveBtn(); };
+    overlay.querySelector('.sig-clear').onclick = () => { pad.clear(); refreshGuardarBtn(); };
+    overlay.querySelector('.sig-undo').onclick = () => { pad.undo(); refreshGuardarBtn(); };
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
 
     saveBtn.onclick = async () => {
@@ -467,7 +467,7 @@ export function pick(opts = {}) {
       <div class="sig-tile" data-id="${_esc(s.id)}">
         <img src="${_esc(dataUrl)}"/>
         <div style="margin-top:4px;font-size:0.72rem;color:var(--fg);opacity:0.85;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(s.name || '')}</div>
-        <button class="sig-tile-del" data-id="${_esc(s.id)}" title="Delete">×</button>
+        <button class="sig-tile-del" data-id="${_esc(s.id)}" title="Eliminar">×</button>
       </div>
     `;
     }).join('');
@@ -476,7 +476,7 @@ export function pick(opts = {}) {
       <div class="modal-content" style="width:min(560px,94vw);">
         <div class="modal-header">
           <h4>Choose a signature</h4>
-          <button class="sig-close modal-close" title="Close">×</button>
+          <button class="sig-close modal-close" title="Cerrar">×</button>
         </div>
         <div class="modal-body">
           <button class="sig-new-tile confirm-btn confirm-btn-primary" style="width:100%;margin-bottom:12px;padding:8px;">+ Draw new signature</button>
@@ -507,7 +507,7 @@ export function pick(opts = {}) {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        if (!await window.styledConfirm('Delete this signature?', { confirmText: 'Delete', danger: true })) return;
+        if (!await window.styledConfirmar('Eliminar this signature?', { confirmText: 'Eliminar', danger: true })) return;
         await _deleteSignature(id);
         btn.closest('.sig-tile')?.remove();
       });

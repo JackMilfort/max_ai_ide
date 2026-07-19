@@ -72,13 +72,13 @@ export function dismissOrRemove(el) {
 //   // outside-click and Escape now both call close(); call it yourself from
 //   // item handlers too.
 //
-// `onClose` runs exactly once (idempotent) and owns the actual teardown
+// `onCerrar` runs exactly once (idempotent) and owns the actual teardown
 // (removing/hiding the node, clearing anchor state, …). `isOutside(ev)`
 // defaults to "the click landed outside `el`"; override it when extra anchors
 // should count as inside the menu. The returned idempotent close() is also
 // stashed on `el._dismiss`, so bulk removers (see dismissOrRemove) can tear the
 // menu down through its real teardown rather than orphaning its stack entry.
-export function bindMenuDismiss(el, onClose, isOutside) {
+export function bindMenuDismiss(el, onCerrar, isOutside) {
   let done = false;
   let unreg = () => {};
   const onDocClick = (ev) => {
@@ -90,7 +90,7 @@ export function bindMenuDismiss(el, onClose, isOutside) {
     done = true;
     unreg(); unreg = () => {};
     document.removeEventListener('click', onDocClick, true);
-    try { if (typeof onClose === 'function') onClose(); } catch {}
+    try { if (typeof onCerrar === 'function') onCerrar(); } catch {}
   }
   // Defer attaching the outside-click listener so the opening click doesn't
   // immediately close the menu. Skip the attach if close() already ran in the

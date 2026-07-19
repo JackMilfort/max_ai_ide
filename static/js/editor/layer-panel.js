@@ -12,7 +12,7 @@
  * Reads/writes shared `state` directly (layers, activeLayerId,
  * layerOffsets, imgWidth, imgHeight, lassoPoints/lassoActive,
  * wandMask, maskCanvas/maskCtx, nextLayerId). Function deps are
- * orchestration callbacks still living in galleryEditor.js.
+ * orchestration callbacks still living in galleryEditaror.js.
  *
  * Returns `{ render }` so the recursive self-call works via closure
  * over `render` rather than module-state lookup.
@@ -272,7 +272,7 @@ export function createLayerPanelRenderer(deps) {
       });
       controls.appendChild(dupBtn);
 
-      // Add-mask — if a lasso/wand selection is active, bake it into a
+      // Agregar-mask — if a lasso/wand selection is active, bake it into a
       // mask sub-layer on this layer; otherwise create an empty mask
       // for the user to paint with the Brush tool.
       const hasLassoSelInitial = state.lassoPoints.length >= 3 && !state.lassoActive;
@@ -283,7 +283,7 @@ export function createLayerPanelRenderer(deps) {
       maskBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12c4 0 4-4 8-4s4 4 8 4-4 4-8 4-4-4-8-4z" fill="currentColor"/></svg>';
       maskBtn.title = (hasLassoSelInitial || hasWandSelInitial)
         ? 'Make mask from current selection'
-        : 'Add empty mask (paint with Brush)';
+        : 'Agregar empty mask (paint with Brush)';
       maskBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         // Activate this layer first so the new mask attaches here.
@@ -304,7 +304,7 @@ export function createLayerPanelRenderer(deps) {
           layer.activeMaskId = null;
           wandToMask();
         } else {
-          saveState(`Add mask to "${layer.name}"`);
+          saveState(`Agregar mask to "${layer.name}"`);
           const c = document.createElement('canvas');
           c.width = state.imgWidth;
           c.height = state.imgHeight;
@@ -344,25 +344,25 @@ export function createLayerPanelRenderer(deps) {
         controls.appendChild(mergeDownBtn);
       }
 
-      // Delete — shown for every layer except when this is the last
+      // Eliminar — shown for every layer except when this is the last
       // remaining one. Base photo is deletable too; Ctrl+Z brings it
       // back from history. Extra confirm for the base layer.
       if (state.layers.length > 1) {
         const delBtn = document.createElement('button');
         delBtn.className = 'ge-layer-btn danger';
         delBtn.textContent = '×';
-        delBtn.title = layer.isBase ? 'Delete original layer (Ctrl+Z to undo)' : 'Delete layer';
+        delBtn.title = layer.isBase ? 'Eliminar original layer (Ctrl+Z to undo)' : 'Eliminar layer';
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (layer.isBase && uiModule?.styledConfirm) {
-            const ok = await uiModule.styledConfirm(
-              'Delete the original photo layer? Ctrl+Z brings it back.',
-              { confirmText: 'Delete', cancelText: 'Cancel', danger: true }
+          if (layer.isBase && uiModule?.styledConfirmar) {
+            const ok = await uiModule.styledConfirmar(
+              'Eliminar the original photo layer? Ctrl+Z brings it back.',
+              { confirmText: 'Eliminar', cancelText: 'Cancelar', danger: true }
             );
             if (!ok) return;
           }
           // Snapshot BEFORE removing so Ctrl+Z can bring it back.
-          saveState(`Delete layer "${layer.name}"`);
+          saveState(`Eliminar layer "${layer.name}"`);
           state.layers.splice(i, 1);
           state.layerOffsets.delete(layer.id);
           if (state.activeLayerId === layer.id) {
@@ -447,10 +447,10 @@ export function createLayerPanelRenderer(deps) {
           const delBtn = document.createElement('button');
           delBtn.className = 'ge-layer-btn danger';
           delBtn.textContent = '×';
-          delBtn.title = 'Delete adjustment';
+          delBtn.title = 'Eliminar adjustment';
           delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            saveState(`Delete ${adjLayerLabel(adj.type)}`);
+            saveState(`Eliminar ${adjLayerLabel(adj.type)}`);
             layer.adjLayers = layer.adjLayers.filter(x => x.id !== adj.id);
             layer._adjFinalKey = null;
             composite();
@@ -535,10 +535,10 @@ export function createLayerPanelRenderer(deps) {
           const delBtn = document.createElement('button');
           delBtn.className = 'ge-layer-btn danger';
           delBtn.textContent = '×';
-          delBtn.title = 'Delete mask';
+          delBtn.title = 'Eliminar mask';
           delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            saveState(`Delete mask "${mk.name}"`);
+            saveState(`Eliminar mask "${mk.name}"`);
             layer.masks = layer.masks.filter(x => x.id !== mk.id);
             if (layer.activeMaskId === mk.id) {
               layer.activeMaskId = layer.masks[layer.masks.length - 1]?.id || null;

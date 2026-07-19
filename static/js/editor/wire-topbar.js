@@ -1,15 +1,15 @@
 /**
- * Topbar wiring — undo/redo/history, Save dropdown, zoom buttons,
- * Save/Export/Download/Project, Edge popup, and the cross-dropdown
+ * Topbar wiring — undo/redo/history, Guardar dropdown, zoom buttons,
+ * Guardar/Export/Descargar/Project, Edge popup, and the cross-dropdown
  * coordination (close-others + global outside-click).
  *
  *   #ge-undo / #ge-redo / #ge-history-btn
- *   #ge-save-menu-btn + #ge-save-menu  (Save / Save as / Download /
- *                                       Save project / Load project)
+ *   #ge-save-menu-btn + #ge-save-menu  (Guardar / Guardar as / Descargar /
+ *                                       Guardar project / Load project)
  *   #ge-zoom-out / #ge-zoom-in / #ge-zoom-fit / #ge-zoom-100
  *   #ge-export-gallery / #ge-download
  *   #ge-save-project / #ge-load-project
- *   #ge-edge-menu-btn + #ge-edge-menu (Width input + Feather / Delete
+ *   #ge-edge-menu-btn + #ge-edge-menu (Width input + Feather / Eliminar
  *                                      action buttons)
  *
  * Dropdown coordination: every menu hides any sibling menu when it
@@ -22,13 +22,13 @@
  *   toggleHistoryPanel:   () => void,
  *   fitZoom:              () => void,
  *   applyZoom:            () => void,
- *   exportToGallery:      () => void,
+ *   exportToGalería:      () => void,
  *   downloadPNG:          () => void,
  *   saveProject:          () => void,
  *   loadProjectPrompt:    () => void,
  *   activeLayer:          () => object | null,
  *   saveState:            (label?: string) => void,
- *   applyEdgeFeather:     (layer: object, width: number, hardDelete: boolean) => void,
+ *   applyEdgeFeather:     (layer: object, width: number, hardEliminar: boolean) => void,
  *   composite:            () => void,
  *   registerDocClickAway: (handler: (e: Event) => void) => void,
  *   uiModule:             object,
@@ -40,7 +40,7 @@ const TOPBAR_MENU_IDS = ['ge-image-menu', 'ge-filter-menu', 'ge-resize-menu', 'g
 const TOPBAR_TRIGGER_IDS = ['ge-image-menu-btn', 'ge-filter-menu-btn', 'ge-resize-menu-btn', 'ge-save-menu-btn'];
 
 /**
- * Close every topbar dropdown except an optional "keep open" one.
+ * Cerrar every topbar dropdown except an optional "keep open" one.
  * Exported so the Image / Filter / Resize menus (wired elsewhere)
  * can call it from their own open handlers.
  */
@@ -56,7 +56,7 @@ export function wireTopbar(deps) {
   const {
     undo, redo, toggleHistoryPanel,
     fitZoom, applyZoom,
-    exportToGallery, downloadPNG, saveProject, loadProjectPrompt,
+    exportToGalería, downloadPNG, saveProject, loadProjectPrompt,
     activeLayer, saveState, applyEdgeFeather, composite,
     registerDocClickAway, uiModule,
   } = deps;
@@ -66,8 +66,8 @@ export function wireTopbar(deps) {
   document.getElementById('ge-redo')?.addEventListener('click', redo);
   document.getElementById('ge-history-btn')?.addEventListener('click', toggleHistoryPanel);
 
-  // Save dropdown — "Save ▾" toggles a small menu (Save / Save-as /
-  // Download / Save project / Load project). Inner items keep their
+  // Guardar dropdown — "Guardar ▾" toggles a small menu (Guardar / Guardar-as /
+  // Descargar / Guardar project / Load project). Inner items keep their
   // original IDs so the standalone handlers below wire to them
   // unchanged.
   {
@@ -86,11 +86,11 @@ export function wireTopbar(deps) {
       if (saveMenu.parentNode !== document.body) {
         document.body.appendChild(saveMenu);
       }
-      const setSaveMenuOpen = (open) => {
+      const setGuardarMenuOpen = (open) => {
         saveMenu.hidden = !open;
         saveTopbar?.classList.toggle('ge-topbar-menu-open', !!open);
       };
-      const positionSaveMenu = () => {
+      const positionGuardarMenu = () => {
         const r = saveBtn.getBoundingClientRect();
         saveMenu.style.top = `${r.bottom + 2}px`;
         saveMenu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
@@ -99,14 +99,14 @@ export function wireTopbar(deps) {
       saveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const willOpen = saveMenu.hidden;
-        setSaveMenuOpen(willOpen);
-        if (willOpen) positionSaveMenu();
+        setGuardarMenuOpen(willOpen);
+        if (willOpen) positionGuardarMenu();
       });
-      saveMenu.addEventListener('click', () => { setSaveMenuOpen(false); });
-      window.addEventListener('resize', () => { if (!saveMenu.hidden) positionSaveMenu(); });
+      saveMenu.addEventListener('click', () => { setGuardarMenuOpen(false); });
+      window.addEventListener('resize', () => { if (!saveMenu.hidden) positionGuardarMenu(); });
       registerDocClickAway((e) => {
         if (!saveMenu.hidden && !saveMenu.contains(e.target) && e.target !== saveBtn) {
-          setSaveMenuOpen(false);
+          setGuardarMenuOpen(false);
         }
       });
     }
@@ -118,8 +118,8 @@ export function wireTopbar(deps) {
   document.getElementById('ge-zoom-in')?.addEventListener('click', () => { state.zoom = Math.min(5, state.zoom * 1.25); applyZoom(); });
   document.getElementById('ge-zoom-out')?.addEventListener('click', () => { state.zoom = Math.max(0.1, state.zoom / 1.25); applyZoom(); });
 
-  // Export / Download / Project Save / Project Load.
-  document.getElementById('ge-export-gallery')?.addEventListener('click', exportToGallery);
+  // Export / Descargar / Project Guardar / Project Load.
+  document.getElementById('ge-export-gallery')?.addEventListener('click', exportToGalería);
   document.getElementById('ge-download')?.addEventListener('click', downloadPNG);
   document.getElementById('ge-save-project')?.addEventListener('click', saveProject);
   document.getElementById('ge-load-project')?.addEventListener('click', loadProjectPrompt);
@@ -140,17 +140,17 @@ export function wireTopbar(deps) {
     }
   });
 
-  // Edge popup — Width input + Feather / Delete action buttons.
-  function applyEdgeAction(hardDelete) {
+  // Edge popup — Width input + Feather / Eliminar action buttons.
+  function applyEdgeAction(hardEliminar) {
     const layer = activeLayer();
     if (!layer || layer.locked) { uiModule.showToast('Select an unlocked layer'); return; }
     const widthInput = document.getElementById('ge-edge-width');
     const width = parseInt(widthInput?.value || '8');
     if (isNaN(width) || width < 1) { uiModule.showToast('Invalid width'); return; }
     saveState();
-    applyEdgeFeather(layer, width, hardDelete);
+    applyEdgeFeather(layer, width, hardEliminar);
     composite();
-    uiModule.showToast(hardDelete ? `Edges deleted ${width}px` : `Edges feathered ${width}px`);
+    uiModule.showToast(hardEliminar ? `Edges deleted ${width}px` : `Edges feathered ${width}px`);
   }
   {
     const btn = document.getElementById('ge-edge-menu-btn');

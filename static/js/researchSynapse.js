@@ -20,7 +20,7 @@ const PHASE_LABEL = {
 function rand(a, b) { return Math.random() * (b - a) + a; }
 function pick(arr)  { return arr[Math.floor(Math.random() * arr.length)]; }
 
-export default function createResearchSynapse(container, opts = {}) {
+export default function createInvestigaciónSynapse(container, opts = {}) {
   const W = 520, H = 220;
   const cx = W / 2, cy = H / 2;
 
@@ -186,7 +186,7 @@ export default function createResearchSynapse(container, opts = {}) {
       if (completed) return;
       if (typeof round !== 'number' || round < 1) return;
       if (round > lastRound) {
-        // Add one sub-question node per new round we see
+        // Agregar one sub-question node per new round we see
         for (let i = lastRound; i < round && subs.length < 10; i++) {
           _addSub(opts.label || `R${i + 1}`);
         }
@@ -195,7 +195,7 @@ export default function createResearchSynapse(container, opts = {}) {
       }
     },
 
-    /** Update the total source count — adds leaf nodes for any new sources. */
+    /** Actualizar the total source count — adds leaf nodes for any new sources. */
     setSourceCount(total) {
       if (completed) return;
       if (typeof total !== 'number' || total <= sourceCount) return;

@@ -1,6 +1,6 @@
 // static/js/emailLibrary/state.js
 //
-// Shared mutable state for the email-library popup. Keeping these on a
+// Compartird mutable state for the email-library popup. Keeping these on a
 // single exported object lets sibling modules (utils, signatureFold,
 // future render/menu/composer splits) read and write the same values
 // without each one importing 19 `let` bindings — which ES modules
@@ -13,7 +13,7 @@
 export const state = {
   _libOpen: false,
   _libJustOpened: false,
-  _libEmails: [],
+  _libCorreos: [],
   _libTotal: 0,
   _libOffset: 0,
   _libFolder: 'INBOX',
@@ -21,14 +21,14 @@ export const state = {
   _libAccountId: null,           // null = backend default account
   _libAccounts: [],              // list of accounts for the chip strip
   _libPendingExpandUid: null,
-  _libSearch: '',
+  _libBuscar: '',
   _libFilter: 'all',             // all, unread, unanswered
   _libSort: 'recent',            // recent, unread, favorites
   _libHasAttachments: false,
   _libShowTags: localStorage.getItem('odysseus.email.showTags') !== '0',
   _libLoading: false,
   _docModule: null,
-  _onEmailClick: null,
+  _onCorreoClick: null,
   _libEscHandler: null,
   _selectMode: false,
   _selectedUids: new Set(),

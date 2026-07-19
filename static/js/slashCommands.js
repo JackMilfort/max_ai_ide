@@ -259,7 +259,7 @@ function _showSetupEndpointChoicesStreamed(options = {}) {
   return typewriterBlocksReply(blocks, { gap: '4px', bodyClass: 'setup-guide-no-censor', interval: 3 });
 }
 
-async function _hasConfiguredModels() {
+async function _hasConfiguredModelos() {
   const modelsBox = document.getElementById('models');
   if (modelsBox && modelsBox.querySelector('.models-row')) return true;
   try {
@@ -310,7 +310,7 @@ function slashReply(text) {
   const body = document.createElement('div');
   body.className = 'body';
   body.innerHTML = text;
-  // Add copy buttons to any <pre> blocks
+  // Agregar copy buttons to any <pre> blocks
   body.querySelectorAll('pre').forEach(pre => {
     if (!pre.querySelector('.copy-code')) {
       const btn = document.createElement('button');
@@ -386,11 +386,11 @@ function _slashFooter(msgEl) {
   footer.className = 'msg-footer';
   const actions = document.createElement('span');
   actions.className = 'msg-actions';
-  // Copy
+  // Copiar
   const copyBtn = document.createElement('button');
   copyBtn.className = 'footer-copy-btn';
   copyBtn.type = 'button';
-  copyBtn.title = 'Copy message';
+  copyBtn.title = 'Copiar message';
   const _copySvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   const _checkSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   copyBtn.innerHTML = _copySvg;
@@ -522,7 +522,7 @@ function typewriterBlocksReply(blocks, options = {}) {
         btn.type = 'button';
         btn.className = 'copy-code';
         btn.setAttribute('data-code', copyText);
-        btn.title = 'Copy';
+        btn.title = 'Copiar';
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
         const copyNow = (e) => {
           e.preventDefault();
@@ -622,7 +622,7 @@ function detectProvider(input) {
       const parsed = new URL(url);
       if (parsed.hostname.endsWith('ollama.com')) url = 'https://ollama.com/api';
     } catch(e) {}
-    // Add /v1 if bare host:port
+    // Agregar /v1 if bare host:port
     if (/^https?:\/\/[^/]+$/.test(url) && !url.includes('api.') && !url.includes('ollama.com')) url += '/v1';
     return { base_url: url, api_key: '', name: '' };
   }
@@ -694,11 +694,11 @@ async function connectDetectedSetupEndpoint(detected) {
       setupSpinner.destroy();
       spinnerDiv.remove();
       await typewriterReply(`Found ${count} model${count > 1 ? 's' : ''} on ${providerLabel}. Starting a chat...`);
-      if (modelsModule) await modelsModule.refreshModels(true);
-      const firstModel = data.models[0];
+      if (modelsModule) await modelsModule.refreshModelos(true);
+      const firstModelo = data.models[0];
       const chatUrl = setupChatUrlForEndpoint(detected);
       if (sessionModule) {
-        await sessionModule.createDirectChat(chatUrl, firstModel, data.id);
+        await sessionModule.createDirectChat(chatUrl, firstModelo, data.id);
       }
       await typewriterReply("You're all set. Type /tour for a walkthrough, or /setup endpoint to add another endpoint or key.");
       _clearSetupGuideMessages();
@@ -709,7 +709,7 @@ async function connectDetectedSetupEndpoint(detected) {
     spinnerDiv.remove();
     setupMode = 'endpoint-provider-first';
     await typewriterReply("Endpoint saved, but no models were found. Check the provider, key, or service status, then try /setup endpoint again.");
-    if (modelsModule) modelsModule.refreshModels(true);
+    if (modelsModule) modelsModule.refreshModelos(true);
   } catch {
     setupSpinner.destroy();
     spinnerDiv.remove();
@@ -860,15 +860,15 @@ async function handleSetupWizard(mode, input) {
   if (mode === 'theme') {
     const name = input.trim().toLowerCase();
     const tm = themeModule;
-    const custom = tm && tm.getCustomThemes ? tm.getCustomThemes() : {};
+    const custom = tm && tm.getCustomTemas ? tm.getCustomTemas() : {};
     const colors = (tm && tm.THEMES && tm.THEMES[name]) || custom[name];
     if (tm && colors) {
       tm.applyColors(colors);
       tm.save(name, colors);
-      await typewriterReply(`Theme switched to "${name}".`);
-    } else if (tm && tm.applyTheme) {
-      tm.applyTheme(name);
-      await typewriterReply(`Theme switched to "${name}".`);
+      await typewriterReply(`Tema switched to "${name}".`);
+    } else if (tm && tm.applyTema) {
+      tm.applyTema(name);
+      await typewriterReply(`Tema switched to "${name}".`);
     } else {
       slashReply(`Unknown theme "${name}". Try /theme to see available themes.`);
     }
@@ -902,8 +902,8 @@ function _syncToggleUI(name, state) {
   const btnMap = { web: 'web-toggle-btn', bash: 'bash-toggle-btn', incognito: 'incognito-btn' };
   if (name === 'rag' && window._syncRagIndicator) {
     window._syncRagIndicator(state);
-  } else if (name === 'research' && window._syncResearchIndicator) {
-    window._syncResearchIndicator(state);
+  } else if (name === 'research' && window._syncInvestigaciónIndicator) {
+    window._syncInvestigaciónIndicator(state);
   } else {
     const btn = document.getElementById(btnMap[name]);
     if (btn) btn.classList.toggle('active', state);
@@ -966,11 +966,11 @@ async function _cmdSessionNew(args, ctx) {
     } catch (e) { /* ignore */ }
   }
   if (!endpointUrl || !model) {
-    const withModel = sessions.filter(s => s.endpoint_url && s.model && !s.archived);
-    if (withModel.length > 0) {
-      endpointUrl = withModel[0].endpoint_url;
-      model = withModel[0].model;
-      endpointId = withModel[0].endpoint_id || '';
+    const withModelo = sessions.filter(s => s.endpoint_url && s.model && !s.archived);
+    if (withModelo.length > 0) {
+      endpointUrl = withModelo[0].endpoint_url;
+      model = withModelo[0].model;
+      endpointId = withModelo[0].endpoint_id || '';
     }
   }
   // Last resort — pull first model from /api/models
@@ -1005,13 +1005,13 @@ async function _cmdSessionNew(args, ctx) {
     await sessionModule.loadSessions();
     await sessionModule.selectSession(data.id, { showLoading: false });
     _hideWelcomeScreen();
-    const shortModel = (model || '').split('/').pop();
-    await typewriterReply(`New session — ${shortModel || 'ready'}.`);
+    const shortModelo = (model || '').split('/').pop();
+    await typewriterReply(`New session — ${shortModelo || 'ready'}.`);
   } else { const err = await res.json().catch(() => null); slashReply('Failed to create session' + (err?.detail ? ': ' + ctx.esc(err.detail) : '')); }
   return true;
 }
 
-async function _cmdSessionDelete(args, ctx) {
+async function _cmdSessionEliminar(args, ctx) {
   const raw = args.join(' ').trim();
   const force = /-(rf|fr)\b/.test(raw);
   const cleanArg = raw.replace(/\s*-(rf|fr)\b\s*/, '').trim();
@@ -1028,7 +1028,7 @@ async function _cmdSessionDelete(args, ctx) {
       if (res.ok) deleted++; else failed++;
     }
     await sessionModule.loadSessions();
-    let msg = `Deleted ${deleted} session${deleted !== 1 ? 's' : ''}`;
+    let msg = `Eliminard ${deleted} session${deleted !== 1 ? 's' : ''}`;
     if (skipped && !force) msg += `, kept ${skipped} starred`;
     if (failed) msg += `, ${failed} failed`;
     slashReply(msg);
@@ -1043,15 +1043,15 @@ async function _cmdSessionDelete(args, ctx) {
   const label = sess ? `"${ctx.esc(sess.name || target.slice(0,8))}"` : target.slice(0,8);
   const res = await fetch(`${API_BASE}/api/session/${target}`, { method: 'DELETE', credentials: 'same-origin' });
   if (res.ok) {
-    await typewriterReply(`Deleted ${label}`);
+    await typewriterReply(`Eliminard ${label}`);
     await sessionModule.loadSessions();
   } else if (res.status === 403) {
     slashReply('Cannot delete a starred session — unstar it first, or use <code>/s rm -rf</code>');
-  } else { const err = await res.json().catch(() => null); slashReply('Delete failed' + (err?.detail ? ': ' + ctx.esc(err.detail) : '')); }
+  } else { const err = await res.json().catch(() => null); slashReply('Eliminar failed' + (err?.detail ? ': ' + ctx.esc(err.detail) : '')); }
   return true;
 }
 
-async function _cmdSessionArchive(args, ctx) {
+async function _cmdSessionArchivar(args, ctx) {
   const target = _resolveSession(args[0]) || ctx.sid;
   if (!target) { slashReply('No session to archive'); return true; }
   const sessions = sessionModule.getSessions();
@@ -1059,18 +1059,18 @@ async function _cmdSessionArchive(args, ctx) {
   const label = sess ? `"${ctx.esc(sess.name || target.slice(0,8))}"` : target.slice(0,8);
   if (sess && sess.archived) { await typewriterReply(`${label} is already archived`); return true; }
   const res = await fetch(`${API_BASE}/api/session/${target}/archive`, { method: 'POST', credentials: 'same-origin' });
-  if (res.ok) { await typewriterReply(`Archived ${label}`); await sessionModule.loadSessions(); }
-  else { slashReply('Archive failed'); }
+  if (res.ok) { await typewriterReply(`Archivard ${label}`); await sessionModule.loadSessions(); }
+  else { slashReply('Archivar failed'); }
   return true;
 }
 
-async function _cmdSessionRename(args, ctx) {
+async function _cmdSessionRenombrar(args, ctx) {
   const newName = args.join(' ');
   if (!newName) { slashReply('Usage: /rename New Name'); return true; }
   const fd = new FormData(); fd.append('name', newName);
   const res = await fetch(`${API_BASE}/api/session/${ctx.sid}`, { method: 'PATCH', body: fd, credentials: 'same-origin' });
-  if (res.ok) { await typewriterReply(`Renamed to "${ctx.esc(newName)}"`); await sessionModule.loadSessions(); }
-  else { slashReply('Rename failed'); }
+  if (res.ok) { await typewriterReply(`Renombrard to "${ctx.esc(newName)}"`); await sessionModule.loadSessions(); }
+  else { slashReply('Renombrar failed'); }
   return true;
 }
 
@@ -1170,10 +1170,10 @@ async function _cmdSessionInfo(args, ctx) {
   if (!s) { slashReply('Session not found'); return true; }
   slashReply(`<pre>Session: ${ctx.esc(s.name || 'Untitled')}
 ID:      ${s.id}
-Model:   ${ctx.esc(s.model || '?')}
+Modelo:   ${ctx.esc(s.model || '?')}
 Folder:  ${ctx.esc(s.folder || '(none)')}
 Messages: ${s.message_count || '?'}
-Created: ${s.created_at || '?'}</pre>`);
+Creard: ${s.created_at || '?'}</pre>`);
   return true;
 }
 
@@ -1198,7 +1198,7 @@ async function _cmdSessionExport(args, ctx) {
     const a = raw.toLowerCase();
     if (['json','txt','html','md'].includes(a)) fmt = a;
   }
-  const params = new URLSearchParams({ fmt });
+  const params = new URLBuscarParams({ fmt });
   if (filename) params.set('filename', filename);
   window.open(`${API_BASE}/api/session/${ctx.sid}/export?${params}`, '_blank');
   slashReply(`Exporting as .${fmt}${filename ? ' → ' + filename : ''}...`);
@@ -1210,7 +1210,7 @@ async function _cmdSessionExport(args, ctx) {
 async function _cmdToggleWeb(args, ctx) { const v = (args[0]||'').toLowerCase(); if (v === 'on' || v === 'off') _applyToggle('web', v); else _quickToggle('web'); return true; }
 async function _cmdToggleBash(args, ctx) { const v = (args[0]||'').toLowerCase(); if (v === 'on' || v === 'off') _applyToggle('bash', v); else _quickToggle('bash'); return true; }
 async function _cmdToggleRag(args, ctx) { const v = (args[0]||'').toLowerCase(); if (v === 'on' || v === 'off') _applyToggle('rag', v); else _quickToggle('rag'); return true; }
-async function _cmdToggleResearch(args, ctx) { const v = (args[0]||'').toLowerCase(); if (v === 'on' || v === 'off') _applyToggle('research', v); else _quickToggle('research'); return true; }
+async function _cmdToggleInvestigación(args, ctx) { const v = (args[0]||'').toLowerCase(); if (v === 'on' || v === 'off') _applyToggle('research', v); else _quickToggle('research'); return true; }
 async function _cmdToggleIncognito(args, ctx) {
   const sessions = sessionModule.getSessions();
   const sess = ctx.sid ? sessions.find(s => s.id === ctx.sid) : null;
@@ -1332,12 +1332,12 @@ async function _cmdToggleSidebar(args, ctx) {
   return true;
 }
 
-// ── Settings ──
+// ── Configuración ──
 
 async function _cmdOpen(args, ctx) {
   const target = (args[0] || '').trim().toLowerCase();
   if (!target) {
-    slashReply('Open what? Try /open Cookbook, /open Settings, /open Gallery, /open Notes, /open Tasks, /open Library, /open Research, or /open Compare.');
+    slashReply('Open what? Try /open Recetas, /open Configuración, /open Galería, /open Notas, /open Tareas, /open Library, /open Investigación, or /open Compare.');
     return true;
   }
   const clickFirst = (...ids) => {
@@ -1349,7 +1349,7 @@ async function _cmdOpen(args, ctx) {
   };
   try {
     if (target === 'cookbook' || target === 'cook') {
-      if (cookbookModule && typeof cookbookModule.open === 'function') await cookbookModule.open({ tab: 'Download' });
+      if (cookbookModule && typeof cookbookModule.open === 'function') await cookbookModule.open({ tab: 'Descargar' });
       else clickFirst('tool-cookbook-btn', 'rail-cookbook');
       return true;
     }
@@ -1391,7 +1391,7 @@ async function _cmdToolPanel(tool, args, ctx) {
       const query = args.slice(1).join(' ').trim();
       try {
         if (cookbookModule && typeof cookbookModule.open === 'function') {
-          await cookbookModule.open({ tab: 'Serve', serveSearch: query });
+          await cookbookModule.open({ tab: 'Serve', serveBuscar: query });
           if (query) {
             try {
               const mod = await import('./cookbookServe.js');
@@ -1404,21 +1404,21 @@ async function _cmdToolPanel(tool, args, ctx) {
           document.getElementById('tool-cookbook-btn')?.click();
         }
       } catch (e) {
-        slashReply(`Could not open Cookbook Serve${e?.message ? `: ${ctx.esc(e.message)}` : ''}`);
+        slashReply(`Could not open Recetas Serve${e?.message ? `: ${ctx.esc(e.message)}` : ''}`);
       }
       return true;
     }
     if (sub === 'download' || sub === 'scan') {
-      await cookbookModule?.open?.({ tab: 'Download', usecase: args.slice(1).join(' ').trim() || undefined });
+      await cookbookModule?.open?.({ tab: 'Descargar', usecase: args.slice(1).join(' ').trim() || undefined });
       return true;
     }
-    await cookbookModule?.open?.({ tab: 'Download', usecase: rest || undefined });
+    await cookbookModule?.open?.({ tab: 'Descargar', usecase: rest || undefined });
     return true;
   }
   if (target === 'email') {
     const btn = document.getElementById('rail-email') || document.getElementById('email-section-title');
     if (btn) btn.click();
-    else slashReply('Could not open Email.');
+    else slashReply('Could not open Correo.');
     return true;
   }
   if (target === 'settings') {
@@ -1429,9 +1429,9 @@ async function _cmdToolPanel(tool, args, ctx) {
   return _cmdOpen([target], ctx);
 }
 
-async function _cmdSettings(args, ctx) {
-  // Opens the Settings modal — primarily useful when the user has hidden the
-  // Settings cog in Appearance and needs a way back in.
+async function _cmdConfiguración(args, ctx) {
+  // Opens the Configuración modal — primarily useful when the user has hidden the
+  // Configuración cog in Appearance and needs a way back in.
   const tab = (args[0] || '').toLowerCase() || undefined;
   try {
     if (settingsModule && typeof settingsModule.open === 'function') {
@@ -1443,31 +1443,31 @@ async function _cmdSettings(args, ctx) {
     }
   } catch (e) {
     console.warn('/settings open failed', e);
-    slashReply('Could not open Settings.');
+    slashReply('Could not open Configuración.');
     return true;
   }
   return true;
 }
 
-// ── Theme ──
+// ── Tema ──
 
-async function _cmdTheme(args, ctx) {
+async function _cmdTema(args, ctx) {
   const tm = themeModule;
   const sub = (args[0] || '').toLowerCase();
-  const custom = tm && tm.getCustomThemes ? tm.getCustomThemes() : {};
+  const custom = tm && tm.getCustomTemas ? tm.getCustomTemas() : {};
   const customNames = Object.keys(custom);
   const presetNames = tm && tm.THEMES ? Object.keys(tm.THEMES) : [];
   if (!sub || !tm || !tm.THEMES) {
     const customLabel = customNames.length ? `\nCustom: ${customNames.join(', ')}` : '';
-    slashReply(`Usage:\n  /theme &lt;name&gt; — Apply a preset or custom theme\n  /theme save &lt;name&gt; — Save current colors as a custom theme\n  /theme delete &lt;name&gt; — Delete a custom theme\nPresets: ${presetNames.join(', ')}${customLabel}`);
+    slashReply(`Usage:\n  /theme &lt;name&gt; — Apply a preset or custom theme\n  /theme save &lt;name&gt; — Guardar current colors as a custom theme\n  /theme delete &lt;name&gt; — Eliminar a custom theme\nPresets: ${presetNames.join(', ')}${customLabel}`);
     return true;
   }
   if (sub === 'save' && args[1]) {
     const saveName = args[1].toLowerCase().replace(/\s+/g, '-');
     if (tm.THEMES[saveName]) { slashReply('Cannot overwrite a built-in theme.'); return true; }
-    const s = tm.getSaved();
+    const s = tm.getGuardard();
     const colors = s ? s.colors : tm.THEMES.dark;
-    tm.saveCustomTheme(saveName, colors);
+    tm.saveCustomTema(saveName, colors);
     tm.save(saveName, colors);
     await typewriterReply(`Custom theme "${saveName}" saved`);
     return true;
@@ -1477,12 +1477,12 @@ async function _cmdTheme(args, ctx) {
     const delArg = args[1].toLowerCase().replace(/\s+/g, '-');
     if (delArg === 'all') {
       if (!customNames.length) { slashReply('No custom themes to delete'); return true; }
-      for (const n of customNames) { if (tm.deleteCustomTheme) tm.deleteCustomTheme(n); }
-      await typewriterReply(`Deleted ${customNames.length} custom theme${customNames.length !== 1 ? 's' : ''}`);
+      for (const n of customNames) { if (tm.deleteCustomTema) tm.deleteCustomTema(n); }
+      await typewriterReply(`Eliminard ${customNames.length} custom theme${customNames.length !== 1 ? 's' : ''}`);
       return true;
     }
-    if (tm.deleteCustomTheme) tm.deleteCustomTheme(delArg);
-    await typewriterReply(`Theme "${delArg}" deleted`);
+    if (tm.deleteCustomTema) tm.deleteCustomTema(delArg);
+    await typewriterReply(`Tema "${delArg}" deleted`);
     return true;
   }
   const name = sub;
@@ -1500,13 +1500,13 @@ async function _cmdTheme(args, ctx) {
     const sw = grid.querySelector(`[data-theme="${name}"]`);
     if (sw) sw.classList.add('active');
   }
-  await typewriterReply(`Theme: ${name}`);
+  await typewriterReply(`Tema: ${name}`);
   return true;
 }
 
-// ── Models ──
+// ── Modelos ──
 
-async function _cmdModels(args, ctx) {
+async function _cmdModelos(args, ctx) {
   slashReply('Fetching models...');
   const res = await fetch(`${API_BASE}/api/models`, { credentials: 'same-origin' });
   const data = await res.json();
@@ -1519,11 +1519,11 @@ async function _cmdModels(args, ctx) {
   return true;
 }
 
-async function _cmdModel(args, ctx) {
+async function _cmdModelo(args, ctx) {
   const sub = (args[0] || '').toLowerCase();
-  if (sub === 'list' || sub === 'ls') return _cmdModels(args.slice(1), ctx);
+  if (sub === 'list' || sub === 'ls') return _cmdModelos(args.slice(1), ctx);
 
-  const model = sessionModule.getCurrentModel ? sessionModule.getCurrentModel() : '';
+  const model = sessionModule.getCurrentModelo ? sessionModule.getCurrentModelo() : '';
   const endpoint = sessionModule.getCurrentEndpointUrl ? sessionModule.getCurrentEndpointUrl() : '';
   slashReply(`<pre>${[
     `Current model: ${ctx.esc(model || 'None selected')}`,
@@ -1555,9 +1555,9 @@ async function _cmdMcp(args, ctx) {
   return true;
 }
 
-// ── Memory ──
+// ── Memoria ──
 
-async function _cmdMemoryList(args, ctx) {
+async function _cmdMemoriaList(args, ctx) {
   const res = await fetch(`${API_BASE}/api/memory`, { credentials: 'same-origin' });
   const data = await res.json();
   const mems = data.memory || [];
@@ -1568,7 +1568,7 @@ async function _cmdMemoryList(args, ctx) {
   return true;
 }
 
-async function _cmdMemoryAdd(args, ctx) {
+async function _cmdMemoriaAgregar(args, ctx) {
   const text = args.join(' ');
   if (!text) { slashReply('Usage: /memory add Your text here'); return true; }
   const res = await fetch(`${API_BASE}/api/memory/add`, {
@@ -1576,12 +1576,12 @@ async function _cmdMemoryAdd(args, ctx) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, category: 'fact', source: 'user' })
   });
-  if (res.ok) await typewriterReply(`Memory added: ${ctx.esc(text)}`);
+  if (res.ok) await typewriterReply(`Memoria added: ${ctx.esc(text)}`);
   else slashReply('Failed to add memory');
   return true;
 }
 
-async function _cmdMemoryDelete(args, ctx) {
+async function _cmdMemoriaEliminar(args, ctx) {
   const raw = args.join(' ').trim();
   const force = /-(rf|fr)\b/.test(raw);
   const cleanArg = raw.replace(/\s*-(rf|fr)\b\s*/, '').trim();
@@ -1600,7 +1600,7 @@ async function _cmdMemoryDelete(args, ctx) {
       const res = await fetch(`${API_BASE}/api/memory/${m.id}`, { method: 'DELETE', credentials: 'same-origin' });
       if (res.ok) deleted++;
     }
-    await typewriterReply(`Deleted ${deleted}/${mems.length} memories`);
+    await typewriterReply(`Eliminard ${deleted}/${mems.length} memories`);
     return true;
   }
 
@@ -1615,12 +1615,12 @@ async function _cmdMemoryDelete(args, ctx) {
     if (match) { memId = match.id; preview = match.text.slice(0, 50); }
   }
   const res = await fetch(`${API_BASE}/api/memory/${memId}`, { method: 'DELETE', credentials: 'same-origin' });
-  if (res.ok) await typewriterReply(`Deleted: ${preview}${preview.length >= 50 ? '...' : ''}`);
-  else slashReply('Delete failed — check the ID');
+  if (res.ok) await typewriterReply(`Eliminard: ${preview}${preview.length >= 50 ? '...' : ''}`);
+  else slashReply('Eliminar failed — check the ID');
   return true;
 }
 
-async function _cmdMemorySearch(args, ctx) {
+async function _cmdMemoriaBuscar(args, ctx) {
   const query = args.join(' ');
   if (!query) { slashReply('Usage: /memory search query'); return true; }
   const fd = new FormData(); fd.append('query', query);
@@ -1700,7 +1700,7 @@ async function _cmdReloadSkills(args, ctx) {
   return true;
 }
 
-// ── Note (quick Notes shortcut) ──
+// ── Note (quick Notas shortcut) ──
 
 async function _cmdNote(args, ctx) {
   const text = args.join(' ');
@@ -1892,7 +1892,7 @@ async function _cmdRagList(args, ctx) {
   return true;
 }
 
-async function _cmdRagAdd(args, ctx) {
+async function _cmdRagAgregar(args, ctx) {
   const dir = args.join(' ');
   if (!dir) { slashReply('Usage: /rag add /path/to/directory'); return true; }
   const res = await fetch(`${API_BASE}/api/personal/add_directory`, {
@@ -1942,9 +1942,9 @@ async function _cmdRagRemove(args, ctx) {
   return true;
 }
 
-// ── Web Search ──
+// ── Web Buscar ──
 
-async function _cmdWebSearch(args, ctx) {
+async function _cmdWebBuscar(args, ctx) {
   const query = args.join(' ');
   if (!query) { slashReply('Usage: /search &lt;query&gt;'); return true; }
   // Enable web toggle for this search, then fall through to normal chat
@@ -1956,9 +1956,9 @@ async function _cmdWebSearch(args, ctx) {
   return false; // fall through to normal chat submit
 }
 
-// ── Search ──
+// ── Buscar ──
 
-async function _cmdSearch(args, ctx) {
+async function _cmdBuscar(args, ctx) {
   const query = args.join(' ');
   if (!query) { slashReply('Usage: /find &lt;query&gt;'); return true; }
   const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}&limit=20`, { credentials: 'same-origin' });
@@ -1973,7 +1973,7 @@ async function _cmdSearch(args, ctx) {
       return `<a href="#${sid}" style="color:var(--red);text-decoration:none">${name}</a>  ${snippet}`;
     });
     slashReply(`<pre>${lines.join('\n')}</pre>`);
-  } else { slashReply('Search failed'); }
+  } else { slashReply('Buscar failed'); }
   return true;
 }
 
@@ -1986,8 +1986,8 @@ async function _cmdStats(args, ctx) {
     slashReply(`<pre>Sessions:  ${d.sessions || '?'}
 Messages:  ${d.messages || '?'}
 Memories:  ${d.memories || '?'}
-Documents: ${d.documents || '?'}
-Uploads:   ${d.uploads || '?'}</pre>`);
+Documentos: ${d.documents || '?'}
+Subirs:   ${d.uploads || '?'}</pre>`);
   } else { slashReply('Failed to fetch stats'); }
   return true;
 }
@@ -2029,7 +2029,7 @@ async function _cmdUsage(args, ctx) {
 
   slashReply(`<pre>${[
     `Session: ${ctx.esc(session?.name || 'Current chat')}`,
-    `Model: ${ctx.esc(model)}`,
+    `Modelo: ${ctx.esc(model)}`,
     `Messages: ${messageCount.toLocaleString()}`,
     `Recorded tokens: ${totalTokens.toLocaleString()}`,
     costLine,
@@ -2100,8 +2100,8 @@ async function _cmdTts(args, ctx) {
 // ── Demo ──
 
 async function _cmdDemo(args, ctx) {
-  const hasModels = await _hasConfiguredModels();
-  if (!hasModels) {
+  const hasModelos = await _hasConfiguredModelos();
+  if (!hasModelos) {
     await typewriterReply('Before the tour, add your first AI endpoint with /setup or in /settings.');
     return true;
   }
@@ -2192,7 +2192,7 @@ async function _cmdDemo(args, ctx) {
     document.head.appendChild(s);
   }
 
-  // Create tooltip
+  // Crear tooltip
   const tooltip = document.createElement('div');
   tooltip.id = 'tour-tooltip';
   document.body.appendChild(tooltip);
@@ -2414,7 +2414,7 @@ async function _cmdDemo(args, ctx) {
         setTimeout(_restore, 50);
         setTimeout(_restore, 200);
       };
-      const onModelPicked = () => { cleanup(); resolve('next'); };
+      const onModeloPicked = () => { cleanup(); resolve('next'); };
 
       const cleanup = () => {
         tooltip.removeEventListener('click', onClick);
@@ -2444,7 +2444,7 @@ async function _cmdDemo(args, ctx) {
         }
       }
       if (sels.includes('#model-picker-btn')) {
-        modelListener = onModelPicked;
+        modelListener = onModeloPicked;
         document.addEventListener('odysseus:model-picked', modelListener, { once: true });
       }
 
@@ -2582,7 +2582,7 @@ async function _cmdTourCompare(args, ctx) {
     }
   }
   if (!overlay) {
-    slashReply('Could not open Model Comparison. Try clicking the Compare tool first.');
+    slashReply('Could not open Modelo Comparison. Try clicking the Compare tool first.');
     return true;
   }
 
@@ -2721,7 +2721,7 @@ async function _cmdTourCompare(args, ctx) {
   // bounding-rect was putting the tooltip in the top-left corner.
   const phase1 = [
     { sel: '#compare-model-overlay .modal-body',
-      text: 'Pick what type of test you want to run. <b>Chat</b>, <b>Agent</b>, <b>Search</b> or <b>Deep Research</b>.',
+      text: 'Pick what type of test you want to run. <b>Chat</b>, <b>Agent</b>, <b>Buscar</b> or <b>Deep Investigación</b>.',
       placement: 'center-above',
       before: () => {
         const modalBody = document.querySelector('#compare-model-overlay .modal-body');
@@ -2774,7 +2774,7 @@ async function _cmdTourCompare(args, ctx) {
     };
     tooltip.addEventListener('click', onClick);
   });
-  const modalClosed = new Promise(resolve => {
+  const modalCerrard = new Promise(resolve => {
     const tick = () => {
       if (!document.getElementById('compare-model-overlay')
           && (document.getElementById('compare-check-btn') || document.getElementById('cmp-eval-btn'))) {
@@ -2785,7 +2785,7 @@ async function _cmdTourCompare(args, ctx) {
     };
     tick();
   });
-  const waitRes = await Promise.race([skipDuringWait, modalClosed]);
+  const waitRes = await Promise.race([skipDuringWait, modalCerrard]);
   if (waitRes === 'skip') { _clear(); return true; }
 
   // Small breather so any entry animation finishes before we measure.
@@ -2797,7 +2797,7 @@ async function _cmdTourCompare(args, ctx) {
   // tour it here; the user will discover it naturally when needed.
   const phase2 = [
     { sel: '#compare-add-btn',
-      text: 'Add more <b>Models</b> here, keep stacking, who’s stopping ya? (you can also remove btw).' },
+      text: 'Agregar more <b>Modelos</b> here, keep stacking, who’s stopping ya? (you can also remove btw).' },
     { sel: '#compare-shuffle-btn',
       text: 'After adding, <b>Shuffle</b> to randomize the order again.' },
     { sel: '#cmp-eval-btn',
@@ -2821,8 +2821,8 @@ async function _cmdTourCompare(args, ctx) {
   return true;
 }
 
-// ── Cookbook tour ──
-async function _cmdTourCookbook(args, ctx) {
+// ── Recetas tour ──
+async function _cmdTourRecetas(args, ctx) {
   // Clear the chat input so "/tour-cookbook" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -2866,7 +2866,7 @@ async function _cmdTourCookbook(args, ctx) {
     }
   }
   if (!modal || modal.classList.contains('hidden')) {
-    slashReply('Could not open Cookbook. Try clicking the Cookbook tool first.');
+    slashReply('Could not open Recetas. Try clicking the Recetas tool first.');
     return true;
   }
 
@@ -2993,22 +2993,22 @@ async function _cmdTourCookbook(args, ctx) {
   // without having to navigate manually. Keep copy tight — no walls of text.
   const steps = [
     { sel: '#cookbook-modal .modal-content',
-      text: '<b>Welcome to Cookbook!</b> Download / Cook / Serve models here!',
+      text: '<b>Welcome to Recetas!</b> Descargar / Cook / Serve models here!',
       placement: 'center-above' },
-    { sel: '#cookbook-modal .cookbook-tab[data-backend="Settings"]',
-      text: 'Hosting on another machine? Configure it under <b>Settings</b>.' },
+    { sel: '#cookbook-modal .cookbook-tab[data-backend="Configuración"]',
+      text: 'Hosting on another machine? Configure it under <b>Configuración</b>.' },
     { sel: '#cookbook-dl-repo',
       text: 'Paste a HuggingFace URL or <code>org/model-name</code> to download. Quantizations like <code>org/model:Q4_K_M</code> work too.',
-      before: () => _clickTab('Search') },
+      before: () => _clickTab('Buscar') },
     { sel: '#cookbook-modal .admin-card:has(> #hwfit-list)',
-      text: '<b>Scan / Download</b> — reads your hardware and lists every model that\'ll run on it.',
-      before: () => _clickTab('Search') },
+      text: '<b>Scan / Descargar</b> — reads your hardware and lists every model that\'ll run on it.',
+      before: () => _clickTab('Buscar') },
     { sel: '#hwfit-hw-manual-btn',
       text: 'Your detected hardware appears here. You can also manually edit it to see what would fit on other setups.',
-      before: () => _clickTab('Search') },
+      before: () => _clickTab('Buscar') },
     { sel: '#cookbook-hf-latest-toggle',
       text: 'Check <b>latest trending models</b> here.',
-      before: () => _clickTab('Search') },
+      before: () => _clickTab('Buscar') },
     { sel: '#cookbook-modal .cookbook-tab[data-backend="Serve"]',
       text: '<b>Serve</b> — fire up downloaded models with vLLM, Ollama, llama.cpp, and diffusion models too.',
       before: () => _clickTab('Serve') },
@@ -3040,15 +3040,15 @@ async function _cmdTourCookbook(args, ctx) {
     if (res === 'back') { if (i > 0) i -= 2; continue; }
   }
 
-  // Leave Cookbook on the Download tab so the user can start downloading immediately.
-  _clickTab('Search');
+  // Leave Recetas on the Descargar tab so the user can start downloading immediately.
+  _clickTab('Buscar');
   _clear();
-  await typewriterReply('That’s Cookbook. Pick a model that catches your eye and let it cook.');
+  await typewriterReply('That’s Recetas. Pick a model that catches your eye and let it cook.');
   return true;
 }
 
-// ── Theme tour ──
-async function _cmdTourTheme(args, ctx) {
+// ── Tema tour ──
+async function _cmdTourTema(args, ctx) {
   // Clear the chat input so "/tour-theme" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -3095,7 +3095,7 @@ async function _cmdTourTheme(args, ctx) {
     }
   }
   if (!modal || modal.classList.contains('hidden')) {
-    slashReply('Could not open Theme. Try clicking the Theme tool first.');
+    slashReply('Could not open Tema. Try clicking the Tema tool first.');
     return true;
   }
 
@@ -3249,7 +3249,7 @@ async function _cmdTourTheme(args, ctx) {
   // work as a fallback (read past without touching anything).
   const steps = [
     { sel: '#theme-popup',
-      text: '<b>Welcome to Theme.</b> Odysseus is yours to customize!',
+      text: '<b>Welcome to Tema.</b> Odysseus is yours to customize!',
       placement: 'center-above',
       before: () => _clickTab('theme-tab-browse') },
     { sel: '#themeGrid',
@@ -3261,11 +3261,11 @@ async function _cmdTourTheme(args, ctx) {
       before: () => _clickTab('theme-tab-customize'),
       interactive: true },
     { sel: '#themeCustom',
-      text: 'Want finer control? <b>Edit each color individually</b> here — the page updates live.',
+      text: 'Want finer control? <b>Editar each color individually</b> here — the page updates live.',
       before: () => _clickTab('theme-tab-customize'),
       interactive: true },
     { sel: '#theme-bg-pattern-select',
-      text: 'Add a <b>background animation</b> — rain, petals, constellations, sparkles, embers…',
+      text: 'Agregar a <b>background animation</b> — rain, petals, constellations, sparkles, embers…',
       before: () => _clickTab('theme-tab-customize'),
       interactive: true },
     { sel: '#theme-opacity-wrap',
@@ -3289,12 +3289,12 @@ async function _cmdTourTheme(args, ctx) {
   }
 
   _clear();
-  await typewriterReply('That’s Theme. Make it yours.');
+  await typewriterReply('That’s Tema. Make it yours.');
   return true;
 }
 
-// ── Settings tour ──
-async function _cmdTourSettings(args, ctx) {
+// ── Configuración tour ──
+async function _cmdTourConfiguración(args, ctx) {
   // Clear the chat input so "/tour-settings" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -3339,7 +3339,7 @@ async function _cmdTourSettings(args, ctx) {
     }
   }
   if (!modal || modal.classList.contains('hidden')) {
-    slashReply('Could not open Settings. Try clicking the gear icon first.');
+    slashReply('Could not open Configuración. Try clicking the gear icon first.');
     return true;
   }
 
@@ -3472,34 +3472,34 @@ async function _cmdTourSettings(args, ctx) {
 
   const steps = [
     { sel: '#settings-modal .modal-content',
-      text: '<b>Welcome to Settings.</b> HOW EXCITING.',
+      text: '<b>Welcome to Configuración.</b> HOW EXCITING.',
       placement: 'center-above' },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="services"]',
-      text: '<b>Add Models</b> — add a local endpoint first, like Ollama, vLLM, or llama.cpp. Cloud providers are optional.',
+      text: '<b>Agregar Modelos</b> — add a local endpoint first, like Ollama, vLLM, or llama.cpp. Cloud providers are optional.',
       before: () => _clickNav('services') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="ai"]',
       text: '<b>AI Defaults</b> — three roles share the work. Let\'s walk through them.',
       before: () => _clickNav('ai') },
-    { sel: '#settings-modal .admin-card:has(#set-defaultModelSelect)',
-      text: '<b>Default Chat Model</b> — your main model. The one Odysseus reaches for whenever you start a new chat.',
+    { sel: '#settings-modal .admin-card:has(#set-defaultModeloSelect)',
+      text: '<b>Default Chat Modelo</b> — your main model. The one Odysseus reaches for whenever you start a new chat.',
       before: () => _clickNav('ai') },
-    { sel: '#settings-modal .admin-card:has(#set-utilityModelSelect)',
-      text: '<b>Utility Model</b> — your hard-working sidekick. Runs background tasks (compaction, cleanup, auto-naming, summarization) so your chat model doesn\'t burn cycles on chores. <b>Recommend a small local model</b> here — it\'s free and always on.',
+    { sel: '#settings-modal .admin-card:has(#set-utilityModeloSelect)',
+      text: '<b>Utility Modelo</b> — your hard-working sidekick. Runs background tasks (compaction, cleanup, auto-naming, summarization) so your chat model doesn\'t burn cycles on chores. <b>Recommend a small local model</b> here — it\'s free and always on.',
       before: () => _clickNav('ai') },
-    { sel: '#settings-modal .admin-card:has(#set-vlModelSelect)',
+    { sel: '#settings-modal .admin-card:has(#set-vlModeloSelect)',
       text: '<b>Vision</b> — powers any image-recognition feature: drop a photo in chat, ask what\'s in it, OCR, etc.',
       before: () => _clickNav('ai') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="integrations"]',
       text: '<b>Integrations</b> — wire up email, calendar, contacts here (per-account).',
       before: () => _clickNav('integrations') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="search"]',
-      text: '<b>Search</b> — plug in your own search provider, or use the bundled <b>SearXNG</b> out of the box.',
+      text: '<b>Buscar</b> — plug in your own search provider, or use the bundled <b>SearXNG</b> out of the box.',
       before: () => _clickNav('search') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="appearance"]',
       text: '<b>Appearance</b> — too many tools you don\'t need? Adjust them here! Toggle sidebar buttons, tool icons, and section visibility.',
       before: () => _clickNav('appearance') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="email"]',
-      text: '<b>Email</b> — sync schedule, drafts, snooze defaults — everything email-flow related.',
+      text: '<b>Correo</b> — sync schedule, drafts, snooze defaults — everything email-flow related.',
       before: () => _clickNav('email') },
     { sel: '#settings-modal .settings-nav-item[data-settings-tab="reminders"]',
       text: '<b>Reminders</b> — quiet hours and how Odysseus nudges you about calendar + urgent email.',
@@ -3525,8 +3525,8 @@ async function _cmdTourSettings(args, ctx) {
   return true;
 }
 
-// ── Gallery tour ──
-async function _cmdTourGallery(args, ctx) {
+// ── Galería tour ──
+async function _cmdTourGalería(args, ctx) {
   // Clear the chat input so "/tour-gallery" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -3572,7 +3572,7 @@ async function _cmdTourGallery(args, ctx) {
     }
   }
   if (!modal || modal.classList.contains('hidden')) {
-    slashReply('Could not open Gallery. Try clicking the Gallery tool first.');
+    slashReply('Could not open Galería. Try clicking the Galería tool first.');
     return true;
   }
 
@@ -3704,7 +3704,7 @@ async function _cmdTourGallery(args, ctx) {
 
   const steps = [
     { sel: '#gallery-modal .modal-content',
-      text: '<b>Welcome to Gallery.</b> Photos and albums live here.',
+      text: '<b>Welcome to Galería.</b> Photos and albums live here.',
       placement: 'center-above',
       before: () => _clickTab('images') },
     { sel: '#gallery-modal .gallery-tab[data-tab="images"]',
@@ -3717,7 +3717,7 @@ async function _cmdTourGallery(args, ctx) {
       text: '<b>Albums</b> — group images into collections.',
       before: () => _clickTab('albums') },
     { sel: '#gallery-modal .gallery-tab[data-tab="editor"]',
-      text: '<b>Editor</b> — honestly still WIP, so explore as you want.',
+      text: '<b>Editaror</b> — honestly still WIP, so explore as you want.',
       before: () => _clickTab('editor') },
   ];
 
@@ -3736,12 +3736,12 @@ async function _cmdTourGallery(args, ctx) {
   // Land on Photos so the user has a familiar starting point.
   _clickTab('images');
   _clear();
-  await typewriterReply('That\'s Gallery. Editor is rough — feedback welcome.');
+  await typewriterReply('That\'s Galería. Editaror is rough — feedback welcome.');
   return true;
 }
 
-// ── Notes tour ──
-async function _cmdTourNotes(args, ctx) {
+// ── Notas tour ──
+async function _cmdTourNotas(args, ctx) {
   // Clear the chat input so "/tour-notes" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -3785,7 +3785,7 @@ async function _cmdTourNotes(args, ctx) {
     }
   }
   if (!pane) {
-    slashReply('Could not open Notes. Try clicking the Notes tool first.');
+    slashReply('Could not open Notas. Try clicking the Notas tool first.');
     return true;
   }
 
@@ -3912,16 +3912,16 @@ async function _cmdTourNotes(args, ctx) {
 
   const steps = [
     { sel: '#notes-pane',
-      text: '<b>Notes</b> is your basic todo list, and also where reminders are managed.',
+      text: '<b>Notas</b> is your basic todo list, and also where reminders are managed.',
       placement: 'center-above' },
     { sel: '#notes-pane .notes-pane-body',
       text: 'Your notes show up here. You can also <b>ask Odysseus in chat</b> to take a note for you.' },
     { sel: '#notes-search',
-      text: '<b>Search</b> across every note — title, body, tags, the works.' },
+      text: '<b>Buscar</b> across every note — title, body, tags, the works.' },
     { sel: '#notes-view-toggle',
       text: 'Switch between <b>grid</b> and <b>list</b> views — pick whichever fits your brain.' },
     { sel: '#notes-archive-toggle',
-      text: '<b>Archive</b> stashes old notes you don\'t want cluttering the active view but still want to keep.' },
+      text: '<b>Archivar</b> stashes old notes you don\'t want cluttering the active view but still want to keep.' },
     { sel: '#notes-select-btn',
       text: '<b>Select</b> drops you into multi-select mode for bulk archive or delete.' },
   ];
@@ -3939,7 +3939,7 @@ async function _cmdTourNotes(args, ctx) {
   }
 
   _clear();
-  await typewriterReply('That\'s Notes. Write down whatever you want to remember.');
+  await typewriterReply('That\'s Notas. Write down whatever you want to remember.');
   return true;
 }
 
@@ -4113,17 +4113,17 @@ async function _cmdTourBrain(args, ctx) {
   const _tab = (name) => document.querySelector(`.memory-tab[data-memory-tab="${name}"]`)?.click();
   const steps = [
     { sel: '#memory-modal .memory-modal-content',
-      text: '<b>Brain</b> is where your memories are. You can edit them, or add new ones under <b>Add</b>. Wow.',
+      text: '<b>Brain</b> is where your memories are. You can edit them, or add new ones under <b>Agregar</b>. Wow.',
       before: () => _tab('browse'),
       placement: 'center-above' },
     { sel: '#memory-tidy-btn',
-      text: '<b>Tidy</b> runs your model to clear out irrelevant memories and duplicates. It also triggers automatically from Tasks.',
+      text: '<b>Tidy</b> runs your model to clear out irrelevant memories and duplicates. It also triggers automatically from Tareas.',
       before: () => _tab('browse') },
     { sel: '.memory-tab-panel[data-memory-panel="skills"]',
       text: '<b>Skills</b> are basically your AI’s memory for improving its abilities.',
       before: () => _tab('skills') },
     { sel: '.memory-tab-panel[data-memory-panel="settings"]',
-      text: '<b>Settings</b> lets you turn off auto extraction and set how strong skills need to be before they are tagged.',
+      text: '<b>Configuración</b> lets you turn off auto extraction and set how strong skills need to be before they are tagged.',
       before: () => _tab('settings') },
   ];
 
@@ -4145,7 +4145,7 @@ async function _cmdTourBrain(args, ctx) {
 }
 
 // ── Task tours ──
-async function _openTasksForTour() {
+async function _openTareasForTour() {
   let modal = document.getElementById('tasks-modal');
   if (!modal) {
     const opener = document.getElementById('tool-tasks-btn') || document.getElementById('rail-tasks');
@@ -4192,9 +4192,9 @@ async function _runTaskTour(steps, doneText, opts) {
     document.head.appendChild(s);
   }
 
-  const modal = await _openTasksForTour();
+  const modal = await _openTareasForTour();
   if (!modal) {
-    slashReply('Could not open Tasks. Try clicking the Tasks tool first.');
+    slashReply('Could not open Tareas. Try clicking the Tareas tool first.');
     return true;
   }
 
@@ -4349,12 +4349,12 @@ async function _runTaskTour(steps, doneText, opts) {
 async function _cmdTourTask1(args, ctx) {
   const result = await _runTaskTour([
     { sel: '#tasks-modal .modal-content',
-      text: '<b>Welcome to Tasks.</b> Manage all your AI background work here.' },
+      text: '<b>Welcome to Tareas.</b> Manage all your AI background work here.' },
     { sel: '#tasks-pause-all-btn',
-      text: 'Tasks are <b>paused by default</b> — resume whichever ones make sense for you. (Or pause anything that\'s running.)' },
+      text: 'Tareas are <b>paused by default</b> — resume whichever ones make sense for you. (Or pause anything that\'s running.)' },
     { sel: '#tasks-modal .modal-body',
-      text: 'When enabled, Tasks use the <b>utility model configured in Settings</b> for cleanup and organization jobs.' },
-  ], 'Use Tasks when you want Odysseus to handle background housekeeping.', {
+      text: 'When enabled, Tareas use the <b>utility model configured in Configuración</b> for cleanup and organization jobs.' },
+  ], 'Use Tareas when you want Odysseus to handle background housekeeping.', {
     continueLabel: 'continue →',
     continueText: '<b>Part 1 done.</b> Want to keep going into <b>adding & managing tasks</b>?',
   });
@@ -4365,14 +4365,14 @@ async function _cmdTourTask1(args, ctx) {
 async function _cmdTourTask2(args, ctx) {
   return _runTaskTour([
     { sel: '#tasks-modal .tasks-tab[data-tab="new"]',
-      text: '<b>Add</b> creates scheduled prompts, research jobs, actions, event triggers, or webhooks.',
+      text: '<b>Agregar</b> creates scheduled prompts, research jobs, actions, event triggers, or webhooks.',
       before: () => document.querySelector('#tasks-modal .tasks-tab[data-tab="new"]')?.click() },
     { sel: '#task-ai-input',
       text: 'You can just describe the task in plain chat language. Example: “weekday mornings summarize unread email”.' },
     { sel: '#tasks-modal .memory-item[data-idx="0"]',
       text: 'Or pick a template and fill out the form manually.' },
     { sel: '#task-form-save, #tasks-modal .tasks-tab[data-tab="tasks"]',
-      text: 'Tasks can be edited, paused, resumed, run now, or deleted from their cards.',
+      text: 'Tareas can be edited, paused, resumed, run now, or deleted from their cards.',
       before: () => document.querySelector('#tasks-modal .tasks-tab[data-tab="tasks"]')?.click() },
     // Tuck the modal out of the way so the chatbox is unmistakable, then
     // re-show it when the user moves past this step so the tour lands
@@ -4381,12 +4381,12 @@ async function _cmdTourTask2(args, ctx) {
       text: 'You can also <b>just ask in chat</b> — say "every weekday at 9am check for urgent emails" and Odysseus will create the task for you.',
       before: () => document.getElementById('tasks-modal')?.classList.add('hidden'),
       after:  () => document.getElementById('tasks-modal')?.classList.remove('hidden') },
-  ], 'That\'s Tasks. Have it run the background bits so you can stay in chat.');
+  ], 'That\'s Tareas. Have it run the background bits so you can stay in chat.');
 }
 
-// ── Tour: Deep Research ──
+// ── Tour: Deep Investigación ──
 
-async function _cmdTourResearch(args, ctx) {
+async function _cmdTourInvestigación(args, ctx) {
   // Clear the chat input so "/tour-research" doesn't linger.
   const _msgEl = document.getElementById('message');
   if (_msgEl) {
@@ -4394,7 +4394,7 @@ async function _cmdTourResearch(args, ctx) {
     _msgEl.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Shared tour-styles injection (same block as /tour, /tour-compare, /tour-cookbook).
+  // Compartird tour-styles injection (same block as /tour, /tour-compare, /tour-cookbook).
   if (!document.getElementById('tour-styles')) {
     const s = document.createElement('style');
     s.id = 'tour-styles';
@@ -4430,7 +4430,7 @@ async function _cmdTourResearch(args, ctx) {
     }
   }
   if (!overlay) {
-    slashReply('Could not open Deep Research. Try clicking the Deep Research tool first.');
+    slashReply('Could not open Deep Investigación. Try clicking the Deep Investigación tool first.');
     return true;
   }
 
@@ -4546,7 +4546,7 @@ async function _cmdTourResearch(args, ctx) {
     });
   }
 
-  function _ensureSettingsOpen() {
+  function _ensureConfiguraciónOpen() {
     const body = document.getElementById('research-settings-body');
     const toggle = document.getElementById('research-settings-toggle');
     if (body && toggle && body.style.display === 'none') toggle.click();
@@ -4554,13 +4554,13 @@ async function _cmdTourResearch(args, ctx) {
 
   const steps = [
     { sel: '#research-pane',
-      text: '<b>Welcome to Deep Research!</b> An LLM-in-the-loop agent that plans the search, queries the web, extracts findings, and writes you a full report.',
+      text: '<b>Welcome to Deep Investigación!</b> An LLM-in-the-loop agent that plans the search, queries the web, extracts findings, and writes you a full report.',
       placement: 'center-above' },
     { sel: '#research-query',
       text: 'Type what you want to researched here. Be specific — <i>"compare X vs Y for Z"</i> beats <i>"tell me about X"</i>.' },
     { sel: '#research-settings-body',
       text: '<b>Rounds</b> is how long the model will keep searching for. You can set to <b>Auto</b>, or go deeper/quicker depending on preference.',
-      before: _ensureSettingsOpen },
+      before: _ensureConfiguraciónOpen },
     { sel: '#research-pane',
       text: 'When a report finishes you can <b>discuss the results with the LLM</b> in chat, or open the full <b>visual HTML report</b> — sources, images, the works.',
       placement: 'center-above' },
@@ -4580,7 +4580,7 @@ async function _cmdTourResearch(args, ctx) {
 
   _clear();
   {
-    const _body = await typewriterReply('That’s Deep Research — hit Start or queue up many. You can also view past research in your ');
+    const _body = await typewriterReply('That’s Deep Investigación — hit Start or queue up many. You can also view past research in your ');
     const libLink = document.createElement('button');
     libLink.type = 'button';
     libLink.textContent = 'Library';
@@ -4608,7 +4608,7 @@ async function _cmdTourLibrary(args, ctx) {
     _msgEl.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Shared tour-styles injection.
+  // Compartird tour-styles injection.
   if (!document.getElementById('tour-styles')) {
     const s = document.createElement('style');
     s.id = 'tour-styles';
@@ -4766,7 +4766,7 @@ async function _cmdTourLibrary(args, ctx) {
       tooltip.addEventListener('click', onClick);
       // Interactive steps advance when the user clicks the highlighted
       // element — letting the original click through so the real action
-      // (open the Create modal, in the Library case) actually fires.
+      // (open the Crear modal, in the Library case) actually fires.
       if (interactive) {
         _onTarget = () => { cleanup(); resolve('next'); };
         target.addEventListener('click', _onTarget, true);
@@ -4777,7 +4777,7 @@ async function _cmdTourLibrary(args, ctx) {
   // ── Phase 1: Library overview ──
   const libSteps = [
     { sel: '#doclib-modal .doclib-modal-content',
-      text: '<b>Welcome to Library!</b> Your hub for <b>Chats</b>, <b>Documents</b>, <b>Research</b>, and <b>Archive</b> — search, sort and tidy!',
+      text: '<b>Welcome to Library!</b> Your hub for <b>Chats</b>, <b>Documentos</b>, <b>Investigación</b>, and <b>Archivar</b> — search, sort and tidy!',
       placement: 'center-above',
       before: () => {
         // Force the modal box to fill its intended frame so the halo wraps the
@@ -4789,7 +4789,7 @@ async function _cmdTourLibrary(args, ctx) {
         }
       } },
     { sel: '#doclib-create-btn',
-      text: '<b>Create</b> a fresh blank document — click it to try it out! (Or hit <b>Import</b> next to it to bring in a file from disk.)',
+      text: '<b>Crear</b> a fresh blank document — click it to try it out! (Or hit <b>Import</b> next to it to bring in a file from disk.)',
       interactive: true },
     { sel: '#doclib-grid .doclib-card',
       text: 'Each card is a saved document. It’s linked to the chat you created it in — so either <b>clone</b> it for a new chat, or <b>open</b> it in its original.',
@@ -4827,7 +4827,7 @@ async function _cmdTourLibrary(args, ctx) {
     return true;
   }
 
-  // Close library, open the doc in the editor, wait for the pane to mount.
+  // Cerrar library, open the doc in the editor, wait for the pane to mount.
   document.getElementById('doclib-close')?.click();
   await new Promise(r => setTimeout(r, 200));
   try { await window.documentModule.loadDocument(firstDocId); } catch (_) {}
@@ -5056,7 +5056,7 @@ async function _setupProviderDeviceFlow(providerKey) {
     if (result.status === 'authorized') {
       const n = ((result.endpoint && result.endpoint.models) || []).length;
       await _setupReply(`Connected - ${n} ${config.label} model${n !== 1 ? 's' : ''} available.`);
-      if (modelsModule) modelsModule.refreshModels(true);
+      if (modelsModule) modelsModule.refreshModelos(true);
       return;
     }
     if (result.status === 'failed') {
@@ -5118,9 +5118,9 @@ async function _cmdSetup(args, ctx) {
 
   // Check if models are already configured
   const modelsBox = document.getElementById('models');
-  const hasModels = modelsBox && modelsBox.querySelector('.models-row');
+  const hasModelos = modelsBox && modelsBox.querySelector('.models-row');
 
-  if (hasModels) {
+  if (hasModelos) {
     if (!topic) {
       _clearSetupGuideMessages();
       return _showSetupEndpointGuide();
@@ -5134,7 +5134,7 @@ async function _cmdSetup(args, ctx) {
     if (topic === 'theme' || topic === 'themes') {
       const tm = themeModule;
       const presets = tm && tm.THEMES ? Object.keys(tm.THEMES) : [];
-      const customObj = tm && tm.getCustomThemes ? tm.getCustomThemes() : {};
+      const customObj = tm && tm.getCustomTemas ? tm.getCustomTemas() : {};
       const customKeys = Object.keys(customObj);
 
       // One-shot: /setup theme <name> -> apply directly
@@ -5144,7 +5144,7 @@ async function _cmdSetup(args, ctx) {
         if (colors) {
           tm.applyColors(colors);
           tm.save(themeName, colors);
-          await typewriterReply(`Theme: ${themeName}`);
+          await typewriterReply(`Tema: ${themeName}`);
         } else {
           const customLabel = customKeys.length ? ` | Custom: ${customKeys.join(', ')}` : '';
           slashReply(`Unknown theme "${themeName}". Available: ${presets.join(', ')}${customLabel}`);
@@ -5229,14 +5229,14 @@ async function _cmdShortcuts(args, ctx) {
   }).join('+');
 
   const entries = [
-    [formatCombo(keybinds.search), 'Search conversations'],
+    [formatCombo(keybinds.search), 'Buscar conversaciones'],
     [formatCombo(keybinds.toggle_sidebar), 'Toggle sidebar'],
     [formatCombo(keybinds.new_session), 'New session'],
     [formatCombo(keybinds.star_session), 'Star / unstar session'],
-    [formatCombo(keybinds.delete_session), 'Delete session'],
+    [formatCombo(keybinds.delete_session), 'Eliminar session'],
     [formatCombo(keybinds.admin_panel), 'Admin panel'],
-    [formatCombo(keybinds.cancel), 'Cancel stream / close panel'],
-    ['Enter', 'Send message'],
+    [formatCombo(keybinds.cancel), 'Cancelar stream / close panel'],
+    ['Enter', 'Enviar mensaje'],
     ['Shift+Enter', 'New line'],
   ];
   const maxKey = Math.max(...entries.map(e => e[0].length));
@@ -5272,7 +5272,7 @@ const _ODYSSEY_QUOTES = [
 ];
 
 const _8BALL = [
-  "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.",
+  "It is certain.", "It is decidedly so.", "Without a doubt.", "Sí, definitely.",
   "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.",
   "Signs point to yes.", "Reply hazy, try again.", "Ask again later.",
   "Better not tell you now.", "Cannot predict now.", "Concentrate and ask again.",
@@ -5704,7 +5704,7 @@ async function _cmdHelp(args, ctx) {
       categories[cat].push(`  ${usage.padEnd(21)}${desc}`);
     }
   }
-  const order = ['Getting started', 'Tours', 'Chats', 'Settings', 'Memory', 'Productivity', 'AI Tools'];
+  const order = ['Getting started', 'Tours', 'Chats', 'Configuración', 'Memoria', 'Productivity', 'AI Tools'];
   let lines = [];
   for (const cat of order) {
     if (categories[cat] && categories[cat].length) {
@@ -5751,19 +5751,19 @@ const COMMANDS = {
     help: 'Manage chat sessions',
     default: 'info',
     subs: {
-      'new':         { handler: _cmdSessionNew,         alias: ['create','mkdir'], help: 'Create new chat',             usage: '/chats new [name]' },
-      'delete':      { handler: _cmdSessionDelete,      alias: ['del','rm'],       help: 'Delete chat',                 usage: '/chats delete [id]' },
-      'archive':     { handler: _cmdSessionArchive,     alias: ['tar'],            help: 'Archive chat',                usage: '/chats archive [id]' },
-      'rename':      { handler: _cmdSessionRename,      alias: ['mv'],             help: 'Rename current chat',         usage: '/chats rename Name' },
+      'new':         { handler: _cmdSessionNew,         alias: ['create','mkdir'], help: 'Crear new chat',             usage: '/chats new [name]' },
+      'delete':      { handler: _cmdSessionEliminar,      alias: ['del','rm'],       help: 'Eliminar chat',                 usage: '/chats delete [id]' },
+      'archive':     { handler: _cmdSessionArchivar,     alias: ['tar'],            help: 'Archivar chat',                usage: '/chats archive [id]' },
+      'rename':      { handler: _cmdSessionRenombrar,      alias: ['mv'],             help: 'Renombrar current chat',         usage: '/chats rename Name' },
       'favorite':    { handler: _cmdSessionImportant,   alias: ['pin','important'], help: 'Mark as favorite',          usage: '/chats favorite' },
       'unfavorite':  { handler: _cmdSessionUnimportant, alias: ['unpin','unimportant'], help: 'Unmark favorite',       usage: '/chats unfavorite' },
       'fork':        { handler: _cmdSessionFork,        alias: ['cp'],             help: 'Fork chat (keep first N msgs)', usage: '/chats fork [N]' },
-      'truncate':    { handler: _cmdSessionTruncate,    alias: [],                 help: 'Delete older messages, keep last N', usage: '/chats truncate N' },
+      'truncate':    { handler: _cmdSessionTruncate,    alias: [],                 help: 'Eliminar older messages, keep last N', usage: '/chats truncate N' },
       'switch':      { handler: _cmdSessionSwitch,      alias: ['goto','cd'],      help: 'Switch to chat by name/id',    usage: '/chats switch name' },
       'sort':        { handler: _cmdSessionSort,        alias: [],                 help: 'Auto-sort into folders',      usage: '/chats sort' },
       'info':        { handler: _cmdSessionInfo,        alias: ['stat'],           help: 'Show chat details',           usage: '/chats info' },
       'clear':       { handler: _cmdSessionClear,       alias: [],                 help: 'Clear chat display',          usage: '/chats clear' },
-      'export':      { handler: _cmdSessionExport,      alias: ['cat'],            help: 'Download as markdown',        usage: '/chats export' }
+      'export':      { handler: _cmdSessionExport,      alias: ['cat'],            help: 'Descargar as markdown',        usage: '/chats export' }
     }
   },
   toggle: {
@@ -5775,7 +5775,7 @@ const COMMANDS = {
     subs: {
       'web':       { handler: _cmdToggleWeb,       alias: ['search','s','w'],  help: 'Toggle web search',       usage: '/toggle web' },
       'bash':      { handler: _cmdToggleBash,      alias: ['b','shell'],       help: 'Toggle bash/shell',       usage: '/toggle bash' },
-      'research':  { handler: _cmdToggleResearch,  alias: ['r'],               help: 'Toggle deep research',    usage: '/toggle research' },
+      'research':  { handler: _cmdToggleInvestigación,  alias: ['r'],               help: 'Toggle deep research',    usage: '/toggle research' },
       'doc':       { handler: _cmdToggleDoc,       alias: [],     help: 'Toggle document editor',  usage: '/toggle doc' },
       'sidebar':   { handler: _cmdToggleSidebar,   alias: ['sb'], help: 'Cycle sidebar (full/mini/off)', usage: '/toggle sidebar [1|2|3]' },
       '_show':     { handler: _cmdToggleShow,      alias: [],     help: 'Show all toggle states',  usage: '/toggle' }
@@ -5791,26 +5791,26 @@ const COMMANDS = {
   },
   memory: {
     alias: ['m'],
-    category: 'Memory',
+    category: 'Memoria',
     help: 'Manage persistent memories',
     default: 'list',
     subs: {
-      'list':   { handler: _cmdMemoryList,   alias: ['ls'],          help: 'List all memories',   usage: '/memory list' },
-      'add':    { handler: _cmdMemoryAdd,    alias: ['echo'],        help: 'Save a memory',       usage: '/memory add text' },
-      'delete': { handler: _cmdMemoryDelete, alias: ['del', 'rm'],   help: 'Delete by ID',        usage: '/memory delete id' },
-      'search': { handler: _cmdMemorySearch, alias: ['grep'],        help: 'Search memories',     usage: '/memory search q' }
+      'list':   { handler: _cmdMemoriaList,   alias: ['ls'],          help: 'List all memories',   usage: '/memory list' },
+      'add':    { handler: _cmdMemoriaAgregar,    alias: ['echo'],        help: 'Guardar a memory',       usage: '/memory add text' },
+      'delete': { handler: _cmdMemoriaEliminar, alias: ['del', 'rm'],   help: 'Eliminar by ID',        usage: '/memory delete id' },
+      'search': { handler: _cmdMemoriaBuscar, alias: ['grep'],        help: 'Buscar memories',     usage: '/memory search q' }
     }
   },
   skills: {
     alias: ['skill'],
-    category: 'Memory',
+    category: 'Memoria',
     help: 'List, search, inspect, or run skills',
     handler: _cmdSkills,
     usage: '/skills list | search query | view name | use name request',
   },
   'reload-skills': {
     alias: ['reload_skills'],
-    category: 'Memory',
+    category: 'Memoria',
     help: 'Refresh the slash skill catalog',
     handler: _cmdReloadSkills,
     usage: '/reload-skills',
@@ -5823,14 +5823,14 @@ const COMMANDS = {
     default: 'list',
     subs: {
       'list':   { handler: _cmdRagList,   alias: ['ls'],       help: 'List indexed files',    usage: '/rag list' },
-      'add':    { handler: _cmdRagAdd,    alias: [],           help: 'Add directory',         usage: '/rag add /path' },
+      'add':    { handler: _cmdRagAgregar,    alias: [],           help: 'Agregar directory',         usage: '/rag add /path' },
       'remove': { handler: _cmdRagRemove, alias: ['rm'],       help: 'Remove directory',      usage: '/rag remove /path' }
     }
   },
   todo: {
     alias: ['td'],
     category: 'Productivity',
-    help: 'Add or list todos',
+    help: 'Agregar or list todos',
     handler: _cmdTodo,
     noUserBubble: true,
     usage: '/todo Your task  ·  /todo list',
@@ -5838,7 +5838,7 @@ const COMMANDS = {
   event: {
     alias: ['ev'],
     category: 'Productivity',
-    help: 'Create a calendar event',
+    help: 'Crear a calendar event',
     handler: _cmdEvent,
     noUserBubble: true,
     usage: '/event tomorrow 14:00 Team call',
@@ -5846,7 +5846,7 @@ const COMMANDS = {
   setup: {
     alias: ['su', 'seutp'],
     category: 'Getting started',
-    help: 'Add local or API model endpoints',
+    help: 'Agregar local or API model endpoints',
     handler: _cmdSetup,
     usage: '/setup local URL  ·  /setup groq KEY  ·  /setup copilot  ·  /setup chatgpt-subscription',
     // Provider subs so the autocomplete popup surfaces "/setup deepseek",
@@ -5870,7 +5870,7 @@ const COMMANDS = {
       local:      { help: 'Local model server (vLLM / LM Studio / llama.cpp / Ollama)',
                     usage: '/setup local http://localhost:8000/v1',
                     handler: (a, c) => _cmdSetup(['local', ...a], c) },
-      endpoint:   { help: 'Open the endpoint manager in Settings',
+      endpoint:   { help: 'Open the endpoint manager in Configuración',
                     usage: '/setup endpoint',
                     handler: (a, c) => _cmdSetup(['endpoint', ...a], c) },
     },
@@ -5885,22 +5885,22 @@ const COMMANDS = {
   'tour-compare': {
     alias: ['compare-tour'],
     category: 'Tours',
-    help: 'Model comparison tour',
+    help: 'Modelo comparison tour',
     handler: _cmdTourCompare,
     usage: '/tour-compare'
   },
   'tour-cookbook': {
     alias: ['cookbook-tour'],
     category: 'Tours',
-    help: 'Cookbook tour: hardware, downloads, serving',
-    handler: _cmdTourCookbook,
+    help: 'Recetas tour: hardware, downloads, serving',
+    handler: _cmdTourRecetas,
     usage: '/tour-cookbook'
   },
   'tour-research': {
     alias: ['research-tour'],
     category: 'Tours',
-    help: 'Deep Research tour',
-    handler: _cmdTourResearch,
+    help: 'Deep Investigación tour',
+    handler: _cmdTourInvestigación,
     usage: '/tour-research'
   },
   'tour-library': {
@@ -5913,22 +5913,22 @@ const COMMANDS = {
   'tour-theme': {
     alias: ['theme-tour'],
     category: 'Tours',
-    help: 'Theme editor tour',
-    handler: _cmdTourTheme,
+    help: 'Tema editor tour',
+    handler: _cmdTourTema,
     usage: '/tour-theme'
   },
   'tour-settings': {
     alias: ['tour-setting', 'settings-tour'],
     category: 'Tours',
-    help: 'Settings tour: models, integrations, appearance',
-    handler: _cmdTourSettings,
+    help: 'Configuración tour: models, integrations, appearance',
+    handler: _cmdTourConfiguración,
     usage: '/tour-settings'
   },
   'tour-gallery': {
     alias: ['gallery-tour'],
     category: 'Tours',
-    help: 'Gallery tour: photos, albums, editor',
-    handler: _cmdTourGallery,
+    help: 'Galería tour: photos, albums, editor',
+    handler: _cmdTourGalería,
     usage: '/tour-gallery'
   },
   'tour-brain': {
@@ -5941,14 +5941,14 @@ const COMMANDS = {
   'tour-task-1': {
     alias: ['tour-task', 'tour-tasks', 'tour-tasks-1', 'tasks-tour', 'tasks-tour-1'],
     category: 'Tours',
-    help: 'Tasks tour: built-ins, runs, pause controls',
+    help: 'Tareas tour: built-ins, runs, pause controls',
     handler: _cmdTourTask1,
     usage: '/tour-task-1'
   },
   'tour-task-2': {
     alias: ['tour-tasks-2', 'tasks-tour-2'],
     category: 'Tours',
-    help: 'Tasks tour: adding and managing tasks',
+    help: 'Tareas tour: adding and managing tasks',
     handler: _cmdTourTask2,
     usage: '/tour-task-2'
   },
@@ -5961,16 +5961,16 @@ const COMMANDS = {
   },
   theme: {
     alias: [],
-    category: 'Settings',
+    category: 'Configuración',
     help: 'Change color theme',
-    handler: _cmdTheme,
+    handler: _cmdTema,
     usage: '/theme name'
   },
   settings: {
     alias: ['cfg', 'preferences', 'config'],
-    category: 'Settings',
-    help: 'Open the Settings panel',
-    handler: _cmdSettings,
+    category: 'Configuración',
+    help: 'Open the Configuración panel',
+    handler: _cmdConfiguración,
     usage: '/settings [tab]'
   },
   open: {
@@ -5979,33 +5979,33 @@ const COMMANDS = {
     hidden: true,
     help: 'Open a tool panel',
     handler: _cmdOpen,
-    usage: '/open Cookbook'
+    usage: '/open Recetas'
   },
   cookbook: {
     alias: ['cook'],
     category: 'Tools',
-    help: 'Open Cookbook; use "serve" to jump to model serving',
+    help: 'Open Recetas; use "serve" to jump to model serving',
     handler: (args, ctx) => _cmdToolPanel('cookbook', args, ctx),
     usage: '/cookbook  ·  /cookbook serve qwen'
   },
   email: {
     alias: ['mail', 'inbox'],
     category: 'Tools',
-    help: 'Open Email',
+    help: 'Open Correo',
     handler: (args, ctx) => _cmdToolPanel('email', args, ctx),
     usage: '/email'
   },
   notes: {
     alias: [],
     category: 'Tools',
-    help: 'Open Notes',
+    help: 'Open Notas',
     handler: (args, ctx) => _cmdToolPanel('notes', args, ctx),
     usage: '/notes'
   },
   tasks: {
     alias: [],
     category: 'Tools',
-    help: 'Open Tasks',
+    help: 'Open Tareas',
     handler: (args, ctx) => _cmdToolPanel('tasks', args, ctx),
     usage: '/tasks'
   },
@@ -6026,14 +6026,14 @@ const COMMANDS = {
   gallery: {
     alias: ['photos'],
     category: 'Tools',
-    help: 'Open Gallery',
+    help: 'Open Galería',
     handler: (args, ctx) => _cmdToolPanel('gallery', args, ctx),
     usage: '/gallery'
   },
   research: {
     alias: [],
     category: 'Tools',
-    help: 'Open Deep Research',
+    help: 'Open Deep Investigación',
     handler: (args, ctx) => _cmdToolPanel('research', args, ctx),
     usage: '/research'
   },
@@ -6053,16 +6053,16 @@ const COMMANDS = {
   },
   model: {
     alias: [],
-    category: 'Settings',
+    category: 'Configuración',
     help: 'Show current chat model',
-    handler: _cmdModel,
+    handler: _cmdModelo,
     usage: '/model  ·  /model list'
   },
   models: {
     alias: [],
-    category: 'Settings',
+    category: 'Configuración',
     help: 'List available models',
-    handler: _cmdModels,
+    handler: _cmdModelos,
     usage: '/models'
   },
   search: {
@@ -6070,7 +6070,7 @@ const COMMANDS = {
     category: 'Utility',
     hidden: true,
     help: 'Web search (sends query with web enabled)',
-    handler: _cmdWebSearch,
+    handler: _cmdWebBuscar,
     noUserBubble: true,
     usage: '/search query'
   },
@@ -6078,8 +6078,8 @@ const COMMANDS = {
     alias: ['search-history'],
     category: 'Utility',
     hidden: true,
-    help: 'Search all conversations',
-    handler: _cmdSearch,
+    help: 'Buscar all conversations',
+    handler: _cmdBuscar,
     usage: '/find query'
   },
   stats: {
@@ -6130,7 +6130,7 @@ const COMMANDS = {
   },
   note: {
     alias: ['n'],
-    category: 'Memory',
+    category: 'Memoria',
     help: 'Quick-save a note',
     handler: _cmdNote,
     usage: '/note text'

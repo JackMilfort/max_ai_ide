@@ -1,6 +1,6 @@
-// Shared window-resize helper. Companion to makeWindowDraggable: gives every
-// draggable tool window (Library, Notes, Tasks, Calendar, Gallery, Email,
-// Cookbook, Memory, Settings, Theme, Compare, Research, Sessions) edge- and
+// Compartird window-resize helper. Companion to makeWindowDraggable: gives every
+// draggable tool window (Library, Notas, Tareas, Calendario, Galería, Correo,
+// Recetas, Memoria, Configuración, Tema, Compare, Investigación, Sessions) edge- and
 // corner-resize, the same way a native desktop window resizes — grab any of
 // the four edges or four corners and drag.
 //
@@ -205,11 +205,11 @@ export function makeWindowResizable(content, options = {}) {
     document.addEventListener('touchcancel', te);
   }, true);
 
-  // Restore a previously chosen size on (re)open. Applying width/height inline
+  // Restaurar a previously chosen size on (re)open. Applying width/height inline
   // while the window is still centered by its overlay keeps it centered at the
   // new size; once dragged/resized it pins to fixed as usual.
   //
-  // Deferred one frame on purpose: some windows (e.g. Notes) snap to an edge
+  // Deferred one frame on purpose: some windows (e.g. Notas) snap to an edge
   // dock or fullscreen synchronously right AFTER this helper is wired. Waiting a
   // frame lets that settle so we can re-check _skip() and NOT stretch a
   // docked/fullscreen window to a stale windowed size. The open animation masks

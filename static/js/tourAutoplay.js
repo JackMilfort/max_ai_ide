@@ -10,7 +10,7 @@
 
 import { handleSlashCommand } from './slashCommands.js';
 
-// Modal id → slash command to fire (without the leading "/"). Add to this
+// Modal id → slash command to fire (without the leading "/"). Agregar to this
 // map when a new feature picks up a `tour-*` command.
 const TOUR_FOR_MODAL = {
   'doclib-modal':           'tour-library',

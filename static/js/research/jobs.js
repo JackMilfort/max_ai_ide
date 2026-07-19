@@ -1,5 +1,5 @@
 /**
- * Research job queue — add, start, monitor, cancel research jobs.
+ * Investigación job queue — add, start, monitor, cancel research jobs.
  */
 
 let _jobs = [];
@@ -248,7 +248,7 @@ export function formatPhase(progress, maxRounds) {
   switch (p.phase) {
     case 'probing': return 'Probing model...';
     case 'planning': return 'Planning research strategy...';
-    case 'searching': return `${rn}Searching (${p.queries || 0} queries)`;
+    case 'searching': return `${rn}Buscaring (${p.queries || 0} queries)`;
     case 'reading': return `${rn}Reading ${p.total_sources || 0} sources`;
     case 'analyzing': return `${rn}Analyzing ${p.total_findings || 0} findings`;
     case 'writing': return `Writing report -- ${p.total_sources || 0} sources`;
@@ -354,7 +354,7 @@ function _finishJob(job, status) {
   job.elapsed = Date.now() - (job.startedAt || Date.now());
   if (status === 'done') {
     if ('Notification' in window && Notification.permission === 'granted') {
-      try { new Notification('Research Complete', { body: job.query.slice(0, 80) }); } catch {}
+      try { new Notification('Investigación Complete', { body: job.query.slice(0, 80) }); } catch {}
     }
     if (_onCompleteCb) _onCompleteCb(job);
   }

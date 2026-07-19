@@ -1,6 +1,6 @@
 /**
  * Lasso + Magic Wand panel controls — sliders, mode toggles, and the
- * panel action buttons (Invert / Clear / Delete / Copy / To Mask /
+ * panel action buttons (Invert / Clear / Eliminar / Copiar / To Mask /
  * Bg Remove). The actual selection algorithms live in their tool
  * modules (editor/tools/lasso.js, editor/tools/wand.js); this file
  * just wires the side-panel UI to them.
@@ -9,8 +9,8 @@
  *     #ge-lasso-feather       slider, updates label + preview, recomposites
  *     #ge-lasso-grow          slider, updates label + recomposites
  *     #ge-lasso-invert        → invertSelection
- *     #ge-lasso-delete        → lassoDeleteSelection
- *     #ge-lasso-copy          → lassoCopyToLayer
+ *     #ge-lasso-delete        → lassoEliminarSelection
+ *     #ge-lasso-copy          → lassoCopiarToLayer
  *     #ge-lasso-mask          → lassoToMask
  *
  *   Wand section:
@@ -18,20 +18,20 @@
  *     #ge-wand-grow           slider, updates label + recomposites
  *     #ge-wand-tolerance      slider, updates future wand-click tolerance
  *     #ge-wand-live           opt-in rAF-coalesced live retune while dragging
- *     .ge-wand-mode-btn       segmented toggle (New / Add / Subtract)
+ *     .ge-wand-mode-btn       segmented toggle (New / Agregar / Subtract)
  *     #ge-wand-vis            toggle the translucent red overlay
  *     #ge-wand-clear / -invert / -delete / -copy / -mask / -rembg
  *
  * @param {{
  *   composite:               () => void,
  *   invertSelection:         () => boolean,
- *   lassoDeleteSelection:    () => void,
- *   lassoCopyToLayer:        () => void,
+ *   lassoEliminarSelection:    () => void,
+ *   lassoCopiarToLayer:        () => void,
  *   lassoToMask:             () => void,
  *   runMagicWand:            (x: number, y: number, mode: string, opts?: object) => void,
  *   wandClear:               () => void,
- *   wandDeleteSelection:     () => void,
- *   wandCopyToNewLayer:      () => void,
+ *   wandEliminarSelection:     () => void,
+ *   wandCopiarToNewLayer:      () => void,
  *   wandToMask:              () => void,
  *   buildSelectionHintMask:  () => string | null,
  *   applyImageTool:          (endpoint, payload, name, btn, opts?) => Promise<void>,
@@ -46,9 +46,9 @@ const EYE_OFF  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" st
 export function wireSelectionControls({
   composite,
   invertSelection,
-  lassoDeleteSelection, lassoCopyToLayer, lassoToMask,
+  lassoEliminarSelection, lassoCopiarToLayer, lassoToMask,
   runMagicWand,
-  wandClear, wandDeleteSelection, wandCopyToNewLayer, wandToMask,
+  wandClear, wandEliminarSelection, wandCopiarToNewLayer, wandToMask,
   buildSelectionHintMask, applyImageTool,
   uiModule,
 }) {
@@ -70,12 +70,12 @@ export function wireSelectionControls({
     composite();
   });
   document.getElementById('ge-lasso-delete')?.addEventListener('click', () => {
-    if (state.lassoPoints.length >= 3 && !state.lassoActive) lassoDeleteSelection();
-    else if (state.wandMask) wandDeleteSelection();
+    if (state.lassoPoints.length >= 3 && !state.lassoActive) lassoEliminarSelection();
+    else if (state.wandMask) wandEliminarSelection();
   });
   document.getElementById('ge-lasso-copy')?.addEventListener('click', () => {
-    if (state.lassoPoints.length >= 3 && !state.lassoActive) lassoCopyToLayer();
-    else if (state.wandMask) wandCopyToNewLayer();
+    if (state.lassoPoints.length >= 3 && !state.lassoActive) lassoCopiarToLayer();
+    else if (state.wandMask) wandCopiarToNewLayer();
   });
   document.getElementById('ge-lasso-mask')?.addEventListener('click', () => {
     if (state.lassoPoints.length >= 3 && !state.lassoActive) lassoToMask();
@@ -124,7 +124,7 @@ export function wireSelectionControls({
     if (state.wandLiveRetune) retuneWand();
   });
 
-  // Wand mode segmented toggle (New / Add / Subtract).
+  // Wand mode segmented toggle (New / Agregar / Subtract).
   document.querySelectorAll('.ge-wand-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.wandMode;
@@ -150,8 +150,8 @@ export function wireSelectionControls({
 
   document.getElementById('ge-wand-clear')?.addEventListener('click', wandClear);
   document.getElementById('ge-wand-invert')?.addEventListener('click', invertSelection);
-  document.getElementById('ge-wand-delete')?.addEventListener('click', wandDeleteSelection);
-  document.getElementById('ge-wand-copy')?.addEventListener('click', wandCopyToNewLayer);
+  document.getElementById('ge-wand-delete')?.addEventListener('click', wandEliminarSelection);
+  document.getElementById('ge-wand-copy')?.addEventListener('click', wandCopiarToNewLayer);
   document.getElementById('ge-wand-mask')?.addEventListener('click', wandToMask);
   // Selection-constrained Bg Remove — reuses the same path the toolbar
   // Bg Remove button does. buildSelectionHintMask picks the active

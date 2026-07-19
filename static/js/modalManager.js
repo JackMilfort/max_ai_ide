@@ -21,7 +21,7 @@
  *   // From the sidebar/rail button click handler:
  *   if (!Modals.toggle('gallery-modal')) {
  *     // No registered modal — build and open it fresh.
- *     openGallery();
+ *     openGalería();
  *   }
  */
 
@@ -82,7 +82,7 @@ function _emitModalOpened(id, modal) {
   } catch (_) {}
 }
 
-function _captureRestoreHeight(modal, state) {
+function _captureRestaurarHeight(modal, state) {
   if (!modal || !state) return;
   const content = modal.querySelector('.modal-content');
   if (!content) return;
@@ -102,7 +102,7 @@ function _captureRestoreHeight(modal, state) {
   state.restoreMinHeight = `${Math.round(Math.max(minHeight, Math.min(rect.height, maxHeight)))}px`;
 }
 
-function _applyRestoreHeight(modal, state) {
+function _applyRestaurarHeight(modal, state) {
   if (!modal || !state?.restoreMinHeight) return;
   const content = modal.querySelector('.modal-content');
   if (!content) return;
@@ -127,24 +127,24 @@ function _setBadge(btnIds, on) {
 // ── Bottom dock — visible chip per minimized modal ──
 
 const _LABELS = {
-  'cookbook-modal':    { label: 'Cookbook',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>' },
-  'calendar-modal':    { label: 'Calendar',  icon: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18' },
-  'gallery-modal':     { label: 'Gallery',   icon: 'M3 3h18v18H3zM8.5 8.5l3 3M21 15l-5-5L5 21' },
-  'tasks-modal':       { label: 'Tasks',     icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
+  'cookbook-modal':    { label: 'Recetas',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>' },
+  'calendar-modal':    { label: 'Calendario',  icon: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18' },
+  'gallery-modal':     { label: 'Galería',   icon: 'M3 3h18v18H3zM8.5 8.5l3 3M21 15l-5-5L5 21' },
+  'tasks-modal':       { label: 'Tareas',     icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
   'doclib-modal':      { label: 'Library',   icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2zM9 7h6M9 11h4' },
   // Full SVG markup (not a single path-d) — the rounded-lobe brain needs
   // three sub-paths, which the dock renderer supports when the icon string
   // contains '<'.
   'memory-modal':      { label: 'Brain',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>' },
-  'notes-panel':       { label: 'Notes',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 17.5 15.5 10l2.5 2.5L10.5 20H8z"/></svg>' },
-  'email-lib-modal':   { label: 'Email',     icon: 'M2 4h20v16H2zM22 7l-9.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7' },
+  'notes-panel':       { label: 'Notas',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5"/><path d="M8 17.5 15.5 10l2.5 2.5L10.5 20H8z"/></svg>' },
+  'email-lib-modal':   { label: 'Correo',     icon: 'M2 4h20v16H2zM22 7l-9.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7' },
   // The Prompt window (characters / inject / group). Syringe = "prompt" icon,
   // matching its title bar. Full SVG markup (multi-path) per the dock renderer.
   'custom-preset-modal': { label: 'Prompt',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>' },
-  'research-overlay':  { label: 'Research',  icon: 'M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0M21 21l-4.35-4.35M11 8L11 14M8 11L14 11' },
-  'theme-modal':       { label: 'Theme',     icon: 'M12 2a10 10 0 1 0 10 10c0-1-1-2-2-2h-2a2 2 0 0 1 0-4h1a2 2 0 0 0 0-4 10 10 0 0 0-7-2zM7.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM12 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM16.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z' },
+  'research-overlay':  { label: 'Investigación',  icon: 'M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0M21 21l-4.35-4.35M11 8L11 14M8 11L14 11' },
+  'theme-modal':       { label: 'Tema',     icon: 'M12 2a10 10 0 1 0 10 10c0-1-1-2-2-2h-2a2 2 0 0 1 0-4h1a2 2 0 0 0 0-4 10 10 0 0 0-7-2zM7.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM12 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM16.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z' },
   'compare-model-overlay': { label: 'Compare',  icon: 'M8 3v18M16 3v18M3 8h5M16 16h5' },
-  'settings-modal':    { label: 'Settings',  icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.4.4.62.94.6 1.51V11a2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' },
+  'settings-modal':    { label: 'Configuración',  icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.4.4.62.94.6 1.51V11a2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' },
   'ge-shortcuts-modal':{ label: 'Shortcuts', icon: 'M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10' },
   // Virtual id — the doc editor pane isn't a modal, but it minimizes to a
   // chip via the same dock infrastructure.
@@ -351,8 +351,8 @@ function _renderDock() {
     chip.type = 'button';
     chip.className = 'minimized-dock-chip';
     chip.dataset.modalId = id;
-    chip.title = `Restore ${meta.label}`;
-    // Restore any external data-* attributes the previous chip carried
+    chip.title = `Restaurar ${meta.label}`;
+    // Restaurar any external data-* attributes the previous chip carried
     // (e.g. emailLibrary's data-tab-num slot-number badge).
     const prevAttrs = oldData.get(id);
     if (prevAttrs) {
@@ -368,7 +368,7 @@ function _renderDock() {
     chip.innerHTML = `
       ${iconHtml}
       <span class="minimized-dock-label">${meta.label}</span>
-      <span class="minimized-dock-x" title="Close">×</span>
+      <span class="minimized-dock-x" title="Cerrar">×</span>
     `;
     chip.addEventListener('click', (e) => {
       if (chip._wasDragging) { chip._wasDragging = false; return; }
@@ -731,7 +731,7 @@ function _wireChipDrag(chip, dock) {
           if (navigator.vibrate) { try { navigator.vibrate(15); } catch {} }
         }, LONG_PRESS_MS);
       }
-      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointermove', onPointerMover);
       document.addEventListener('pointerup', onPointerUp, { once: true });
       document.addEventListener('pointercancel', onPointerUp, { once: true });
       return;
@@ -749,12 +749,12 @@ function _wireChipDrag(chip, dock) {
       dockStartTop = dr.top;
     }
     chip.setPointerCapture(e.pointerId);
-    chip.addEventListener('pointermove', onPointerMove);
+    chip.addEventListener('pointermove', onPointerMover);
     chip.addEventListener('pointerup', onPointerUp, { once: true });
     chip.addEventListener('pointercancel', onPointerUp, { once: true });
   };
 
-  const onPointerMove = (e) => {
+  const onPointerMover = (e) => {
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     // Touch fingers drift a few pixels even on a "still" tap, so the touch
@@ -876,7 +876,7 @@ function _wireChipDrag(chip, dock) {
         }
       }
     } else {
-      // Move-dock: reposition the entire dock element. On touch, the whole
+      // Mover-dock: reposition the entire dock element. On touch, the whole
       // chain also interacts with the trash zone — drop on X to close every
       // chip in the dock.
       let newLeft = Math.max(8, Math.min(window.innerWidth  - dock.offsetWidth  - 8, dockStartLeft + dx));
@@ -914,8 +914,8 @@ function _wireChipDrag(chip, dock) {
   };
 
   const onPointerUp = () => {
-    document.removeEventListener('pointermove', onPointerMove);
-    chip.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointermove', onPointerMover);
+    chip.removeEventListener('pointermove', onPointerMover);
     activePointerId = null;
     cancelLongPress();
     // Clear the global drag flag so the chat container's edge-swipe handler
@@ -1233,7 +1233,7 @@ export function minimize(id) {
   // and let the chip drive restore/close via the registered functions.
   const modal = document.getElementById(id);
   if (modal) {
-    _captureRestoreHeight(modal, s);
+    _captureRestaurarHeight(modal, s);
     // If this window is edge-docked (right/left), SUSPEND the dock: release
     // the body push so the chat returns to full width while the window is
     // minimized, but keep the dock so restoring the chip snaps it back in.
@@ -1266,7 +1266,7 @@ export function restore(id) {
   if (modal) {
     modal.classList.remove('hidden', 'modal-minimized');
     modal.style.display = '';
-    _applyRestoreHeight(modal, s);
+    _applyRestaurarHeight(modal, s);
     // Surface above any already-open tool window — restoring from the dock
     // should bring this tool to the front, not leave it stuck behind one with
     // a higher static z-index.
@@ -1307,11 +1307,11 @@ export function toggle(id) {
 export function close(id) {
   const s = _state.get(id);
   if (!s) return;
-  const modalBeforeClose = document.getElementById(id);
-  const contentBeforeClose = modalBeforeClose?.querySelector?.('.modal-content');
-  const suspendedDockSide = contentBeforeClose?._dockSuspended
-    || (modalBeforeClose?.classList?.contains('modal-left-docked') ? 'left'
-        : modalBeforeClose?.classList?.contains('modal-right-docked') ? 'right'
+  const modalBeforeCerrar = document.getElementById(id);
+  const contentBeforeCerrar = modalBeforeCerrar?.querySelector?.('.modal-content');
+  const suspendedDockSide = contentBeforeCerrar?._dockSuspended
+    || (modalBeforeCerrar?.classList?.contains('modal-left-docked') ? 'left'
+        : modalBeforeCerrar?.classList?.contains('modal-right-docked') ? 'right'
           : null);
   const shouldRememberDock = s.isMinimized && !!suspendedDockSide;
   if (shouldRememberDock) _rememberDock(id, suspendedDockSide);
@@ -1409,7 +1409,7 @@ const _AUTO_WIRE = {
   'doclib-modal':         { rail: 'rail-archive',   sidebar: 'tool-library-btn' },
   'memory-modal':         { rail: null,             sidebar: 'tool-memory-btn' },
   'notes-panel':          { rail: 'rail-notes',     sidebar: 'tool-notes-btn' },
-  // Email already has its own #email-unread-dot inline next to the title —
+  // Correo already has its own #email-unread-dot inline next to the title —
   // don't add a second modalManager badge that lands at the right edge.
   'email-lib-modal':      { rail: null,             sidebar: null },
   'research-overlay':     { rail: 'rail-research',  sidebar: 'tool-research-btn' },
@@ -1478,7 +1478,7 @@ const _SWIPE_DOWN_MINIMIZES = new Set([
 // (per-email reader tabs) survive swipe-down too.
 const _SWIPE_DOWN_MINIMIZES_PREFIX = ['email-reader-'];
 
-function _clearEmailSplitAfterMinimize() {
+function _clearCorreoSplitAfterMinimize() {
   document.body.classList.remove('email-doc-split-active', 'email-front');
   document.documentElement.style.removeProperty('--email-doc-split-left-x');
   document.documentElement.style.removeProperty('--email-doc-split-email-w');
@@ -1499,7 +1499,7 @@ function _clearEmailSplitAfterMinimize() {
 // Re-route swipe-dismiss to minimize-rather-than-close — but only for the
 // allowlisted tools above. For every other modal, return early so the
 // default close handler runs and the modal goes away.
-// Close any open body-mounted popups (kebab dropdowns, split-button menus,
+// Cerrar any open body-mounted popups (kebab dropdowns, split-button menus,
 // etc.) when the cookbook modal is swiped away. Otherwise the dropdowns
 // stay floating in the middle of the page with no anchor.
 window.addEventListener('modal-dismissed', (e) => {
@@ -1523,13 +1523,13 @@ window.addEventListener('modal-dismissed', (e) => {
   _setBadge(s.btnIds, true);
   const modal = document.getElementById(id);
   if (modal) {
-    const isEmailModal = id === 'email-lib-modal' || id.startsWith('email-reader-');
+    const isCorreoModal = id === 'email-lib-modal' || id.startsWith('email-reader-');
     if (modal.classList.contains('modal-right-docked')
         || modal.classList.contains('modal-left-docked')
         || modal.classList.contains('email-snap-left')) {
       try { suspendDock(modal); } catch (err) { console.warn('suspendDock on dismissed failed', err); }
     }
-    if (isEmailModal) _clearEmailSplitAfterMinimize();
+    if (isCorreoModal) _clearCorreoSplitAfterMinimize();
     modal.classList.add('modal-minimized');
   }
   _ensureDock();

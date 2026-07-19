@@ -102,7 +102,7 @@ export function createShortcutsPopover() {
     const el = ensurePopover();
     const open = show === undefined ? el.style.display === 'none' : show;
     if (open) {
-      // Restore the user's last-dragged position if any; otherwise
+      // Restaurar the user's last-dragged position if any; otherwise
       // anchor above the button.
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem('ge-shortcuts-pos') || 'null'); } catch {}

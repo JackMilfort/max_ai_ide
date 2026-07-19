@@ -79,7 +79,7 @@ export function buildRightPanel({ controlsHTML, layerPanelHTML }) {
     state.container.appendChild(controls);
   }
 
-  // Move every slider-row's value chip out of its <label> and place
+  // Mover every slider-row's value chip out of its <label> and place
   // it AFTER the slider, so the value sits on the right edge of the
   // row instead of being smashed against the slider track on the left.
   controls.querySelectorAll('.ge-eraser-row').forEach(row => {

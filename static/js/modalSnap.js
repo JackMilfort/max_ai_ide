@@ -1,8 +1,8 @@
 // Right-edge snap docking for draggable modals.
 //
-// Adds a "drag-to-right" gesture that docks a modal as a right-side panel
+// Agregars a "drag-to-right" gesture that docks a modal as a right-side panel
 // (mirrors the snap-to-top fullscreen pattern used by _makeDraggable in
-// emailLibrary.js / documentLibrary.js / galleryEditor.js). While docked:
+// emailLibrary.js / documentLibrary.js / galleryEditaror.js). While docked:
 //   - the modal-content lives at `right: 0; top: 0; bottom: 0` with a
 //     viewport-fraction width
 //   - body gets `right-dock-active` + `--right-dock-w` so the workspace
@@ -128,10 +128,10 @@ function _resolveRightDockWidth(modal, content) {
 }
 
 function _resolveLeftDockWidth(content, left = _leftNavRight()) {
-  return _clampLeftDockWidth(content?._userDockWidth || _storedDockWidth(content?._dockOwner, content, 'left') || _resolveEmailDocSplitWidth(content, left), left);
+  return _clampLeftDockWidth(content?._userDockWidth || _storedDockWidth(content?._dockOwner, content, 'left') || _resolveCorreoDocSplitWidth(content, left), left);
 }
 
-function _isEmailDockOwner(owner) {
+function _isCorreoDockOwner(owner) {
   const id = owner?.id || '';
   return id === 'email-lib-modal' || id.startsWith('email-reader-') || owner?.classList?.contains('email-window-modal');
 }
@@ -188,17 +188,17 @@ function _leftNavRight() {
   return x;
 }
 
-function _clampEmailDocSplitWidth(width, left = _leftNavRight()) {
+function _clampCorreoDocSplitWidth(width, left = _leftNavRight()) {
   const available = Math.max(0, window.innerWidth - left);
   if (!available) return 0;
   const compact = available < 760;
-  const minEmail = compact ? 260 : 340;
+  const minCorreo = compact ? 260 : 340;
   const minDoc = compact ? 260 : 360;
-  const maxEmail = Math.max(minEmail, available - minDoc);
-  return Math.min(maxEmail, Math.max(minEmail, Math.round(width)));
+  const maxCorreo = Math.max(minCorreo, available - minDoc);
+  return Math.min(maxCorreo, Math.max(minCorreo, Math.round(width)));
 }
 
-function _storedEmailDocSplitWidth() {
+function _storedCorreoDocSplitWidth() {
   try {
     const raw = localStorage.getItem(EMAIL_DOC_SPLIT_WIDTH_KEY);
     const n = parseFloat(raw || '');
@@ -208,7 +208,7 @@ function _storedEmailDocSplitWidth() {
   }
 }
 
-function _saveEmailDocSplitWidth(width) {
+function _saveCorreoDocSplitWidth(width) {
   try { localStorage.setItem(EMAIL_DOC_SPLIT_WIDTH_KEY, String(Math.round(width))); } catch (_) {}
 }
 
@@ -222,14 +222,14 @@ function _disconnectLeftDockObservers(content) {
   delete content._leftDockNavObs;
 }
 
-function _applyEmailDocSplitGeometry(left, emailWidth) {
+function _applyCorreoDocSplitGeometry(left, emailWidth) {
   const x = left + emailWidth;
   document.documentElement.style.setProperty('--email-doc-split-left-x', `${left}px`);
   document.documentElement.style.setProperty('--email-doc-split-email-w', `${emailWidth}px`);
   document.documentElement.style.setProperty('--email-doc-split-right-x', `${x}px`);
 
   // emailLibrary.js pins the document pane with inline !important styles
-  // after opening a document beside a snapped email. Update that inline
+  // after opening a document beside a snapped email. Actualizar that inline
   // geometry too, otherwise the email resizes but the document stays put.
   const docPane = document.getElementById('doc-editor-pane');
   if (!docPane || window.innerWidth <= 768) return;
@@ -245,7 +245,7 @@ function _applyEmailDocSplitGeometry(left, emailWidth) {
   docPane.style.setProperty('transform', 'none', 'important');
 }
 
-function _clearEmailDocSplitGeometry() {
+function _clearCorreoDocSplitGeometry() {
   document.body.classList.remove('email-doc-split-active');
   document.documentElement.style.removeProperty('--email-doc-split-left-x');
   document.documentElement.style.removeProperty('--email-doc-split-email-w');
@@ -258,11 +258,11 @@ function _clearEmailDocSplitGeometry() {
   ].forEach(prop => docPane.style.removeProperty(prop));
 }
 
-function _resolveEmailDocSplitWidth(content, left) {
+function _resolveCorreoDocSplitWidth(content, left) {
   const available = Math.max(0, window.innerWidth - left);
   const fallback = Math.max(440, available * 0.55);
-  const requested = content?._emailDocSplitUserW || _storedEmailDocSplitWidth() || fallback;
-  return _clampEmailDocSplitWidth(requested, left);
+  const requested = content?._emailDocSplitUserW || _storedCorreoDocSplitWidth() || fallback;
+  return _clampCorreoDocSplitWidth(requested, left);
 }
 
 // Position a left-docked window flush against the current left nav, covering
@@ -278,7 +278,7 @@ function _anchorLeftDock(content) {
   if (!content || content._dockSide !== 'left') return;
   const left = _leftNavRight();
   const w = document.body.classList.contains('doc-view')
-    ? _resolveEmailDocSplitWidth(content, left)
+    ? _resolveCorreoDocSplitWidth(content, left)
     : _resolveLeftDockWidth(content, left);
   content.style.left = left + 'px';
   content.style.width = w + 'px';
@@ -288,15 +288,15 @@ function _anchorLeftDock(content) {
   // the doc-pane becomes position:fixed starting at the email's right edge.
   // No flex/max-width fighting; the doc just owns the right side from the
   // email's right edge to the viewport edge — they touch flush, no gap.
-  const docOpen = document.body.classList.contains('doc-view') && _isEmailDockOwner(content._dockOwner);
+  const docOpen = document.body.classList.contains('doc-view') && _isCorreoDockOwner(content._dockOwner);
   if (docOpen) {
     if (!document.body.classList.contains('email-doc-split-active')) {
       document.body.classList.add('email-doc-split-active');
     }
     document.documentElement.style.setProperty('--left-dock-w', '0px');
-    _applyEmailDocSplitGeometry(left, w);
+    _applyCorreoDocSplitGeometry(left, w);
   } else if (document.body.classList.contains('email-doc-split-active')) {
-    _clearEmailDocSplitGeometry();
+    _clearCorreoDocSplitGeometry();
   } else {
     document.documentElement.style.setProperty('--left-dock-w', w + 'px');
   }
@@ -515,7 +515,7 @@ function _applyDockInternal(modal, side, dockClass) {
   // case. Without this, closing a docked window leaves a phantom strip
   // of empty space on the right because nothing tells the body to drop
   // its padding-right.
-  if (!modal._dockCloseWatcher && typeof MutationObserver !== 'undefined') {
+  if (!modal._dockCerrarWatcher && typeof MutationObserver !== 'undefined') {
     const onGone = () => _onDockedModalGone(modal, dockClass);
     // Watch the modal for: the `.hidden` class flip, an inline
     // `display:none` (how the draggable modals — calendar, plan, workspace,
@@ -534,9 +534,9 @@ function _applyDockInternal(modal, side, dockClass) {
         if (!modal.isConnected) onGone();
       });
       parentObs.observe(modal.parentNode, { childList: true });
-      modal._dockCloseWatcher = { obs, parentObs };
+      modal._dockCerrarWatcher = { obs, parentObs };
     } else {
-      modal._dockCloseWatcher = { obs };
+      modal._dockCerrarWatcher = { obs };
     }
   }
   return w;
@@ -547,11 +547,11 @@ function _applyDockInternal(modal, side, dockClass) {
 // if the dock is already cleared so multiple observers can fire safely.
 function _onDockedModalGone(modal, dockClass) {
   if (!modal) return;
-  const watcher = modal._dockCloseWatcher;
+  const watcher = modal._dockCerrarWatcher;
   if (watcher) {
     try { watcher.obs && watcher.obs.disconnect(); } catch (_) {}
     try { watcher.parentObs && watcher.parentObs.disconnect(); } catch (_) {}
-    delete modal._dockCloseWatcher;
+    delete modal._dockCerrarWatcher;
   }
   const _c = modal.querySelector ? modal.querySelector('.modal-content') : null;
   _disconnectLeftDockObservers(_c);
@@ -564,7 +564,7 @@ function _onDockedModalGone(modal, dockClass) {
   // Tear down the email/doc split CSS vars we set in _anchorLeftDock so the
   // doc-pane returns to its natural flex layout when the email is closed.
   if (hadLeft && !_hasOtherDockedWindow('left', modal)) {
-    _clearEmailDocSplitGeometry();
+    _clearCorreoDocSplitGeometry();
   }
   if (_c?._preDockSnapshot?.collapsedSidebar && !_hasAnyOtherDockedWindow(modal)) {
     _expandSidebarFromRail();
@@ -601,7 +601,7 @@ function _expandSidebarFromRail() {
   try { window.syncRailSide && window.syncRailSide(); } catch (_) {}
 }
 
-// Un-dock a previously docked modal. Restores the exact rendered size +
+// Un-dock a previously docked modal. Restaurars the exact rendered size +
 // position the modal had before being docked. (cx, cy) re-anchors the
 // drag near the cursor so the panel feels like it peeled off the edge.
 export function clearRightDock(modal, cx, cy, dockClass) {
@@ -616,7 +616,7 @@ export function clearRightDock(modal, cx, cy, dockClass) {
   modal.classList.remove(dockClass);
   clearDockSide(side, modal);
   if (side === 'left' && !_hasOtherDockedWindow('left', modal)) {
-    _clearEmailDocSplitGeometry();
+    _clearCorreoDocSplitGeometry();
   }
   delete content._dockSide;
   delete content._dockOwner;
@@ -626,7 +626,7 @@ export function clearRightDock(modal, cx, cy, dockClass) {
   // user didn't manually toggle it during the dock (we don't want to
   // override their explicit choice).
   if (snap && snap.collapsedSidebar && !_hasAnyOtherDockedWindow(modal)) _expandSidebarFromRail();
-  // Restore the exact inline style values the modal had before docking
+  // Restaurar the exact inline style values the modal had before docking
   // (width: min(720px, 92vw), max-height: 85vh, etc. — whatever the
   // mount path set). Setting an empty string here removes the property
   // from the inline style attribute, letting CSS rules take back over.
@@ -677,7 +677,7 @@ export function suspendDock(modal) {
   const nodes = _resolveDockNodes(modal);
   if (!nodes || !nodes.content) return null;
   const content = nodes.content;
-  const hadEmailSnapLeft = modal.classList.contains('email-snap-left');
+  const hadCorreoSnapLeft = modal.classList.contains('email-snap-left');
   const side = content._dockSide
     || (modal.classList.contains('modal-left-docked') ? 'left'
         : modal.classList.contains('email-snap-left') ? 'left'
@@ -685,26 +685,26 @@ export function suspendDock(modal) {
   if (!side) return null;
   // Stop the close-watcher from tearing the dock fully down when `.hidden`
   // is added by minimize — we want to keep the dock, just release the push.
-  if (modal._dockCloseWatcher) {
-    try { modal._dockCloseWatcher.obs && modal._dockCloseWatcher.obs.disconnect(); } catch (_) {}
-    try { modal._dockCloseWatcher.parentObs && modal._dockCloseWatcher.parentObs.disconnect(); } catch (_) {}
-    delete modal._dockCloseWatcher;
+  if (modal._dockCerrarWatcher) {
+    try { modal._dockCerrarWatcher.obs && modal._dockCerrarWatcher.obs.disconnect(); } catch (_) {}
+    try { modal._dockCerrarWatcher.parentObs && modal._dockCerrarWatcher.parentObs.disconnect(); } catch (_) {}
+    delete modal._dockCerrarWatcher;
   }
   // Release the body push + restore the sidebar so the chat fills the width.
   clearDockSide(side, modal);
   if (side === 'left') {
     _disconnectLeftDockObservers(content);
   }
-  if (hadEmailSnapLeft) {
+  if (hadCorreoSnapLeft) {
     modal.classList.remove('email-snap-left');
-    _clearEmailDocSplitGeometry();
+    _clearCorreoDocSplitGeometry();
     delete content._dockSide;
     delete content._dockOwner;
     delete content._dockSuspended;
     return null;
   }
   if (side === 'left' && !_hasOtherDockedWindow('left', modal)) {
-    _clearEmailDocSplitGeometry();
+    _clearCorreoDocSplitGeometry();
   }
   if (content._preDockSnapshot?.collapsedSidebar && !_hasAnyOtherDockedWindow(modal)) {
     _expandSidebarFromRail();
@@ -732,7 +732,7 @@ export function resumeDock(modal) {
 // Wire right-edge snap detection into a drag session. Call this once per
 // modal that should support docking. Returns an object the caller's drag
 // handler can poll: { hovering(): boolean, commit(): void, release(): void }.
-// The drag handler is responsible for calling onMove(clientX, clientY)
+// The drag handler is responsible for calling onMover(clientX, clientY)
 // during mousemove and commit() at mouseup if hovering().
 export function makeRightDockController(modal, dockClass = 'modal-right-docked') {
   return makeEdgeDockController(modal, 'right', dockClass);
@@ -746,7 +746,7 @@ function _leftNavWidth() {
 }
 
 // Generic edge-snap controller. `side` is 'left' or 'right'. Same pattern
-// as the original right-only controller: caller drives onMove during
+// as the original right-only controller: caller drives onMover during
 // mousemove, then calls commit()/release() at mouseup based on hovering().
 export function makeEdgeDockController(modal, side = 'right', dockClass) {
   if (!dockClass) dockClass = side === 'left' ? 'modal-left-docked' : 'modal-right-docked';
@@ -756,7 +756,7 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
     return window.innerWidth - cx;
   };
   return {
-    onMove(cx, cy) {
+    onMover(cx, cy) {
       if (modal.classList.contains(dockClass)) {
         if (_distFromEdge(cx) > UNSNAP_PX) {
           clearRightDock(modal, cx, cy, dockClass);
@@ -949,13 +949,13 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
       document.body.style.userSelect = 'none';
       document.body.classList.add('edge-dock-resizing');
       _setWidth(owner, side, e.clientX);
-      const onMove = (ev) => {
+      const onMover = (ev) => {
         ev.preventDefault();
         _setWidth(owner, side, ev.clientX);
       };
       const onUp = (ev) => {
         try { handle.releasePointerCapture?.(e.pointerId); } catch (_) {}
-        document.removeEventListener('pointermove', onMove, true);
+        document.removeEventListener('pointermove', onMover, true);
         document.removeEventListener('pointerup', onUp, true);
         document.removeEventListener('pointercancel', onUp, true);
         document.body.classList.remove('edge-dock-resizing');
@@ -967,7 +967,7 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
         if (finalW) _saveDockWidth(owner, content, side, finalW);
         ev.preventDefault();
       };
-      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointermove', onMover, true);
       document.addEventListener('pointerup', onUp, true);
       document.addEventListener('pointercancel', onUp, true);
     });
@@ -1030,12 +1030,12 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
     const content = _activeLeftDockContent();
     if (!content) return;
     const left = _leftNavRight();
-    const w = _clampEmailDocSplitWidth(clientX - left, left);
+    const w = _clampCorreoDocSplitWidth(clientX - left, left);
     content._emailDocSplitUserW = w;
     content.style.left = left + 'px';
     content.style.width = w + 'px';
     content.style.maxWidth = w + 'px';
-    _applyEmailDocSplitGeometry(left, w);
+    _applyCorreoDocSplitGeometry(left, w);
     _position();
   };
 
@@ -1049,13 +1049,13 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
     document.body.style.userSelect = 'none';
     document.body.classList.add('email-doc-split-resizing');
     _dragTo(e.clientX);
-    const onMove = (ev) => {
+    const onMover = (ev) => {
       ev.preventDefault();
       _dragTo(ev.clientX);
     };
     const onUp = (ev) => {
       try { stripe.releasePointerCapture?.(e.pointerId); } catch (_) {}
-      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointermove', onMover, true);
       document.removeEventListener('pointerup', onUp, true);
       document.removeEventListener('pointercancel', onUp, true);
       document.body.classList.remove('email-doc-split-resizing');
@@ -1063,10 +1063,10 @@ export function makeEdgeDockController(modal, side = 'right', dockClass) {
       document.body.style.userSelect = prevUserSelect;
       const rightX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--email-doc-split-right-x')) || 0;
       const left = _leftNavRight();
-      if (rightX > left) _saveEmailDocSplitWidth(rightX - left);
+      if (rightX > left) _saveCorreoDocSplitWidth(rightX - left);
       ev.preventDefault();
     };
-    document.addEventListener('pointermove', onMove, true);
+    document.addEventListener('pointermove', onMover, true);
     document.addEventListener('pointerup', onUp, true);
     document.addEventListener('pointercancel', onUp, true);
   });

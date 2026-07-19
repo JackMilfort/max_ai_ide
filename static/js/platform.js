@@ -1,7 +1,7 @@
 // ============================================
 // Platform detection + AltGr-keystroke helper
 // ============================================
-// Shared by the keybind code: root keyboard-shortcuts.js, the editor's
+// Compartird by the keybind code: root keyboard-shortcuts.js, the editor's
 // keyboard-shortcuts.js, and settings.js. Single source of truth so the three
 // guards can't drift.
 

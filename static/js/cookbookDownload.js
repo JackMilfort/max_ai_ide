@@ -1,13 +1,13 @@
 // ============================================
 // COOKBOOK DOWNLOAD SUB-MODULE
-// Download tab: SSE streaming, model download,
+// Descargar tab: SSE streaming, model download,
 // panel rendering, command building
 // ============================================
 
 import uiModule from './ui.js';
 import { _diagnose, _showDiagnosis, _clearDiagnosis } from './cookbook-diagnosis.js';
 
-// Shared state/functions injected by init()
+// Compartird state/functions injected by init()
 let _envState;
 let _sshCmd;
 let _getPort;
@@ -26,8 +26,8 @@ let modelLogo;
 let esc;
 let _addTask;
 let _renderRunningTab;
-let _loadTasks;
-let _saveTasks;
+let _loadTareas;
+let _saveTareas;
 
 // Storage keys
 const SERVE_STATE_KEY = 'cookbook-serve-state';
@@ -68,7 +68,7 @@ function _looksLikeGgufRepo(model) {
   return !!model?.is_gguf || haystack.includes('gguf') || haystack.includes('.gguf');
 }
 
-function _ggufDownloadSource(model, backend) {
+function _ggufDescargarSource(model, backend) {
   if (backend !== 'llamacpp') return null;
   const source = _firstGgufSource(model);
   if (source) return source;
@@ -106,7 +106,7 @@ function _missingGgufMessage(model) {
   if (/\bnvfp4\b/i.test(name)) {
     return `${name} is an NVIDIA NVFP4 checkpoint, not a GGUF download. Pick the base model row with an Unsloth GGUF source, or paste the GGUF repo directly.`;
   }
-  return `No GGUF source is configured for ${name}. Pick a model with a GGUF source, or paste the GGUF repo in Download.`;
+  return `No GGUF source is configured for ${name}. Pick a model with a GGUF source, or paste the GGUF repo in Descargar.`;
 }
 
 function _bashQuote(value) {
@@ -121,12 +121,12 @@ function _missingGgufCommand(model) {
   return `printf '%s\\n' ${_bashQuote(msg)} >&2; exit 1`;
 }
 
-export function _buildDownloadCmd(model, backend) {
+export function _buildDescargarCmd(model, backend) {
   let cmd = '';
   if (backend === 'ollama') {
     cmd = `ollama pull ${model.name.split('/').pop().toLowerCase()}`;
   } else {
-    const ggufSource = _ggufDownloadSource(model, backend);
+    const ggufSource = _ggufDescargarSource(model, backend);
     if (backend === 'llamacpp' && !ggufSource) {
       cmd = _missingGgufCommand(model);
     } else {
@@ -254,11 +254,11 @@ export function _wirePanelEvents(panel, model, backend) {
     }
   });
 
-  // Download button
+  // Descargar button
   const dlBtn = panel.querySelector('.hwfit-dl-btn');
   if (dlBtn) {
     dlBtn.addEventListener('click', () => {
-      _runModelDownload(panel, model, backend)
+      _runModeloDescargar(panel, model, backend)
     });
   }
 
@@ -293,19 +293,19 @@ export function _wirePanelEvents(panel, model, backend) {
     });
   }
 
-  // Copy button
+  // Copiar button
   const copyBtn = panel.querySelector('.hwfit-copy-btn');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       const cmd = panel.querySelector('.hwfit-panel-cmd')?.textContent || '';
       _copyText(cmd).then(() => {
         copyBtn.textContent = 'Copied';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+        setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 1500);
       });
     });
   }
 
-  // Save button
+  // Guardar button
   const saveBtn = panel.querySelector('.hwfit-save-btn');
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
@@ -321,18 +321,18 @@ export function _wirePanelEvents(panel, model, backend) {
   }
 
   // Output copy button
-  const outputCopyBtn = panel.querySelector('.cookbook-output-copy');
-  if (outputCopyBtn) {
-    outputCopyBtn.addEventListener('click', (e) => {
+  const outputCopiarBtn = panel.querySelector('.cookbook-output-copy');
+  if (outputCopiarBtn) {
+    outputCopiarBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const text = panel.querySelector('.cookbook-output-pre')?.textContent || '';
       _copyText(text).then(() => {
-        const origHTML = outputCopyBtn.innerHTML;
-        outputCopyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-        outputCopyBtn.classList.add('copied');
+        const origHTML = outputCopiarBtn.innerHTML;
+        outputCopiarBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        outputCopiarBtn.classList.add('copied');
         setTimeout(() => {
-          outputCopyBtn.innerHTML = origHTML;
-          outputCopyBtn.classList.remove('copied');
+          outputCopiarBtn.innerHTML = origHTML;
+          outputCopiarBtn.classList.remove('copied');
         }, 1500);
       });
     });
@@ -463,10 +463,10 @@ export async function _runPanelCmd(panel, cmd, opts = {}) {
   }
 }
 
-// ── Model download (dedicated endpoint, tmux-backed) ──
+// ── Modelo download (dedicated endpoint, tmux-backed) ──
 
-export async function _runModelDownload(panel, model, backend, hostOverride) {
-  const ggufSource = _ggufDownloadSource(model, backend);
+export async function _runModeloDescargar(panel, model, backend, hostOverride) {
+  const ggufSource = _ggufDescargarSource(model, backend);
   if (backend === 'llamacpp' && !ggufSource) {
     uiModule.showToast(_missingGgufMessage(model));
     return;
@@ -554,14 +554,14 @@ export async function _runModelDownload(panel, model, backend, hostOverride) {
   const taskName = _downloadTaskName(shortName, payload);
   const targetHost = host || 'local';
 
-  const tasks = _loadTasks();
-  const sameDownload = (t) => {
+  const tasks = _loadTareas();
+  const sameDescargar = (t) => {
     if (!t || t.type !== 'download') return false;
     const tRepo = t?.payload?.repo_id || t?.repo_id || t?.repo || t?.name || '';
     const tHost = t?.remoteHost || t?.payload?.remote_host || 'local';
     return String(tRepo) === String(payload.repo_id) && String(tHost || 'local') === String(targetHost);
   };
-  const duplicate = tasks.find(t => sameDownload(t) && (t.status === 'running' || t.status === 'queued'));
+  const duplicate = tasks.find(t => sameDescargar(t) && (t.status === 'running' || t.status === 'queued'));
   if (duplicate) {
     _renderRunningTab();
     uiModule.showToast(`${shortName} is already ${duplicate.status === 'queued' ? 'queued' : 'downloading'}`);
@@ -572,7 +572,7 @@ export async function _runModelDownload(panel, model, backend, hostOverride) {
   // alive on the host. Probe it; if alive, flip back to running + treat as
   // duplicate so we don't kick off a second concurrent download writing to
   // the same target dir.
-  const zombieCandidate = tasks.find(t => sameDownload(t)
+  const zombieCandidate = tasks.find(t => sameDescargar(t)
     && ['done', 'error', 'crashed', 'stopped'].includes(t.status)
     && t.sessionId && !String(t.sessionId).startsWith('queue-'));
   if (zombieCandidate) {
@@ -592,12 +592,12 @@ export async function _runModelDownload(panel, model, backend, hostOverride) {
       const _d = await _r.json();
       if (_d.exit_code === 0) {
         // tmux still alive → not actually done. Revive + tell the user.
-        const _fresh = _loadTasks();
+        const _fresh = _loadTareas();
         const _ft = _fresh.find(t => t.sessionId === zombieCandidate.sessionId);
         if (_ft) {
           _ft.status = 'running';
           _ft._selfHealed = true;
-          _saveTasks(_fresh);
+          _saveTareas(_fresh);
         }
         _renderRunningTab();
         uiModule.showToast(`${shortName} is still downloading (was marked finished after a restart — revived)`);
@@ -609,9 +609,9 @@ export async function _runModelDownload(panel, model, backend, hostOverride) {
 
   if (activeOnHost) {
     const queueId = `queue-${Date.now().toString(36)}`;
-    const allTasks = _loadTasks();
-    allTasks.push({ id: queueId, sessionId: queueId, name: taskName, type: 'download', status: 'queued', output: '', ts: Date.now(), payload, remoteHost: host, remoteServerKey: payload.remote_server_key || '', remoteServerName: payload.remote_server_name || '', sshPort: payload.ssh_port || '', platform: payload.platform || '' });
-    _saveTasks(allTasks);
+    const allTareas = _loadTareas();
+    allTareas.push({ id: queueId, sessionId: queueId, name: taskName, type: 'download', status: 'queued', output: '', ts: Date.now(), payload, remoteHost: host, remoteServerKey: payload.remote_server_key || '', remoteServerName: payload.remote_server_name || '', sshPort: payload.ssh_port || '', platform: payload.platform || '' });
+    _saveTareas(allTareas);
     _renderRunningTab();
     uiModule.showToast(`Queued ${shortName} — waiting for current download`);
     return;
@@ -627,24 +627,24 @@ export async function _runModelDownload(panel, model, backend, hostOverride) {
     if (!res.ok) {
       // Errors carry actionable text (e.g. "tmux is required …"); keep them up
       // long enough to read, matching the serve path's duration (issue #1355).
-      uiModule.showToast('Download failed: HTTP ' + res.status, 9000);
+      uiModule.showToast('Descargar failed: HTTP ' + res.status, 9000);
       return;
     }
     const data = await res.json();
     if (!data.ok) {
-      uiModule.showToast('Download failed: ' + (data.error || ''), 9000);
+      uiModule.showToast('Descargar failed: ' + (data.error || ''), 9000);
       return;
     }
     _addTask(data.session_id, taskName, 'download', payload);
-    uiModule.showToast(`Downloading ${taskName}...`);
+    uiModule.showToast(`Descargaring ${taskName}...`);
   } catch (e) {
-    uiModule.showToast('Download failed: ' + e.message, 9000);
+    uiModule.showToast('Descargar failed: ' + e.message, 9000);
   }
 }
 
 // ── Init ──
 
-export function initDownload(shared) {
+export function initDescargar(shared) {
   _envState = shared._envState;
   _sshCmd = shared._sshCmd;
   _getPort = shared._getPort;
@@ -663,6 +663,6 @@ export function initDownload(shared) {
   esc = shared.esc;
   _addTask = shared._addTask;
   _renderRunningTab = shared._renderRunningTab;
-  _loadTasks = shared._loadTasks;
-  _saveTasks = shared._saveTasks;
+  _loadTareas = shared._loadTareas;
+  _saveTareas = shared._saveTareas;
 }

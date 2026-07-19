@@ -1,4 +1,4 @@
-// Shared window-drag helper. Replaces the duplicated mousedown / mousemove
+// Compartird window-drag helper. Replaces the duplicated mousedown / mousemove
 // / mouseup + snap-to-top fullscreen + left/right edge dock patterns that
 // were copy-pasted across calendar.js, tasks.js, gallery.js, emailLibrary.js,
 // documentLibrary.js, theme.js. Behavior stays identical to the old per-file
@@ -15,7 +15,7 @@
 //                        near the top edge (within SNAP_PX). Caller is
 //                        responsible for adding fsClass + applying inline
 //                        styles that produce the fullscreen layout.
-//     onExitFullscreen:  optional (cx, cy) => void — called mid-drag when
+//     onSalirFullscreen:  optional (cx, cy) => void — called mid-drag when
 //                        the cursor leaves the fullscreen "unsnap" band
 //                        (down > UNSNAP_PX OR near either horizontal edge
 //                        in dock-snap range). Caller restores windowed
@@ -60,7 +60,7 @@ export function makeWindowDraggable(modal, options = {}) {
   if (!content || !header) return;
   const fsClass = options.fsClass || null;
   const onEnterFullscreen = options.onEnterFullscreen || null;
-  const onExitFullscreen = options.onExitFullscreen || null;
+  const onSalirFullscreen = options.onSalirFullscreen || null;
   const enableFullscreen = false;
   const onDragEnd = options.onDragEnd || null;
   const onDragStart = options.onDragStart || null;
@@ -134,9 +134,9 @@ export function makeWindowDraggable(modal, options = {}) {
     onEnterFullscreen();
   };
   const _exitFs = (cx, cy) => {
-    if (!onExitFullscreen) return;
+    if (!onSalirFullscreen) return;
     if (fsClass && modal && !modal.classList.contains(fsClass)) return;
-    onExitFullscreen(cx, cy);
+    onSalirFullscreen(cx, cy);
     // After exit, re-anchor the drag offsets to the new windowed rect so
     // the drag continues smoothly from the cursor's position.
     const r = content.getBoundingClientRect();
@@ -149,7 +149,7 @@ export function makeWindowDraggable(modal, options = {}) {
   const _startDrag = (cx, cy) => {
     dragging = true;
     if (modal) modal.classList.add('modal-dragging');
-    // Cancel any in-flight open animation so we don't pin a mid-animation
+    // Cancelar any in-flight open animation so we don't pin a mid-animation
     // rect and then jump once the animation settles.
     try {
       content.getAnimations()
@@ -172,10 +172,10 @@ export function makeWindowDraggable(modal, options = {}) {
     content.style.margin = '0';
   };
 
-  const _onMove = (cx, cy) => {
+  const _onMover = (cx, cy) => {
     if (!dragging) return;
     // Fullscreen state: unsnap on drag-down or drag toward either horizontal
-    // edge. Update dock hover immediately after exit so a fast release
+    // edge. Actualizar dock hover immediately after exit so a fast release
     // commits the dock instead of dropping the modal mid-air.
     if (_isFullscreen()) {
       // Corner guard: ignore the side edges while the cursor is still in the
@@ -192,18 +192,18 @@ export function makeWindowDraggable(modal, options = {}) {
       // windowed (centered) modal.
       if (nearRight && rightDock) {
         if (leftDock) leftDock.release();
-        rightDock.onMove(cx, cy);
+        rightDock.onMover(cx, cy);
         return;
       }
       if (nearLeft && leftDock) {
         if (rightDock) rightDock.release();
-        leftDock.onMove(cx, cy);
+        leftDock.onMover(cx, cy);
         return;
       }
       if (cy > UNSNAP_PX) {
         _exitFs(cx, cy);
-        if (rightDock) rightDock.onMove(cx, cy);
-        if (leftDock) leftDock.onMove(cx, cy);
+        if (rightDock) rightDock.onMover(cx, cy);
+        if (leftDock) leftDock.onMover(cx, cy);
       } else {
         if (rightDock) rightDock.release();
         if (leftDock) leftDock.release();
@@ -212,7 +212,7 @@ export function makeWindowDraggable(modal, options = {}) {
     }
     // Right-docked: pulling away from the right edge un-docks. Same for left.
     if (rightDock && modal && modal.classList.contains('modal-right-docked')) {
-      if (rightDock.onMove(cx, cy)) {
+      if (rightDock.onMover(cx, cy)) {
         const r = content.getBoundingClientRect();
         startX = cx; startY = cy;
         startLeft = r.left; startTop = r.top;
@@ -220,7 +220,7 @@ export function makeWindowDraggable(modal, options = {}) {
       return;
     }
     if (leftDock && modal && modal.classList.contains('modal-left-docked')) {
-      if (leftDock.onMove(cx, cy)) {
+      if (leftDock.onMover(cx, cy)) {
         const r = content.getBoundingClientRect();
         startX = cx; startY = cy;
         startLeft = r.left; startTop = r.top;
@@ -241,8 +241,8 @@ export function makeWindowDraggable(modal, options = {}) {
       if (rightDock) rightDock.release();
       if (leftDock) leftDock.release();
     } else {
-      if (rightDock) rightDock.onMove(cx, cy);
-      if (leftDock) leftDock.onMove(cx, cy);
+      if (rightDock) rightDock.onMover(cx, cy);
+      if (leftDock) leftDock.onMover(cx, cy);
     }
   };
 
@@ -284,10 +284,10 @@ export function makeWindowDraggable(modal, options = {}) {
     e.preventDefault();
     movedDuringDrag = false;
     _startDrag(e.clientX, e.clientY);
-    const onMove = (ev) => _onMove(ev.clientX, ev.clientY);
+    const onMover = (ev) => _onMover(ev.clientX, ev.clientY);
     const onUp = (ev) => {
       _onEnd(ev.clientX, ev.clientY);
-      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mousemove', onMover);
       document.removeEventListener('mouseup', onUp);
       // If the pointer actually moved, swallow the synthetic click the
       // browser fires next — otherwise a header click handler (collapse
@@ -302,7 +302,7 @@ export function makeWindowDraggable(modal, options = {}) {
         setTimeout(() => header.removeEventListener('click', swallow, { capture: true }), 50);
       }
     };
-    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mousemove', onMover);
     document.addEventListener('mouseup', onUp);
   });
 
@@ -314,18 +314,18 @@ export function makeWindowDraggable(modal, options = {}) {
       if (!t) return;
       movedDuringDrag = false;
       _startDrag(t.clientX, t.clientY);
-      const onMove = (ev) => {
+      const onMover = (ev) => {
         const tt = ev.touches[0];
-        if (tt) _onMove(tt.clientX, tt.clientY);
+        if (tt) _onMover(tt.clientX, tt.clientY);
       };
       const onEnd = (ev) => {
         const tt = (ev.changedTouches && ev.changedTouches[0]) || null;
         _onEnd(tt ? tt.clientX : null, tt ? tt.clientY : null);
-        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchmove', onMover);
         document.removeEventListener('touchend', onEnd);
         document.removeEventListener('touchcancel', onEnd);
       };
-      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('touchmove', onMover, { passive: true });
       document.addEventListener('touchend', onEnd);
       document.addEventListener('touchcancel', onEnd);
     }, { passive: true });

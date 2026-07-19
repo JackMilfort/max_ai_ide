@@ -3,7 +3,7 @@
 
 import Storage from './storage.js';
 
-function clearFreshComposerRestore() {
+function clearFreshComposerRestaurar() {
   const msgInput = document.getElementById('message');
   if (!msgInput) return;
   const hash = window.location.hash || '';
@@ -17,14 +17,14 @@ function clearFreshComposerRestore() {
   }
 }
 
-clearFreshComposerRestore();
-window.addEventListener('pageshow', clearFreshComposerRestore);
+clearFreshComposerRestaurar();
+window.addEventListener('pageshow', clearFreshComposerRestaurar);
 
 // SECURITY: defense-in-depth state wipe on user switch. If the authenticated
 // user is different from the one whose state is cached in this browser,
 // wipe localStorage + sessionStorage so the new account doesn't inherit
 // the previous user's last session id, last-used model, draft chat input,
-// or cached lists. The settings-tab Logout button already wipes on
+// or cached lists. The settings-tab Salir button already wipes on
 // explicit logout; this catches the cases where a different user signs
 // in without the previous one logging out cleanly.
 (async () => {
@@ -45,7 +45,7 @@ window.addEventListener('pageshow', clearFreshComposerRestore);
       }
       toRemove.forEach(k => localStorage.removeItem(k));
       sessionStorage.clear();
-      clearFreshComposerRestore();
+      clearFreshComposerRestaurar();
     }
     localStorage.setItem(KEY, liveUser);
     // Apply per-user privilege gates to the UI. The backend enforces these
@@ -62,9 +62,9 @@ window.addEventListener('pageshow', clearFreshComposerRestore);
       };
       // Document editor — overflow menu button + the docs panel rail/tool button.
       hideOn('#overflow-doc-btn, #tool-doc-btn', privs.can_use_documents);
-      // Research — sidebar tool + the in-input deep-research toggle.
+      // Investigación — sidebar tool + the in-input deep-research toggle.
       hideOn('#tool-research-btn, #research-toggle-btn', privs.can_use_research);
-      // Memory & skills (rail/tool button only — UI/API entry).
+      // Memoria & skills (rail/tool button only — UI/API entry).
       hideOn('#tool-memory-btn', privs.can_manage_memory);
       // Agent mode toggle — force chat mode by hiding the Agent toggle button.
       if (privs.can_use_agent === false) {
@@ -108,7 +108,7 @@ window.addEventListener('pageshow', clearFreshComposerRestore);
 /* Publish the icon rail's + wide sidebar's current widths as CSS vars so
    fullscreen panels can reserve space on the left for whichever is
    currently visible (the two are mutually exclusive — see
-   sidebar-layout.js:57). Updates live as either resizes; toggles to 0
+   sidebar-layout.js:57). Actualizars live as either resizes; toggles to 0
    when hidden so the fullscreen view reclaims the space. */
 {
   const rail = document.getElementById('icon-rail');
@@ -214,12 +214,12 @@ window.addEventListener('pageshow', clearFreshComposerRestore);
   const MAX_WIDTH = 700;
   const COLLAPSE_THRESHOLD = 150;
 
-  function getSavedWidth() {
+  function getGuardardWidth() {
     const w = parseInt(Storage.get(STORAGE_KEY, '340'), 10);
     return (w >= MIN_WIDTH && w <= MAX_WIDTH) ? w : 340;
   }
 
-  // Restore saved width
+  // Restaurar saved width
   const savedWidth = Storage.get(STORAGE_KEY);
   if (savedWidth) {
     const w = parseInt(savedWidth, 10);

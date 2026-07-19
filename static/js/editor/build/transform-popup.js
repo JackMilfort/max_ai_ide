@@ -19,7 +19,7 @@ export function transformPopupHTML() {
       </button>
       <span class="ge-head-btns">
         <button class="ge-adj-min" type="button" title="Minimise" id="ge-transform-min">&minus;</button>
-        <button class="ge-adj-close" type="button" title="Cancel" id="ge-transform-cancel">&times;</button>
+        <button class="ge-adj-close" type="button" title="Cancelar" id="ge-transform-cancel">&times;</button>
       </span>
     </div>
     <div class="ge-transform-popup-body">
@@ -48,7 +48,7 @@ export function transformPopupHTML() {
           <button type="button" data-spin="up" tabindex="-1" aria-label="Rotate +1°">+</button>
         </span>
       </div>
-      <button type="button" class="ge-btn ge-btn-sm" id="ge-transform-cancel-btn">Cancel</button>
+      <button type="button" class="ge-btn ge-btn-sm" id="ge-transform-cancel-btn">Cancelar</button>
       <button type="button" class="ge-btn ge-btn-sm ge-btn-primary" id="ge-transform-apply">Apply</button>
     </div>
     <p class="ge-transform-popup-hint">Type <strong>-</strong> before W / H to flip.</p>

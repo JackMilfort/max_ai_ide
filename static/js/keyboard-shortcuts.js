@@ -9,7 +9,7 @@ const _defaultKeybinds = {
   fav_session: 'ctrl+alt+f', delete_session: 'ctrl+alt+d',
   cancel: 'escape', tts: 'alt+shift+t',
   incognito: 'ctrl+alt+i', settings: 'ctrl+,', focus_input: 'ctrl+/',
-  // Open-tool shortcuts (Calendar bound by default; rest unbound).
+  // Open-tool shortcuts (Calendario bound by default; rest unbound).
   open_calendar: 'ctrl+alt+c', open_compare: '', open_cookbook: '',
   open_research: '', open_gallery: '', open_library: '', open_memory: '',
   open_notes: '', open_tasks: '', open_theme: '',
@@ -120,7 +120,7 @@ export function initKeyboardShortcuts(modules) {
   };
 
   const _toggleActiveWindow = () => {
-    // Close the first open window (remembering it), else reopen the last one.
+    // Cerrar the first open window (remembering it), else reopen the last one.
     let openId = null;
     for (const id in _WINDOW_TRIGGERS) {
       if (_windowVisible(id)) { openId = id; break; }
@@ -147,7 +147,7 @@ export function initKeyboardShortcuts(modules) {
     if (_matchesCombo(e, kb.search)) {
       e.preventDefault();
       if (searchChatModule) {
-        searchChatModule.isOpen() ? searchChatModule.closeSearch() : searchChatModule.openSearch();
+        searchChatModule.isOpen() ? searchChatModule.closeBuscar() : searchChatModule.openBuscar();
       }
       return;
     }
@@ -198,7 +198,7 @@ export function initKeyboardShortcuts(modules) {
       const s = sessionModule.getSessions().find(x => x.id === sid);
       if (!s) return;
       if (s.is_important) { uiModule.showToast('Unstar before deleting'); return; }
-      uiModule.styledConfirm('Delete this session?', { confirmText: 'Delete', danger: true }).then(ok => {
+      uiModule.styledConfirmar('Eliminar this session?', { confirmText: 'Eliminar', danger: true }).then(ok => {
         if (!ok) return;
         const allSessions = sessionModule.getSessions();
         const idx = allSessions.findIndex(x => x.id === sid);

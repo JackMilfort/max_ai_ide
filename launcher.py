@@ -43,7 +43,7 @@ if getattr(sys, 'frozen', False):
     import subprocess
     import tkinter as tk
 
-    # Auto-Update Executable Swap Logic
+    # Auto-Actualizar Executable Swap Logic
     # If MAX.new was downloaded by the background updater, replace ourselves
     _exe_path = sys.executable
     _exe_dir = os.path.dirname(_exe_path)
@@ -58,7 +58,7 @@ if getattr(sys, 'frozen', False):
     # Swap and restart if update is pending
     if os.path.exists(_new_exe):
         try:
-            os.rename(_exe_path, _old_exe)  # Rename currently running file (Windows allows this!)
+            os.rename(_exe_path, _old_exe)  # Renombrar currently running file (Windows allows this!)
             os.rename(_new_exe, _exe_path)  # Put the new version in place
             # Start the new version and exit immediately
             subprocess.Popen([_exe_path] + sys.argv[1:])
@@ -86,8 +86,8 @@ if getattr(sys, 'frozen', False):
             splash_root.geometry(f"{w}x{h}+{x}+{y}")
 
             tk.Label(splash_root, text="⛵ MAX", font=("Segoe UI", 22, "bold"), bg="#1a1c23", fg="#e06c75").pack(pady=(22, 2))
-            tk.Label(splash_root, text="Launching background services...", font=("Segoe UI", 10), bg="#1a1c23", fg="#d1d4e0").pack(pady=2)
-            tk.Label(splash_root, text="Please wait, this will take a few seconds.", font=("Segoe UI", 8, "italic"), bg="#1a1c23", fg="#5c6370").pack(pady=(12, 0))
+            tk.Label(splash_root, text="Iniciando servicios...", font=("Segoe UI", 10), bg="#1a1c23", fg="#d1d4e0").pack(pady=2)
+            tk.Label(splash_root, text="Por favor espera, esto tomará unos segundos.", font=("Segoe UI", 8, "italic"), bg="#1a1c23", fg="#5c6370").pack(pady=(12, 0))
 
             splash_root.attributes("-topmost", True)
             splash_root.mainloop()
@@ -140,8 +140,8 @@ def setup_system_tray(url):
         import pystray
         icon_img = create_tray_image()
         menu = (
-            pystray.MenuItem('Open MAX', lambda icon, item: on_open_browser(icon, item, url), default=True),
-            pystray.MenuItem('Exit', on_exit)
+            pystray.MenuItem('Abrir MAX', lambda icon, item: on_open_browser(icon, item, url), default=True),
+            pystray.MenuItem('Salir', on_exit)
         )
         tray_icon = pystray.Icon(
             "MAX",

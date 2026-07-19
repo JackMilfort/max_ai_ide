@@ -1,4 +1,4 @@
-// Theme system — preset themes + custom color editing, stored in localStorage
+// Tema system — preset themes + custom color editing, stored in localStorage
 // ES6 module
 
 import Storage from './storage.js';
@@ -76,20 +76,20 @@ const THEME_DEFAULT_INTENSITY = {
   organs:     0.65,
 };
 
-// Default frosted-glass state per theme. Themes not listed default to false.
+// Default frosted-glass state per theme. Temas not listed default to false.
 const THEME_DEFAULT_FROSTED = {
   lavender:   true,
 };
 
 // ── Custom theme persistence ──
-function _loadCustomThemes() {
+function _loadCustomTemas() {
   return Storage.getJSON(CUSTOM_THEMES_KEY, {});
 }
-function _saveCustomThemes(obj) {
+function _saveCustomTemas(obj) {
   Storage.setJSON(CUSTOM_THEMES_KEY, obj);
 }
-export function saveCustomTheme(name, colors, opts) {
-  const ct = _loadCustomThemes();
+export function saveCustomTema(name, colors, opts) {
+  const ct = _loadCustomTemas();
   // Enforce limit — allow overwriting existing, block new past max
   if (!ct[name] && Object.keys(ct).length >= MAX_CUSTOM_THEMES) {
     return 'limit';
@@ -105,27 +105,27 @@ export function saveCustomTheme(name, colors, opts) {
     if (opts.frosted !== undefined) entry.frosted = !!opts.frosted;
   }
   ct[name] = entry;
-  _saveCustomThemes(ct);
-  _syncCustomThemesToServer(ct);
-  initThemeUI();
+  _saveCustomTemas(ct);
+  _syncCustomTemasToServer(ct);
+  initTemaUI();
   return 'ok';
 }
-export function deleteCustomTheme(name) {
-  const ct = _loadCustomThemes();
+export function deleteCustomTema(name) {
+  const ct = _loadCustomTemas();
   delete ct[name];
-  _saveCustomThemes(ct);
-  _syncCustomThemesToServer(ct);
-  initThemeUI();
+  _saveCustomTemas(ct);
+  _syncCustomTemasToServer(ct);
+  initTemaUI();
 }
-function _syncCustomThemesToServer(ct) {
+function _syncCustomTemasToServer(ct) {
   try {
     fetch('/api/prefs/custom-themes', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify({ value: ct }),
-    }).catch(e => console.warn('Theme sync (custom) failed:', e));
-  } catch (e) { console.warn('Theme sync (custom) error:', e); }
+    }).catch(e => console.warn('Tema sync (custom) failed:', e));
+  } catch (e) { console.warn('Tema sync (custom) error:', e); }
 }
 
 // --- Syntax color derivation from theme base colors ---
@@ -287,7 +287,7 @@ export function applyColors(colors) {
     s.setProperty(css, adv[key] || defaults[key]);
   }
 
-  // Update favicon to match theme accent color
+  // Actualizar favicon to match theme accent color
   _updateFavicon(colors.red || '#e06c75');
 }
 
@@ -457,7 +457,7 @@ export function applyBgPattern(pattern) {
   if (sg) sg.style.display = hide ? 'none' : '';
 }
 
-export function getSaved() {
+export function getGuardard() {
   const obj = Storage.getJSON(LS_KEY, null);
   // Migration: 'chatgpt' preset was renamed to 'gpt'
   if (obj && obj.name === 'chatgpt') obj.name = 'gpt';
@@ -488,8 +488,8 @@ function _syncToServer(obj) {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify({ value: obj }),
-    }).catch(e => console.warn('Theme sync failed:', e));
-  } catch (e) { console.warn('Theme sync error:', e); }
+    }).catch(e => console.warn('Tema sync failed:', e));
+  } catch (e) { console.warn('Tema sync error:', e); }
 }
 
 async function _loadFromServer() {
@@ -520,7 +520,7 @@ function syncAdvancedPickers(colors) {
   }
 }
 
-export function initThemeUI() {
+export function initTemaUI() {
   const themePopup = document.getElementById('theme-popup');
   const themeHeader = document.getElementById('theme-popup-header');
   if (themePopup && themeHeader && !themePopup.dataset.dragWired) {
@@ -538,12 +538,12 @@ export function initThemeUI() {
   // tripped readAdvanced() into storing every other `#000000` as an override —
   // e.g. editing Chat Bubble Border turned Sidebar Bg pure black.
   try {
-    const saved = getSaved();
+    const saved = getGuardard();
     if (saved && saved.colors) {
       syncAdvancedPickers(saved.colors);
     }
   } catch (e) { console.warn('syncAdvancedPickers on init failed', e); }
-  // Wire up theme tabs (Themes / Customize)
+  // Wire up theme tabs (Temas / Customize)
   const themeTabs = document.getElementById('theme-tabs');
   if (themeTabs) {
     themeTabs.addEventListener('click', (e) => {
@@ -558,9 +558,9 @@ export function initThemeUI() {
       // Show the opacity slider only on the Customize tab.
       const opWrap = document.getElementById('theme-opacity-wrap');
       if (opWrap) opWrap.classList.toggle('hidden', targetId !== 'theme-tab-customize');
-      // Restore full opacity / blur on every other tab. The slider's effect
+      // Restaurar full opacity / blur on every other tab. The slider's effect
       // is meant to be Customize-only — peeking at the page while tweaking
-      // colors — so swapping back to Themes (or Schedule) should look
+      // colors — so swapping back to Temas (or Schedule) should look
       // exactly like the rest of the app's modals again.
       const popup = document.getElementById('theme-popup');
       if (popup) {
@@ -586,7 +586,7 @@ export function initThemeUI() {
   // Wire the "Peek" opacity toggle — fades the theme modal so the user can
   // see the page behind it while tweaking colors on the Customize tab.
   // On/off only (no slider); starts off, lives in the title bar, and is
-  // cleared when the user swaps to Themes / Schedule.
+  // cleared when the user swaps to Temas / Schedule.
   (function _wireOpacityToggle() {
     const toggle = document.getElementById('theme-opacity-wrap');
     const popup = document.getElementById('theme-popup');
@@ -634,9 +634,9 @@ export function initThemeUI() {
   const grid = document.getElementById('themeGrid');
   if (!grid) return;
 
-  const saved = getSaved();
+  const saved = getGuardard();
   const activeName = saved ? saved.name : DEFAULT_THEME;
-  const customThemes = _loadCustomThemes();
+  const customTemas = _loadCustomTemas();
 
   // Render preset swatches
   grid.innerHTML = Object.entries(THEMES).map(([name, c]) => `
@@ -654,7 +654,7 @@ export function initThemeUI() {
   // Render custom theme swatches into separate card
   const userGrid = document.getElementById('themeUserGrid');
   const userCard = document.getElementById('themeUserCard');
-  const customEntries = Object.entries(customThemes);
+  const customEntries = Object.entries(customTemas);
   if (customEntries.length > 0 && userGrid && userCard) {
     userCard.style.display = '';
     userGrid.innerHTML = customEntries.map(([name, c]) => `
@@ -666,7 +666,7 @@ export function initThemeUI() {
           <span style="background:${c.red}"></span>
         </div>
         <span class="theme-swatch-name">${name}</span>
-        <button type="button" class="theme-delete-btn" data-delete="${name}" title="Delete theme"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button type="button" class="theme-delete-btn" data-delete="${name}" title="Eliminar theme"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
     `).join('');
   } else if (userCard) {
@@ -702,13 +702,13 @@ export function initThemeUI() {
       sw.addEventListener('click', (e) => {
         if (e.target.closest('.theme-delete-btn')) return;
         const name = sw.dataset.theme;
-        const colors = sw.dataset.custom ? customThemes[name] : THEMES[name];
+        const colors = sw.dataset.custom ? customTemas[name] : THEMES[name];
         if (!colors) return;
         applyColors(colors);
         clearAllActive();
         sw.classList.add('active');
         syncPickers(colors);
-        const ct = sw.dataset.custom ? customThemes[name] : null;
+        const ct = sw.dataset.custom ? customTemas[name] : null;
         const f = ct && ct.font ? ct.font : DEFAULT_FONT;
         const d = ct && ct.density ? ct.density : DEFAULT_DENSITY;
         const p = ct && ct.bgPattern ? ct.bgPattern : (THEME_DEFAULT_PATTERN[name] || 'none');
@@ -745,10 +745,10 @@ export function initThemeUI() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const name = btn.dataset.delete;
-        if (uiModule && uiModule.styledConfirm) {
-          if (!await uiModule.styledConfirm(`Delete theme "${name}"?`, { confirmText: 'Delete', danger: true })) return;
+        if (uiModule && uiModule.styledConfirmar) {
+          if (!await uiModule.styledConfirmar(`Eliminar theme "${name}"?`, { confirmText: 'Eliminar', danger: true })) return;
         }
-        deleteCustomTheme(name);
+        deleteCustomTema(name);
       });
     });
   });
@@ -760,7 +760,7 @@ export function initThemeUI() {
 
   // Reference colors for per-picker reset (the theme you started from)
   const refName = saved ? saved.name : DEFAULT_THEME;
-  const refColors = THEMES[refName] || customThemes[refName] || currentColors;
+  const refColors = THEMES[refName] || customTemas[refName] || currentColors;
   const refDefaults = computeAdvancedDefaults(refColors);
 
   // Sync reset button visibility based on whether color differs from reference
@@ -861,16 +861,16 @@ export function initThemeUI() {
       // Auto-save: if the active theme is one of the user's custom themes,
       // route changes back into it so renaming/reloading keeps the edits.
       // Otherwise fall back to the transient 'custom' slot (existing behavior).
-      const _activeSaved = getSaved();
-      const _activeName = _activeSaved && _activeSaved.name;
-      const _customMap = _loadCustomThemes();
+      const _activeGuardard = getGuardard();
+      const _activeName = _activeGuardard && _activeGuardard.name;
+      const _customMap = _loadCustomTemas();
       if (_activeName && _customMap && _customMap[_activeName]) {
         // Preserve advanced/opts keys that aren't part of basic colors.
-        saveCustomTheme(_activeName, colors, {
-          font: _activeSaved.font, density: _activeSaved.density,
-          bgPattern: _activeSaved.bgPattern, bgEffectColor: _activeSaved.bgEffectColor,
-          bgEffectIntensity: _activeSaved.bgEffectIntensity,
-          bgEffectSize: _activeSaved.bgEffectSize,
+        saveCustomTema(_activeName, colors, {
+          font: _activeGuardard.font, density: _activeGuardard.density,
+          bgPattern: _activeGuardard.bgPattern, bgEffectColor: _activeGuardard.bgEffectColor,
+          bgEffectIntensity: _activeGuardard.bgEffectIntensity,
+          bgEffectSize: _activeGuardard.bgEffectSize,
         });
         _saveFull(_activeName, colors);
       } else {
@@ -882,7 +882,7 @@ export function initThemeUI() {
     });
   });
 
-  // Save custom theme — inline input
+  // Guardar custom theme — inline input
   const saveNameInputOld = document.getElementById('theme-save-name');
   const saveGoBtnOld = document.getElementById('theme-save-go');
   const saveError = document.getElementById('theme-save-error');
@@ -891,7 +891,7 @@ export function initThemeUI() {
     saveGoBtnOld.parentNode.replaceChild(newGoBtn, saveGoBtnOld);
     const newNameInput = saveNameInputOld.cloneNode(true);
     saveNameInputOld.parentNode.replaceChild(newNameInput, saveNameInputOld);
-    const doSave = () => {
+    const doGuardar = () => {
       saveError.style.display = 'none';
       const name = newNameInput.value.trim();
       if (!name) { saveError.textContent = 'Enter a name.'; saveError.style.display = 'block'; return; }
@@ -910,22 +910,22 @@ export function initThemeUI() {
       }
       if (hasAdv) colors.advanced = adv;
       const opts = _getOpts();
-      const result = saveCustomTheme(slug, colors, opts);
-      if (result === 'limit') { saveError.textContent = 'Max ' + MAX_CUSTOM_THEMES + ' custom themes. Delete one first.'; saveError.style.display = 'block'; return; }
+      const result = saveCustomTema(slug, colors, opts);
+      if (result === 'limit') { saveError.textContent = 'Max ' + MAX_CUSTOM_THEMES + ' custom themes. Eliminar one first.'; saveError.style.display = 'block'; return; }
       save(slug, colors, opts);
       newNameInput.value = '';
-      _flashAutosaved('Theme saved');
-      uiModule.showToast?.('Theme saved');
+      _flashAutosaved('Tema saved');
+      uiModule.showToast?.('Tema saved');
       const prevHtml = newGoBtn.innerHTML;
       newGoBtn.disabled = true;
-      newGoBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Saved</span>';
+      newGoBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Guardard</span>';
       setTimeout(() => {
         newGoBtn.disabled = false;
         newGoBtn.innerHTML = prevHtml;
       }, 1200);
     };
-    newGoBtn.addEventListener('click', doSave);
-    newNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSave(); });
+    newGoBtn.addEventListener('click', doGuardar);
+    newNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doGuardar(); });
   }
 
   // Reset button
@@ -964,12 +964,12 @@ export function initThemeUI() {
       // Re-scan rows so advanced color inputs get the hover-highlight too.
       const root = document.getElementById('theme-tab-customize');
       if (root) root.dataset.zoneBound = '';
-      initThemeZoneHighlight();
+      initTemaZoneHighlight();
     });
   }
   // Wire hover-highlights on color rows so the user sees which UI zone
   // each input edits.
-  initThemeZoneHighlight();
+  initTemaZoneHighlight();
 
   // Advanced color picker live updates
   function readCurrentColors() {
@@ -1010,15 +1010,15 @@ export function initThemeUI() {
       // Same auto-save routing as the basic color inputs above — write
       // to the active custom theme if there is one, else fall back to
       // the transient 'custom' slot.
-      const _activeSaved = getSaved();
-      const _activeName = _activeSaved && _activeSaved.name;
-      const _customMap = _loadCustomThemes();
+      const _activeGuardard = getGuardard();
+      const _activeName = _activeGuardard && _activeGuardard.name;
+      const _customMap = _loadCustomTemas();
       if (_activeName && _customMap && _customMap[_activeName]) {
-        saveCustomTheme(_activeName, base, {
-          font: _activeSaved.font, density: _activeSaved.density,
-          bgPattern: _activeSaved.bgPattern, bgEffectColor: _activeSaved.bgEffectColor,
-          bgEffectIntensity: _activeSaved.bgEffectIntensity,
-          bgEffectSize: _activeSaved.bgEffectSize,
+        saveCustomTema(_activeName, base, {
+          font: _activeGuardard.font, density: _activeGuardard.density,
+          bgPattern: _activeGuardard.bgPattern, bgEffectColor: _activeGuardard.bgEffectColor,
+          bgEffectIntensity: _activeGuardard.bgEffectIntensity,
+          bgEffectSize: _activeGuardard.bgEffectSize,
         });
         _saveFull(_activeName, base);
       } else {
@@ -1069,7 +1069,7 @@ export function initThemeUI() {
         const fg = currentColors.fg || '#9cdef2';
         ec.value = fg;
         applyBgEffectColor('');
-        const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+        const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
       }
     });
   });
@@ -1119,7 +1119,7 @@ export function initThemeUI() {
     nf.value = _initFont;
     nf.addEventListener('change', () => {
       applyFontDensity(nf.value, document.getElementById('theme-density-select').value);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
     // Fetch custom fonts from local folder and populate dropdown
     fetch('/api/fonts/custom', { credentials: 'same-origin' })
@@ -1135,7 +1135,7 @@ export function initThemeUI() {
           opt.dataset.customFont = '1';
           nf.appendChild(opt);
         }
-        // Restore saved value after options are populated
+        // Restaurar saved value after options are populated
         nf.value = _initFont;
       })
       .catch(e => console.warn('Custom fonts fetch failed:', e));
@@ -1145,7 +1145,7 @@ export function initThemeUI() {
     nd.value = _initDensity;
     nd.addEventListener('change', () => {
       applyFontDensity(document.getElementById('theme-font-select').value, nd.value);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
   const textSizeSelect = document.getElementById('theme-text-size-select');
@@ -1165,7 +1165,7 @@ export function initThemeUI() {
     np.value = _initPattern;
     np.addEventListener('change', () => {
       applyBgPattern(np.value);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
 
@@ -1174,7 +1174,7 @@ export function initThemeUI() {
     effectColorPicker.value = _initEffectColor || currentColors.fg || '#9cdef2';
     effectColorPicker.addEventListener('input', () => {
       applyBgEffectColor(effectColorPicker.value);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
 
@@ -1183,7 +1183,7 @@ export function initThemeUI() {
     intensitySlider.value = String(Math.round(_initEffectIntensity * 100));
     intensitySlider.addEventListener('input', () => {
       applyBgEffectIntensity(parseFloat(intensitySlider.value) / 100);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
 
@@ -1192,7 +1192,7 @@ export function initThemeUI() {
     sizeSlider.value = String(Math.round(_initEffectSize * 100));
     sizeSlider.addEventListener('input', () => {
       applyBgEffectSize(parseFloat(sizeSlider.value) / 100);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
 
@@ -1201,7 +1201,7 @@ export function initThemeUI() {
     frostedToggle.checked = _initFrosted;
     frostedToggle.addEventListener('change', () => {
       applyFrostedGlass(frostedToggle.checked);
-      const s = getSaved(); if (s) _saveFull(s.name, s.colors);
+      const s = getGuardard(); if (s) _saveFull(s.name, s.colors);
     });
   }
 
@@ -1209,7 +1209,7 @@ export function initThemeUI() {
   const harmonyGenBtnEl = document.getElementById('harmony-generate-btn');
   const harmonyAccentEl = document.getElementById('harmony-accent');
   // Make sure the in-house color picker really attached to this one. The
-  // global initColorPickers() call earlier in initThemeUI should have grabbed
+  // global initColorPickers() call earlier in initTemaUI should have grabbed
   // it, but in older sessions / partial loads it sometimes wasn't wrapped —
   // call attachColorPicker idempotently so the popover, suggestions, recents
   // and hex syncing all match every other color row.
@@ -1267,7 +1267,7 @@ export function initThemeUI() {
   const importAreaEl = document.getElementById('theme-import-area');
   const importActionsEl = document.getElementById('theme-import-actions');
   const importGoEl = document.getElementById('theme-import-go');
-  const importCancelEl = document.getElementById('theme-import-cancel');
+  const importCancelarEl = document.getElementById('theme-import-cancel');
 
   if (exportBtnEl) {
     const newExp = exportBtnEl.cloneNode(true);
@@ -1276,7 +1276,7 @@ export function initThemeUI() {
       const colors = readCurrentColors();
       const adv = readAdvanced();
       if (adv) colors.advanced = adv;
-      const cur = getSaved();
+      const cur = getGuardard();
       const obj = { name: cur ? cur.name : 'custom', colors };
       if (cur && cur.font) obj.font = cur.font;
       if (cur && cur.density) obj.density = cur.density;
@@ -1290,7 +1290,7 @@ export function initThemeUI() {
       a.download = 'odysseus_' + (obj.name || 'theme') + '.json';
       a.click();
       URL.revokeObjectURL(url);
-      newExp.innerHTML = '&#x2713; Downloaded!';
+      newExp.innerHTML = '&#x2713; Descargared!';
       setTimeout(() => { newExp.innerHTML = '&#x2913; Export'; }, 1500);
     });
   }
@@ -1331,8 +1331,8 @@ export function initThemeUI() {
       if (parsed.density) opts.density = parsed.density;
       if (parsed.bgPattern) opts.bgPattern = parsed.bgPattern;
       if (parsed.bgEffectColor) opts.bgEffectColor = parsed.bgEffectColor;
-      const result = saveCustomTheme(slug, colorData, opts);
-      if (result === 'limit') { saveError.textContent = 'Max ' + MAX_CUSTOM_THEMES + ' custom themes. Delete one first.'; saveError.style.display = 'block'; return; }
+      const result = saveCustomTema(slug, colorData, opts);
+      if (result === 'limit') { saveError.textContent = 'Max ' + MAX_CUSTOM_THEMES + ' custom themes. Eliminar one first.'; saveError.style.display = 'block'; return; }
       save(slug, colorData, opts);
       applyColors(colorData);
       applyFontDensity(opts.font || DEFAULT_FONT, opts.density || DEFAULT_DENSITY);
@@ -1343,10 +1343,10 @@ export function initThemeUI() {
     });
   }
 
-  if (importCancelEl && importAreaEl && importActionsEl) {
-    const newCancel = importCancelEl.cloneNode(true);
-    importCancelEl.parentNode.replaceChild(newCancel, importCancelEl);
-    newCancel.addEventListener('click', () => {
+  if (importCancelarEl && importAreaEl && importActionsEl) {
+    const newCancelar = importCancelarEl.cloneNode(true);
+    importCancelarEl.parentNode.replaceChild(newCancelar, importCancelarEl);
+    newCancelar.addEventListener('click', () => {
       importAreaEl.classList.add('hidden');
       importActionsEl.classList.add('hidden');
       importAreaEl.value = '';
@@ -1354,7 +1354,7 @@ export function initThemeUI() {
     });
   }
 
-  // Theme popup now uses standard modal frame (not draggable)
+  // Tema popup now uses standard modal frame (not draggable)
 }
 
 // ── Zone highlighter ───────────────────────────────────────────────────
@@ -1386,8 +1386,8 @@ const _THEME_ZONE_MAP = {
   'adv-accentError':   '.toast.error',
 };
 
-function _showThemeZoneHighlight(selector) {
-  _clearThemeZoneHighlight();
+function _showTemaZoneHighlight(selector) {
+  _clearTemaZoneHighlight();
   if (!selector) return;
   let els;
   try { els = document.querySelectorAll(selector); }
@@ -1407,7 +1407,7 @@ function _showThemeZoneHighlight(selector) {
   });
 }
 
-function _clearThemeZoneHighlight() {
+function _clearTemaZoneHighlight() {
   document.querySelectorAll('.theme-zone-highlight').forEach(el => el.remove());
 }
 
@@ -1432,7 +1432,7 @@ function _flashAutosaved(label = 'Auto-saved') {
 
 // Wire hover-to-highlight on every color row inside the theme modal. Call
 // once after the modal markup is in the DOM. Idempotent.
-export function initThemeZoneHighlight() {
+export function initTemaZoneHighlight() {
   const root = document.getElementById('theme-tab-customize');
   if (!root || root.dataset.zoneBound === '1') return;
   root.dataset.zoneBound = '1';
@@ -1441,17 +1441,17 @@ export function initThemeZoneHighlight() {
     if (!input) return;
     const sel = _THEME_ZONE_MAP[input.id];
     if (!sel) return;
-    row.addEventListener('mouseenter', () => _showThemeZoneHighlight(sel));
-    row.addEventListener('mouseleave', _clearThemeZoneHighlight);
+    row.addEventListener('mouseenter', () => _showTemaZoneHighlight(sel));
+    row.addEventListener('mouseleave', _clearTemaZoneHighlight);
     // Also trigger when the picker actually opens (input focus)
-    input.addEventListener('focus', () => _showThemeZoneHighlight(sel));
-    input.addEventListener('blur', _clearThemeZoneHighlight);
+    input.addEventListener('focus', () => _showTemaZoneHighlight(sel));
+    input.addEventListener('blur', _clearTemaZoneHighlight);
   });
   // Clear highlight when the modal closes.
   const modal = document.getElementById('theme-modal');
   if (modal) {
     new MutationObserver(() => {
-      if (modal.classList.contains('hidden')) _clearThemeZoneHighlight();
+      if (modal.classList.contains('hidden')) _clearTemaZoneHighlight();
     }).observe(modal, { attributes: true, attributeFilter: ['class'] });
   }
 }
@@ -1516,7 +1516,7 @@ export function closePopup() {
 }
 
 // Expose for app.js wiring + AI ui_control
-export function getCustomThemes() { return _loadCustomThemes(); }
+export function getCustomTemas() { return _loadCustomTemas(); }
 
 // ── Synapse background effect ──
 // Uses the CSS grid pattern as base, overlays fast-moving small light pulses on grid lines
@@ -1748,7 +1748,7 @@ function _initConstellations() {
     ctx.clearRect(0, 0, W, H);
     const c = getColor();
 
-    // Move stars gently
+    // Mover stars gently
     for (const s of stars) {
       s.x += s.vx; s.y += s.vy;
       if (s.x < 0) s.x = W; if (s.x > W) s.x = 0;
@@ -2071,24 +2071,24 @@ function _initEmbers() {
   draw();
 }
 
-const themeModule = { initThemeUI, togglePopup, closePopup, makeDraggable,
+const themeModule = { initTemaUI, togglePopup, closePopup, makeDraggable,
                        THEMES, applyColors, applyFontDensity, applyBgPattern,
                        applyBgEffectColor, applyBgEffectIntensity, applyBgEffectSize,
                        applyFrostedGlass,
-                       save, getSaved, saveCustomTheme, deleteCustomTheme,
-                       getCustomThemes };
+                       save, getGuardard, saveCustomTema, deleteCustomTema,
+                       getCustomTemas };
 
 export default themeModule;
 
 // Init on DOM ready, with server-side sync fallback
 async function _initWithSync() {
   // If no local theme, try loading from server (cross-device sync)
-  if (!getSaved()) {
-    const serverTheme = await _loadFromServer();
-    if (serverTheme && serverTheme.colors) {
-      if (serverTheme.name === 'sakura') serverTheme.name = 'ume';
-      Storage.setJSON(LS_KEY, serverTheme);
-      applyColors(serverTheme.colors);
+  if (!getGuardard()) {
+    const serverTema = await _loadFromServer();
+    if (serverTema && serverTema.colors) {
+      if (serverTema.name === 'sakura') serverTema.name = 'ume';
+      Storage.setJSON(LS_KEY, serverTema);
+      applyColors(serverTema.colors);
     }
   }
   // Also sync custom themes from server
@@ -2096,16 +2096,16 @@ async function _initWithSync() {
     const res = await fetch('/api/prefs/custom-themes', { credentials: 'same-origin' });
     const data = await res.json();
     if (data.value && typeof data.value === 'object') {
-      const local = _loadCustomThemes();
+      const local = _loadCustomTemas();
       // Merge: server themes fill in missing local ones
       let changed = false;
       for (const [name, colors] of Object.entries(data.value)) {
         if (!local[name]) { local[name] = colors; changed = true; }
       }
-      if (changed) _saveCustomThemes(local);
+      if (changed) _saveCustomTemas(local);
     }
   } catch (e) { console.warn('Custom theme server sync failed:', e); }
-  initThemeUI();
+  initTemaUI();
 }
 
 if (document.readyState === 'loading') {

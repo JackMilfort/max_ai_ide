@@ -1,4 +1,4 @@
-// Shared alphabetical sorting for model pickers and dropdowns.
+// Compartird alphabetical sorting for model pickers and dropdowns.
 
 function _sortText(value) {
   return String(value || '').split('/').pop().trim() || String(value || '');
@@ -18,16 +18,16 @@ function _arrayOrEmpty(models) {
   return Array.isArray(models) ? models : [];
 }
 
-export function sortModelIds(models) {
+export function sortModeloIds(models) {
   return _arrayOrEmpty(models).slice().sort(_compareText);
 }
 
-export function compareModelObjects(a, b) {
+export function compareModeloObjects(a, b) {
   const aLabel = a && (a.display || a.displayName || a.name || a.mid || a.id || a.model);
   const bLabel = b && (b.display || b.displayName || b.name || b.mid || b.id || b.model);
   return _compareText(aLabel, bLabel);
 }
 
-export function sortModelObjects(models) {
-  return _arrayOrEmpty(models).slice().sort(compareModelObjects);
+export function sortModeloObjects(models) {
+  return _arrayOrEmpty(models).slice().sort(compareModeloObjects);
 }

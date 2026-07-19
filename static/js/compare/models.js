@@ -2,17 +2,17 @@
 import Storage from '../storage.js';
 import state from './state.js';
 import uiModule from '../ui.js';
-import { sortModelObjects } from '../modelSort.js';
+import { sortModeloObjects } from '../modelSort.js';
 
 var escapeHtml = uiModule.esc;
 
-// ── Model classification constants ──
+// ── Modelo classification constants ──
 const NON_CHAT_PREFIXES = ['tts-', 'whisper-', 'text-embedding-', 'text-moderation-', 'moderation-', 'embedding'];
 const NON_CHAT_SUFFIXES = ['deep-research', '-online'];
 const IMAGE_PREFIXES = ['dall-e-3', 'gpt-image', 'chatgpt-image'];
 const DEPRECATED_IMAGE = ['dall-e-2'];
 
-function classifyModel(id) {
+function classifyModelo(id) {
   const lower = id.toLowerCase();
   if (DEPRECATED_IMAGE.some(p => lower.startsWith(p))) return 'other';
   if (IMAGE_PREFIXES.some(p => lower.startsWith(p))) return 'image';
@@ -35,24 +35,24 @@ function _modelDisplayNames(models) {
   });
 }
 
-/** Save selected models and synth models to localStorage, keyed by compare mode. */
+/** Guardar selected models and synth models to localStorage, keyed by compare mode. */
 function _persistSelections() {
-  if (state._selectedModels.length > 0) {
-    Storage.setJSON('odysseus-compare-selections-' + (state._compareMode || 'chat'), state._selectedModels);
+  if (state._selectedModelos.length > 0) {
+    Storage.setJSON('odysseus-compare-selections-' + (state._compareMode || 'chat'), state._selectedModelos);
   }
-  if ((state._compareMode === 'search' || state._compareMode === 'research') && state._searchSynthModels) {
-    Storage.setJSON('odysseus-compare-synth-' + state._compareMode, state._searchSynthModels);
+  if ((state._compareMode === 'search' || state._compareMode === 'research') && state._searchSynthModelos) {
+    Storage.setJSON('odysseus-compare-synth-' + state._compareMode, state._searchSynthModelos);
   }
 }
 
-// ── Model fetching with cache ──
+// ── Modelo fetching with cache ──
 const MODELS_CACHE_TTL = 30000; // 30 seconds
 
 /** Fetch available models from API. */
-async function fetchModels() {
+async function fetchModelos() {
   const now = Date.now();
-  if (state._fetchModelsCache && (now - state._fetchModelsCacheTime) < MODELS_CACHE_TTL) {
-    return state._fetchModelsCache;
+  if (state._fetchModelosCache && (now - state._fetchModelosCacheTime) < MODELS_CACHE_TTL) {
+    return state._fetchModelosCache;
   }
   const res = await fetch(`${state.API_BASE}/api/models`);
   const data = await res.json();
@@ -70,7 +70,7 @@ async function fetchModels() {
           name: (displayNames[i] || mid).split('/').pop(),
           endpointId: item.endpoint_id || null,
           endpointName: item.endpoint_name || '',
-          type: classifyModel(mid),
+          type: classifyModelo(mid),
         });
       });
       (item.models_extra || []).forEach((mid, i) => {
@@ -80,25 +80,25 @@ async function fetchModels() {
           name: (extraDisplay[i] || mid).split('/').pop(),
           endpointId: item.endpoint_id || null,
           endpointName: item.endpoint_name || '',
-          type: classifyModel(mid),
+          type: classifyModelo(mid),
         });
       });
     });
   }
-  state._fetchModelsCache = sortModelObjects(models);
-  state._fetchModelsCacheTime = now;
-  return state._fetchModelsCache;
+  state._fetchModelosCache = sortModeloObjects(models);
+  state._fetchModelosCacheTime = now;
+  return state._fetchModelosCache;
 }
 
 // ── Shuffle pool persistence ──
 const POOL_STORAGE_KEY = 'odysseus-shuffle-pool-excluded';
 
-function getExcludedModels() {
+function getExcludedModelos() {
   return Storage.getJSON(POOL_STORAGE_KEY, []);
 }
 
-function setExcludedModels(arr) {
+function setExcludedModelos(arr) {
   Storage.setJSON(POOL_STORAGE_KEY, arr);
 }
 
-export { classifyModel, _modelDisplayNames, fetchModels, _persistSelections, getExcludedModels, setExcludedModels };
+export { classifyModelo, _modelDisplayNames, fetchModelos, _persistSelections, getExcludedModelos, setExcludedModelos };

@@ -17,10 +17,10 @@ export function initSectionCollapse(Storage) {
     // Skip email section — it doesn't collapse (title opens popup instead)
     if (section.id === 'email-section') return;
 
-    // Add chevron (always visible — rotates when collapsed)
+    // Agregar chevron (always visible — rotates when collapsed)
     header.insertAdjacentHTML('beforeend', _chevronHtml);
 
-    // Restore saved state
+    // Restaurar saved state
     if (savedState[section.id]) {
       section.classList.add('collapsed');
     }
@@ -153,7 +153,7 @@ export function initSectionDrag(Storage, loadUIVis) {
     offsetY = e.clientY - rect.top;
     draggedSection = section;
 
-    // Create placeholder
+    // Crear placeholder
     placeholder = document.createElement('div');
     placeholder.className = 'section-placeholder';
     placeholder.style.cssText = `
@@ -178,11 +178,11 @@ export function initSectionDrag(Storage, loadUIVis) {
       transition: 'none'
     });
 
-    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mousemove', onMouseMover);
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  function onMouseMove(e) {
+  function onMouseMover(e) {
     if (!draggedSection) return;
 
     // Only move vertically - horizontal stays locked
@@ -206,7 +206,7 @@ export function initSectionDrag(Storage, loadUIVis) {
       }
     }
 
-    // Move placeholder
+    // Mover placeholder
     if (insertBefore) {
       if (placeholder.nextElementSibling !== insertBefore) {
         sidebarInner.insertBefore(placeholder, insertBefore);
@@ -222,7 +222,7 @@ export function initSectionDrag(Storage, loadUIVis) {
   function onMouseUp() {
     if (!draggedSection) return;
 
-    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mousemove', onMouseMover);
     document.removeEventListener('mouseup', onMouseUp);
 
     // Snap to placeholder - fast!
@@ -235,7 +235,7 @@ export function initSectionDrag(Storage, loadUIVis) {
       placeholder.remove();
       draggedSection.style.cssText = '';
 
-      // Save order
+      // Guardar order
       const ids = getSections().map(s => s.id).filter(Boolean);
       Storage.setJSON(Storage.KEYS.SECTION_ORDER, ids);
 
@@ -246,7 +246,7 @@ export function initSectionDrag(Storage, loadUIVis) {
 
   sidebar.addEventListener('mousedown', onMouseDown);
 
-  // Restore saved order on load
+  // Restaurar saved order on load
   try {
     const saved = Storage.get(Storage.KEYS.SECTION_ORDER);
     if (saved) {

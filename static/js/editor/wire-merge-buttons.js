@@ -1,7 +1,7 @@
 /**
  * Layer merge / flatten buttons in the layer-panel footer:
  *
- *   #ge-flatten     Flatten Copy — merge every visible layer into a
+ *   #ge-flatten     Flatten Copiar — merge every visible layer into a
  *                   new "Flattened" layer, keep originals.
  *   #ge-merge-all   Merge All — flatten every VISIBLE layer into the
  *                   lowest visible one. Hidden layers dropped. Base
@@ -41,7 +41,7 @@ export function mergeLayerDownAtIndex(idx) {
 }
 
 export function wireMergeButtons({ saveState, createLayer, renderLayerPanel, composite, uiModule }) {
-  // Flatten Copy.
+  // Flatten Copiar.
   document.getElementById('ge-flatten')?.addEventListener('click', () => {
     if (state.layers.length < 2) return;
     saveState('Flatten copy');

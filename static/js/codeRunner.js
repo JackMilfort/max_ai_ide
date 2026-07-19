@@ -13,7 +13,7 @@ const pyodideQueue = [];
 /**
  * Get or create an output panel below the <pre> element
  */
-function getOrCreatePanel(pre) {
+function getOrCrearPanel(pre) {
   let panel = pre.nextElementSibling;
   if (panel && panel.classList.contains('code-runner-output')) {
     panel.innerHTML = '';
@@ -42,13 +42,13 @@ function showOutput(panel, text, isError) {
   el.textContent = text;
   panel.innerHTML = '';
   panel.appendChild(el);
-  // Copy button — visible labeled pill at the top-right of the panel
+  // Copiar button — visible labeled pill at the top-right of the panel
   // itself (no separate footer / divider, no tiny icon corner).
   if (text) {
     const cbtn = document.createElement('button');
     cbtn.type = 'button';
     cbtn.className = 'code-runner-copy-inline';
-    cbtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy';
+    cbtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar';
     cbtn.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -67,14 +67,14 @@ function showOutput(panel, text, isError) {
       if (!ok && navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
           if (uiModule.showToast) uiModule.showToast('Copied');
-          cbtn.textContent = 'Copied!';
-          setTimeout(() => { cbtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy'; }, 1500);
-        }).catch(() => { if (uiModule.showToast) uiModule.showToast('Copy failed'); });
+          cbtn.textContent = '¡Copiado!';
+          setTimeout(() => { cbtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar'; }, 1500);
+        }).catch(() => { if (uiModule.showToast) uiModule.showToast('Copiar failed'); });
         return;
       }
-      if (uiModule.showToast) uiModule.showToast(ok ? 'Copied' : 'Copy failed');
+      if (uiModule.showToast) uiModule.showToast(ok ? 'Copied' : 'Copiar failed');
       const orig = cbtn.innerHTML;
-      cbtn.textContent = ok ? 'Copied!' : 'Copy failed';
+      cbtn.textContent = ok ? '¡Copiado!' : 'Copiar failed';
       setTimeout(() => { cbtn.innerHTML = orig; }, 1500);
     });
     // Button lives directly in the panel — no wrapping bar. The panel is
@@ -90,12 +90,12 @@ function showOutput(panel, text, isError) {
  * Legacy absolute-positioned copy button — replaced by the inline bar in
  * showOutput. Kept here as no-op so any earlier callers don't crash.
  */
-function addCopyBtn_unused(panel, text) {
+function addCopiarBtn_unused(panel, text) {
   if (!text) return;
   const btn = document.createElement('button');
   btn.type = 'button';  // Default <button> type is 'submit' — explicit "button" avoids any accidental form submission.
   btn.className = 'code-runner-copy';
-  btn.title = 'Copy output';
+  btn.title = 'Copiar output';
   btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   btn.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -122,7 +122,7 @@ function addCopyBtn_unused(panel, text) {
       try { await navigator.clipboard.writeText(text); ok = true; } catch (_) {}
     }
     if (uiModule && uiModule.showToast) {
-      uiModule.showToast(ok ? 'Copied' : 'Copy failed');
+      uiModule.showToast(ok ? 'Copied' : 'Copiar failed');
     }
     const _orig = btn.innerHTML;
     btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -133,11 +133,11 @@ function addCopyBtn_unused(panel, text) {
 }
 
 /**
- * Add a collapse/close button to the panel.
+ * Agregar a collapse/close button to the panel.
  * Disabled \u2014 the run-output panel is now closed via the unified Code\u2194Run
  * toggle in the editor footer, so a separate X was redundant + cluttered.
  */
-function addCloseBtn(_panel) { /* no-op */ }
+function addCerrarBtn(_panel) { /* no-op */ }
 
 /**
  * Lazy-load Pyodide from CDN
@@ -192,7 +192,7 @@ export async function runPython(code, panel) {
     py = await loadPyodide();
   } catch (e) {
     showOutput(panel, 'Failed to load Python runtime: ' + e.message, true);
-    addCloseBtn(panel);
+    addCerrarBtn(panel);
     return;
   }
 
@@ -235,7 +235,7 @@ finally:
   } catch (e) {
     showOutput(panel, e.message, true);
   }
-  addCloseBtn(panel);
+  addCerrarBtn(panel);
 }
 
 /**
@@ -258,7 +258,7 @@ export function runJavaScript(code, panel) {
     if (!settled) {
       settled = true;
       showOutput(panel, 'Execution timed out (10 s)', true);
-      addCloseBtn(panel);
+      addCerrarBtn(panel);
       cleanup();
     }
   }, 15000);
@@ -279,7 +279,7 @@ export function runJavaScript(code, panel) {
     } else {
       showOutput(panel, '(no output)', false);
     }
-    addCloseBtn(panel);
+    addCerrarBtn(panel);
     cleanup();
   };
 
@@ -345,13 +345,13 @@ export async function runServer(code, panel, lang) {
     if (data.exit_code && data.exit_code !== 0) {
       var exitEl = document.createElement('div');
       exitEl.style.cssText = 'font-size:0.75rem;opacity:0.5;padding:2px 8px;';
-      exitEl.textContent = 'Exit code: ' + data.exit_code;
+      exitEl.textContent = 'Salir code: ' + data.exit_code;
       panel.appendChild(exitEl);
     }
   } catch (e) {
     showOutput(panel, 'Execution failed: ' + e.message, true);
   }
-  addCloseBtn(panel);
+  addCerrarBtn(panel);
 }
 
 /**
@@ -363,7 +363,7 @@ export function runHTML(code, panel) {
   const win = window.open('', '_blank', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
   if (!win) {
     showOutput(panel, 'Popup blocked — please allow popups for this site.', true);
-    addCloseBtn(panel);
+    addCerrarBtn(panel);
     return;
   }
   try { win.opener = null; } catch (_) {}
@@ -372,7 +372,7 @@ export function runHTML(code, panel) {
   win.document.close();
 
   showOutput(panel, 'Opened in new window', false);
-  addCloseBtn(panel);
+  addCerrarBtn(panel);
 }
 
 /**
@@ -386,7 +386,7 @@ export function run(btn) {
   const pre = btn.closest('pre');
   if (!pre) return;
 
-  const panel = getOrCreatePanel(pre);
+  const panel = getOrCrearPanel(pre);
 
   if (lang === 'bash' || lang === 'sh' || lang === 'shell' || lang === 'zsh') {
     runServer(code, panel, 'bash');

@@ -7,7 +7,7 @@
 // Returning the first match instead made "gpt-4o-mini" match the shorter
 // "gpt-4o" key — billing it at gpt-4o rates (~16x) and showing the wrong
 // context window.
-export function matchModelKey(name, keys) {
+export function matchModeloKey(name, keys) {
   const n = (name || '').toLowerCase();
   let best = null;
   for (const key of keys) {

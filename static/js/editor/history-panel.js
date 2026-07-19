@@ -109,7 +109,7 @@ export function createHistoryPanel({ undo, redo }) {
       const r0 = panel.getBoundingClientRect();
       head.setPointerCapture(e.pointerId);
       head.style.cursor = 'grabbing';
-      const onMove = (ev) => {
+      const onMover = (ev) => {
         const nx = Math.max(0, Math.min(window.innerWidth - 60, r0.left + (ev.clientX - startX)));
         const ny = Math.max(0, Math.min(window.innerHeight - 30, r0.top  + (ev.clientY - startY)));
         panel.style.left = nx + 'px';
@@ -118,10 +118,10 @@ export function createHistoryPanel({ undo, redo }) {
       const onUp = () => {
         head.releasePointerCapture(e.pointerId);
         head.style.cursor = '';
-        head.removeEventListener('pointermove', onMove);
+        head.removeEventListener('pointermove', onMover);
         head.removeEventListener('pointerup', onUp);
       };
-      head.addEventListener('pointermove', onMove);
+      head.addEventListener('pointermove', onMover);
       head.addEventListener('pointerup', onUp);
     });
 
@@ -147,12 +147,12 @@ export function createHistoryPanel({ undo, redo }) {
     const rows = [];
     for (let i = 0; i < state.undoStack.length; i++) {
       const s = state.undoStack[i];
-      rows.push({ offset: -(state.undoStack.length - i), label: s._label || 'Edit', ts: s._ts });
+      rows.push({ offset: -(state.undoStack.length - i), label: s._label || 'Editar', ts: s._ts });
     }
     rows.push({ offset: 0, label: 'Current', ts: Date.now(), current: true });
     for (let i = state.redoStack.length - 1; i >= 0; i--) {
       const s = state.redoStack[i];
-      rows.push({ offset: (state.redoStack.length - i), label: s._label || 'Edit', ts: s._ts, future: true });
+      rows.push({ offset: (state.redoStack.length - i), label: s._label || 'Editar', ts: s._ts, future: true });
     }
     list.innerHTML = rows.map(r => `
     <button class="ge-history-row${r.current ? ' current' : ''}${r.future ? ' future' : ''}" data-offset="${r.offset}">

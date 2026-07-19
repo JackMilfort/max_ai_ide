@@ -2,7 +2,7 @@
 import Storage from '../storage.js';
 import state from './state.js';
 import { _modelDisplayNames } from './models.js';
-import { getModelCost } from '../chatRenderer.js';
+import { getModeloCost } from '../chatRenderer.js';
 import uiModule from '../ui.js';
 import { VOTES_STORAGE_KEY, VOTES_MAX } from './icons.js';
 import { showScoreboard } from './scoreboard.js';
@@ -59,7 +59,7 @@ function buildVoteBar(n) {
     paneBtn.style.opacity = noPrompt ? '0.4' : '';
     const label = state._blindMode
       ? 'Vote ' + _slotChar(i)
-      : 'Vote ' + state._selectedModels[i].name;
+      : 'Vote ' + state._selectedModelos[i].name;
     paneBtn.querySelector('.pane-vote-label').textContent = label;
   }
 
@@ -89,7 +89,7 @@ function buildVoteBar(n) {
     bar.appendChild(revealBtn);
   }
 
-  // Add Model button
+  // Agregar Modelo button
 
   // Reset button (always)
   const resetBtn = document.createElement('button');
@@ -101,13 +101,13 @@ function buildVoteBar(n) {
 
 /** Persist a vote record to localStorage and fire-and-forget to backend. */
 function _saveVote(winnerIdx) {
-  const modelNames = _modelDisplayNames(state._selectedModels);
+  const modelNames = _modelDisplayNames(state._selectedModelos);
   const winner = winnerIdx === -1 ? 'tie' : modelNames[winnerIdx];
   // Calculate per-model costs
-  const costs = state._selectedModels.map((m, i) => {
+  const costs = state._selectedModelos.map((m, i) => {
     const pm = state._paneMetrics[i];
     if (!pm) return null;
-    return getModelCost(pm.model || m.model, pm.input_tokens || 0, pm.output_tokens || 0);
+    return getModeloCost(pm.model || m.model, pm.input_tokens || 0, pm.output_tokens || 0);
   });
   const record = {
     models: modelNames,
@@ -142,11 +142,11 @@ function _saveVote(winnerIdx) {
 
 /** Reveal model names in pane headers. Highlights winner if one was picked. */
 function handleVote(winnerIdx) {
-  const displayNames = _modelDisplayNames(state._selectedModels);
+  const displayNames = _modelDisplayNames(state._selectedModelos);
 
   // Reveal only — just show names, keep vote buttons active
   if (winnerIdx === -2) {
-    for (let i = 0; i < state._selectedModels.length; i++) {
+    for (let i = 0; i < state._selectedModelos.length; i++) {
       const el = document.getElementById('cmp-title-' + i);
       if (el) el.innerHTML = '<strong>' + escapeHtml(displayNames[i]) + '</strong> <span class="pane-title-caret">&#x25BE;</span>';
       const hist = document.getElementById('cmp-history-' + i);
@@ -171,7 +171,7 @@ function handleVote(winnerIdx) {
 
   const panes = document.querySelectorAll('.compare-pane');
 
-  for (let i = 0; i < state._selectedModels.length; i++) {
+  for (let i = 0; i < state._selectedModelos.length; i++) {
     const el = document.getElementById('cmp-title-' + i);
     const pane = panes[i];
     if (!el) continue;
@@ -192,7 +192,7 @@ function handleVote(winnerIdx) {
   }
 
   // Swap "AI" role labels to real model names in each pane's messages
-  for (let i = 0; i < state._selectedModels.length; i++) {
+  for (let i = 0; i < state._selectedModelos.length; i++) {
     const hist = document.getElementById('cmp-history-' + i);
     if (!hist) continue;
     hist.querySelectorAll('.msg-ai .role').forEach(roleEl => {

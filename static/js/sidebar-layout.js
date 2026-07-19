@@ -23,12 +23,12 @@ export function syncRailSide() {
  * @param {Object} opts.sessionModule
  * @param {Function} opts.el - Element lookup helper
  * @param {*} opts._defaultChat - Default chat config
- * @param {Function} opts._syncResearchIndicator
+ * @param {Function} opts._syncInvestigaciónIndicator
  */
 export function initSidebarLayout(Storage, opts) {
   const {
     documentModule, _closeCompareIfActive, _deactivateIncognito,
-    presetsModule, sessionModule, el, _defaultChat, _syncResearchIndicator
+    presetsModule, sessionModule, el, _defaultChat, _syncInvestigaciónIndicator
   } = opts;
 
   // ── Icon rail + sidebar toggle ──
@@ -78,7 +78,7 @@ export function initSidebarLayout(Storage, opts) {
   _syncRailSideFn = _syncRailSideCore;
   window.syncRailSide = syncRailSide;
 
-  // Restore sidebar side preference
+  // Restaurar sidebar side preference
   if (Storage.get(Storage.KEYS.SIDEBAR_SIDE) === 'right') {
     document.getElementById('sidebar').classList.add('right-side');
   }
@@ -281,9 +281,9 @@ export function initSidebarLayout(Storage, opts) {
   }
 
   // Suppress sidebar close briefly after dropdown actions
-  window._suppressSidebarClose = false;
+  window._suppressSidebarCerrar = false;
   mobileBackdrop.addEventListener('click', (e) => {
-    if (window._suppressSidebarClose) return;
+    if (window._suppressSidebarCerrar) return;
     // Don't close while a session is being renamed inline — the rename input
     // lives inside the sidebar, and a backdrop tap (e.g. to dismiss the
     // keyboard) would otherwise kick the user out mid-rename.
@@ -349,10 +349,10 @@ export function initSidebarLayout(Storage, opts) {
     if (e.target.closest('.modal') || e.target.closest('.input-bar') || e.target.closest('#message')) return;
     // Ignore clicks on session/folder dropdowns and the styled prompt
     // overlay — they're body-level elements logically tied to a sidebar
-    // action (e.g. "Move to folder → New Folder…"), so closing the
+    // action (e.g. "Mover to folder → New Folder…"), so closing the
     // sidebar when the user clicks one yanks the action mid-flight.
     if (e.target.closest('.session-dropdown, .folder-submenu, #styled-prompt-overlay, #styled-confirm-overlay')) return;
-    // Close full sidebar if open (with animation)
+    // Cerrar full sidebar if open (with animation)
     if (sb && !sb.classList.contains('hidden')) {
       const backdrop = document.getElementById('sidebar-backdrop');
       if (backdrop) backdrop.classList.remove('visible');
@@ -360,7 +360,7 @@ export function initSidebarLayout(Storage, opts) {
       syncRailSide();
       return;
     }
-    // Close mobile-mini icon rail overlay if open
+    // Cerrar mobile-mini icon rail overlay if open
     if (rail && rail.classList.contains('mobile-mini')) {
       rail.classList.remove('mobile-mini');
       rail.style.cssText = '';

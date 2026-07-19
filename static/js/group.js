@@ -7,7 +7,7 @@ import chatRenderer from './chatRenderer.js';
 import spinnerModule from './spinner.js';
 import { providerLogo } from './providers.js';
 import { PROMPT_TEMPLATES, getUserTemplates } from './presets.js';
-import { sortModelObjects } from './modelSort.js';
+import { sortModeloObjects } from './modelSort.js';
 import Storage from './storage.js';
 
 let API_BASE = '';
@@ -37,7 +37,7 @@ function _initGroupTab() {
   // _groupParticipants is at module scope
   let _modelsCache = null;
 
-  async function _getModels() {
+  async function _getModelos() {
     if (_modelsCache) return _modelsCache;
     let items = (window.modelsModule && window.modelsModule.getCachedItems) ? window.modelsModule.getCachedItems() : [];
     if (!items || items.length === 0) {
@@ -57,7 +57,7 @@ function _initGroupTab() {
         result.push({ mid, display: display.split('/').pop(), url: item.url, endpointId: item.endpoint_id });
       });
     });
-    _modelsCache = sortModelObjects(result);
+    _modelsCache = sortModeloObjects(result);
     return _modelsCache;
   }
 
@@ -82,7 +82,7 @@ function _initGroupTab() {
   }
 
   addBtn.addEventListener('click', async () => {
-    const [models, characters] = await Promise.all([_getModels(), _getCharacterList()]);
+    const [models, characters] = await Promise.all([_getModelos(), _getCharacterList()]);
 
     const picker = document.createElement('div');
     picker.style.cssText = 'display:flex;gap:4px;align-items:center;';
@@ -100,7 +100,7 @@ function _initGroupTab() {
     // add an identifier that this is a model selection
     modelSel.dataset.selectionType = "model"
     modelSel.style.cssText = 'font-size:11px;flex:1;height:26px;';
-    modelSel.innerHTML = '<option value="">Model…</option>' +
+    modelSel.innerHTML = '<option value="">Modelo…</option>' +
       models.map(m => '<option value="' + m.mid + '">' + uiModule.esc(m.display) + '</option>').join('');
 
     // Auto-add when model is selected
@@ -136,7 +136,7 @@ function _initGroupTab() {
     const activeTab = document.querySelector('.preset-tab.active');
     if (!activeTab || activeTab.dataset.chartab !== 'group') return;
     // Get default model from current session as fallback
-    const _defaultModel = (window.sessionModule && window.sessionModule.getSessions) ?
+    const _defaultModelo = (window.sessionModule && window.sessionModule.getSessions) ?
       (() => {
         const s = window.sessionModule.getSessions().find(x => x.id === window.sessionModule.getCurrentSessionId());
         if (s) return { mid: s.model, display: s.model.split('/').pop(), url: s.endpoint_url, endpointId: '' };
@@ -144,7 +144,7 @@ function _initGroupTab() {
       })() : null;
 
     const picked = _groupParticipants.map(p => {
-      let m = p.model ? { ...p.model } : (_defaultModel ? { ..._defaultModel } : null);
+      let m = p.model ? { ...p.model } : (_defaultModelo ? { ..._defaultModelo } : null);
       if (!m || !m.url) {
         console.warn('[group] Participant has no valid model:', p);
         return null;
@@ -245,17 +245,17 @@ function _initGroupTab() {
     }
 
     if (modelSelections.length !== 0) {
-      const models = await _getModels();
+      const models = await _getModelos();
 
       modelSelections.forEach((modelSelection) => {
-        const chosenModel = modelSelection.value;
-        const isChosenModelExisting = chosenModel !== EMPTY
-          && models.findIndex((model) => model.mid === chosenModel) !== -1;
+        const chosenModelo = modelSelection.value;
+        const isChosenModeloExisting = chosenModelo !== EMPTY
+          && models.findIndex((model) => model.mid === chosenModelo) !== -1;
 
-        modelSelection.innerHTML = '<option value="">Model…</option>' +
+        modelSelection.innerHTML = '<option value="">Modelo…</option>' +
           models.map(m => '<option value="' + m.mid + '">' + uiModule.esc(m.display) + '</option>').join('');
-        if (isChosenModelExisting) {
-          modelSelection.value = chosenModel;
+        if (isChosenModeloExisting) {
+          modelSelection.value = chosenModelo;
         }
       });
     }
@@ -300,7 +300,7 @@ function _initGroupTab() {
         chip.title = (g.participants || []).map(p => p.characterName || p.modelDisplay || '?').join(', ');
         chip.addEventListener('click', async () => {
           // Load preset participants
-          const [models, chars] = await Promise.all([_getModels(), _getCharacterList()]);
+          const [models, chars] = await Promise.all([_getModelos(), _getCharacterList()]);
           _groupParticipants.length = 0;
           (g.participants || []).forEach(p => {
             const model = models.find(m => m.mid === p.modelId) || models[0];
@@ -316,7 +316,7 @@ function _initGroupTab() {
         // Long-press / right-click to delete
         chip.addEventListener('contextmenu', async (e) => {
           e.preventDefault();
-          if (await window.styledConfirm('Delete preset "' + (g.name || 'Group') + '"?', { confirmText: 'Delete', danger: true })) {
+          if (await window.styledConfirmar('Eliminar preset "' + (g.name || 'Group') + '"?', { confirmText: 'Eliminar', danger: true })) {
             groups.splice(idx, 1);
             fetch(API_BASE + '/api/presets/groups', {
               method: 'POST', credentials: 'same-origin',
@@ -329,7 +329,7 @@ function _initGroupTab() {
       });
     } catch (e) { console.warn('[group] Failed to load presets:', e); }
   }
-  // Restore button text when switching away from Group tab
+  // Restaurar button text when switching away from Group tab
   document.querySelectorAll('.preset-tab[data-chartab]').forEach(tab => {
     if (tab.dataset.chartab !== 'group') {
       tab.addEventListener('click', () => {
@@ -379,9 +379,9 @@ export function setActive(v) { _active = v; }
 export function getMode() { return _mode; }
 export function setMode(m) { _mode = m; }
 
-// ── Model Picker ─────────────────────────────────────
+// ── Modelo Picker ─────────────────────────────────────
 
-export async function showModelPicker() {
+export async function showModeloPicker() {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'modal';
@@ -394,7 +394,7 @@ export async function showModelPicker() {
     // Header
     const header = document.createElement('div');
     header.className = 'modal-header';
-    header.innerHTML = '<h4>Group Chat — Select Models</h4>';
+    header.innerHTML = '<h4>Group Chat — Select Modelos</h4>';
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-btn';
     closeBtn.innerHTML = '&#x2716;';
@@ -418,7 +418,7 @@ export async function showModelPicker() {
     `;
     body.appendChild(modeRow);
 
-    // Search
+    // Buscar
     const search = document.createElement('input');
     search.type = 'text';
     search.placeholder = 'Filter models…';
@@ -426,7 +426,7 @@ export async function showModelPicker() {
     search.style.marginBottom = '8px';
     body.appendChild(search);
 
-    // Model list
+    // Modelo list
     const list = document.createElement('div');
     list.style.cssText = 'max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;';
     body.appendChild(list);
@@ -448,9 +448,9 @@ export async function showModelPicker() {
 
     // Get all available models — try cached first, fetch if empty
     const selected = new Set();
-    let _cachedModels = null;
-    async function getAllModels() {
-      if (_cachedModels) return _cachedModels;
+    let _cachedModelos = null;
+    async function getAllModelos() {
+      if (_cachedModelos) return _cachedModelos;
       let items = (window.modelsModule && window.modelsModule.getCachedItems) ? window.modelsModule.getCachedItems() : [];
       // Fallback: fetch from API if cache is empty
       if (!items || items.length === 0) {
@@ -471,13 +471,13 @@ export async function showModelPicker() {
           result.push({ mid, display: display.split('/').pop(), url: item.url, endpointId: item.endpoint_id, epName: item.endpoint_name || '' });
         });
       });
-      _cachedModels = sortModelObjects(result);
-      return _cachedModels;
+      _cachedModelos = sortModeloObjects(result);
+      return _cachedModelos;
     }
 
     async function render(filter) {
       list.innerHTML = '<div style="opacity:0.4;padding:8px;font-size:12px;">Loading models…</div>';
-      const all = await getAllModels();
+      const all = await getAllModelos();
       const q = (filter || '').toLowerCase();
       all.forEach(m => {
         if (q && !m.mid.toLowerCase().includes(q) && !m.display.toLowerCase().includes(q) && !m.epName.toLowerCase().includes(q)) return;
@@ -522,7 +522,7 @@ export async function showModelPicker() {
 
     // Start button
     document.getElementById('group-start-btn').addEventListener('click', async () => {
-      const all = await getAllModels();
+      const all = await getAllModelos();
       const picked = all.filter(m => selected.has(m.mid));
 
       // Step 2: Character assignment
@@ -595,7 +595,7 @@ export async function startGroup(models, parentSessionId) {
   _roundRobinIdx = 0;
   _participantSessions = [];
 
-  // Create a real parent session for persistence
+  // Crear a real parent session for persistence
   const groupName = '[GRP] ' + models.map(m => m._groupName || m.character?.characterName || m.display).join(', ');
   try {
     const pfd = new FormData();
@@ -618,7 +618,7 @@ export async function startGroup(models, parentSessionId) {
     _parentSessionId = parentSessionId || 'group-' + Date.now();
   }
 
-  // Create a hidden session per model
+  // Crear a hidden session per model
   for (const m of models) {
     try {
       const fd = new FormData();
@@ -683,7 +683,7 @@ export async function startGroup(models, parentSessionId) {
     // selectSession calls stopGroup() (wiping GROUP_STATE_KEY) — so the
     // explicit selectSession below finds no state and lands on a plain chat.
     // loadSessions resolves its target as: URL hash → currentSessionId →
-    // lastSaved → most-recent. Pin BOTH the hash and currentSessionId to the
+    // lastGuardard → most-recent. Pin BOTH the hash and currentSessionId to the
     // parent so it deterministically targets the group session and fires no
     // group-killing intermediate select. (Setting currentSessionId alone
     // wasn't enough — the stale hash outranks it.)
@@ -711,7 +711,7 @@ export async function sendMessage(msg) {
   const box = document.getElementById('chat-history');
   if (!box) return;
 
-  // Save user message to parent session for persistence
+  // Guardar user message to parent session for persistence
   if (_parentSessionId) {
     fetch(`${API_BASE}/api/session/${_parentSessionId}/inject_messages`, {
       method: 'POST', credentials: 'same-origin',
@@ -733,10 +733,10 @@ function _createGroupBubble(model, box) {
   wrap.style.position = 'relative';
 
   // Role label — use character name if assigned, otherwise model name
-  const roleLabel = model._groupName || (model.character ? model.character.characterName : chatRenderer.shortModel(model.mid));
+  const roleLabel = model._groupName || (model.character ? model.character.characterName : chatRenderer.shortModelo(model.mid));
   const roleTs = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   wrap.innerHTML = `<div class="role">${uiModule.esc(roleLabel)} <span class="role-timestamp">${roleTs}</span></div><div class="body"></div>`;
-  chatRenderer.applyModelColor(wrap.querySelector('.role'), model.mid);
+  chatRenderer.applyModeloColor(wrap.querySelector('.role'), model.mid);
 
   // Spinner — identical to chat.js line 3062
   const spinner = spinnerModule.create('Generating response', 'right');
@@ -957,9 +957,9 @@ async function _streamToHolder(modelIdx, sessionId, msg, holderEl, abortCtrl) {
   }
 
   holderEl.dataset.raw = accumulated;
-  holderEl.dataset.groupModel = _models[modelIdx].mid;
+  holderEl.dataset.groupModelo = _models[modelIdx].mid;
 
-  // Save response to parent session for persistence
+  // Guardar response to parent session for persistence
   if (accumulated && _parentSessionId) {
     const gName = _models[modelIdx]._groupName || _models[modelIdx].display;
     fetch(`${API_BASE}/api/session/${_parentSessionId}/inject_messages`, {
@@ -1004,13 +1004,13 @@ export function restoreState(sessionId) {
   return false;
 }
 
-export function getModels() { return _models; }
-export function getModelCount() { return _models.length; }
+export function getModelos() { return _models; }
+export function getModeloCount() { return _models.length; }
 
 const groupModule = {
-  init, isActive, setActive, getMode, setMode, showModelPicker,
+  init, isActive, setActive, getMode, setMode, showModeloPicker,
   startGroup, stopGroup, sendMessage, restoreState,
-  getModels, getModelCount,
+  getModelos, getModeloCount,
 };
 
 export default groupModule;

@@ -5,7 +5,7 @@ import Storage from './storage.js';
 import uiModule, { autoResize, styledPrompt } from './ui.js';
 import chatRenderer from './chatRenderer.js';
 import { providerLogo } from './providers.js';
-import { initModelPicker, updateModelPicker } from './modelPicker.js';
+import { initModeloPicker, updateModeloPicker } from './modelPicker.js';
 import themeModule from './theme.js';
 import spinnerModule from './spinner.js';
 
@@ -26,7 +26,7 @@ const FOLDER_MAX_VISIBLE = 5;
 let _showAllSessions = false;
 let _expandedFolders = {};  // folderName -> true if "show more" clicked
 let _sortMode = Storage.get('odysseus-session-sort') || 'active'; // default to last active
-let _autoCreateInProgress = false; // guard against recursive auto-create
+let _autoCrearInProgress = false; // guard against recursive auto-create
 const _INCOGNITO_SESSIONS_KEY = 'ody-incognito-sessions'; // sessionStorage key for incognito session IDs
 const _isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const _mod = _isMac ? '⌘' : 'Ctrl';
@@ -154,9 +154,9 @@ function _renderHistoryMessage(msg, modelName) {
     ) {
       return null;
     }
-    const docEditMatch = displayContent.match(/^In the document, edit this specific text \((lines? [\d-]+)\):\n```\n([\s\S]*?)\n```\n\nInstruction: ([\s\S]*)$/);
-    if (docEditMatch) {
-      displayContent = `[Doc edit: ${docEditMatch[1]}] ${docEditMatch[3]}`;
+    const docEditarMatch = displayContent.match(/^In the document, edit this specific text \((lines? [\d-]+)\):\n```\n([\s\S]*?)\n```\n\nInstruction: ([\s\S]*)$/);
+    if (docEditarMatch) {
+      displayContent = `[Doc edit: ${docEditarMatch[1]}] ${docEditarMatch[3]}`;
     }
   }
   return _addHistoryMessageWithFullRenderer(msg.role, displayContent, modelName, meta);
@@ -245,16 +245,16 @@ async function _cleanupIncognitoSessions() {
   const ids = _getIncognitoIds();
   if (ids.length === 0) return;
   // Keep the current active incognito session alive, delete the rest
-  const toDelete = ids.filter(sid => sid !== currentSessionId);
-  if (toDelete.length === 0) return;
+  const toEliminar = ids.filter(sid => sid !== currentSessionId);
+  if (toEliminar.length === 0) return;
   const keep = ids.filter(sid => sid === currentSessionId);
   sessionStorage.setItem(_INCOGNITO_SESSIONS_KEY, JSON.stringify(keep));
-  await Promise.all(toDelete.map(sid =>
+  await Promise.all(toEliminar.map(sid =>
     fetch(`${API_BASE}/api/session/${sid}`, { method: 'DELETE' }).catch(() => {})
   ));
 }
 
-// Research indicator tracking
+// Investigación indicator tracking
 const _researchingSessions = new Set();
 const _streamingSessions = new Set();   // Background chat streams (not polled against research API)
 const _completedSessions = new Set();   // Sessions with completed background streams
@@ -347,18 +347,18 @@ function getFolderNames() {
   return Array.from(names).sort();
 }
 
-/** Move a session to a folder via the API. */
+/** Mover a session to a folder via the API. */
 async function moveToFolder(sessionId, folderName) {
   const fd = new FormData();
   fd.append('folder', folderName || '');
   await fetch(`${API_BASE}/api/session/${sessionId}`, { method: 'PATCH', body: fd });
-  // Update local data
+  // Actualizar local data
   const s = sessions.find(x => x.id === sessionId);
   if (s) s.folder = folderName || null;
   renderSessionList();
 }
 
-/** Build the "Move to folder" submenu for a session dropdown. */
+/** Build the "Mover to folder" submenu for a session dropdown. */
 function buildFolderSubmenu(sessionId, currentFolder, dropdown) {
   const folders = getFolderNames();
 
@@ -366,7 +366,7 @@ function buildFolderSubmenu(sessionId, currentFolder, dropdown) {
   moveItem.className = 'dropdown-item-compact';
   moveItem.style.position = 'relative';
   const _folderIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-  moveItem.innerHTML = '<span class="dropdown-icon">' + _folderIcon + '</span><span>Move to folder</span>';
+  moveItem.innerHTML = '<span class="dropdown-icon">' + _folderIcon + '</span><span>Mover to folder</span>';
 
   const sub = document.createElement('div');
   sub.className = 'dropdown session-folder-submenu';
@@ -411,8 +411,8 @@ function buildFolderSubmenu(sessionId, currentFolder, dropdown) {
     e.stopPropagation();
     const name = await styledPrompt('Name this folder:', {
       title: 'New folder',
-      placeholder: 'e.g. Work, Research, Drafts',
-      confirmText: 'Create',
+      placeholder: 'e.g. Work, Investigación, Drafts',
+      confirmText: 'Crear',
     });
     if (!name || !name.trim()) return;
     await moveToFolder(sessionId, name.trim());
@@ -471,7 +471,7 @@ function buildFolderSubmenu(sessionId, currentFolder, dropdown) {
   return moveItem;
 }
 
-/** Create a single session list-item element. */
+/** Crear a single session list-item element. */
 function createSessionItem(s) {
   const div = document.createElement('div');
   div.className = 'list-item session-item';
@@ -568,7 +568,7 @@ function createSessionItem(s) {
       span.replaceWith(input);
       input.focus();
       input.select();
-      const _stopGuard = _guardSidebarDuringRename();
+      const _stopGuard = _guardSidebarDuringRenombrar();
       const commit = async () => {
         const newName = input.value.trim();
         if (newName && newName !== s.name) {
@@ -576,7 +576,7 @@ function createSessionItem(s) {
           fd.append('name', newName);
           await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'PATCH', body: fd });
           s.name = newName;
-          uiModule.showToast('Renamed');
+          uiModule.showToast('Renombrard');
         }
         _forceSidebarOpen();
         renderSessionList();
@@ -593,11 +593,11 @@ function createSessionItem(s) {
   // Clicking anywhere on the row selects the session (except drag handle and menu)
   // On mobile, suppress click if user was scrolling (touchmove detected)
   // Long press on mobile shows context menu
-  let _touchMoved = false;
+  let _touchMoverd = false;
   let _longPressTimer = null;
   let _longPressed = false;
   div.addEventListener('touchstart', (e) => {
-    _touchMoved = false;
+    _touchMoverd = false;
     _longPressed = false;
     if (window.innerWidth > 768) return;
     _longPressTimer = setTimeout(() => {
@@ -607,7 +607,7 @@ function createSessionItem(s) {
       // Show the session dropdown directly (menu button is hidden on mobile)
       const dd = div._sessionDropdown;
       if (dd) {
-        // Close any other open dropdowns
+        // Cerrar any other open dropdowns
         document.querySelectorAll('.dropdown').forEach(d => { if (d !== dd) d.style.display = 'none'; });
         const rect = div.getBoundingClientRect();
         dd.style.position = 'fixed';
@@ -622,14 +622,14 @@ function createSessionItem(s) {
           if (mr.bottom > window.innerHeight - 8) dd.style.top = (rect.top - mr.height - 4) + 'px';
           if (mr.right > window.innerWidth - 8) { dd.style.left = 'auto'; dd.style.right = '8px'; }
         });
-        // Close on tap outside
+        // Cerrar on tap outside
         const close = (ev) => { if (!dd.contains(ev.target)) { dd.style.display = 'none'; document.removeEventListener('click', close, true); } };
         setTimeout(() => document.addEventListener('click', close, true), 100);
       }
     }, 500);
   }, { passive: true });
   div.addEventListener('touchmove', () => {
-    _touchMoved = true;
+    _touchMoverd = true;
     if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
   }, { passive: true });
   div.addEventListener('touchend', () => {
@@ -637,7 +637,7 @@ function createSessionItem(s) {
   }, { passive: true });
   div.addEventListener('click', (e) => {
     if (e.target.closest('.item-drag-handle') || e.target.closest('.session-fav') || e.target.closest('.hamburger') || e.target.closest('.session-dropdown') || e.target.closest('.session-rename-input') || e.target.closest('.session-select-cb')) return;
-    if (_touchMoved || _longPressed) { _touchMoved = false; _longPressed = false; return; }
+    if (_touchMoverd || _longPressed) { _touchMoverd = false; _longPressed = false; return; }
     // In select mode, toggle dot instead of navigating
     if (_selectMode) {
       const dot = div.querySelector('.session-select-cb');
@@ -647,17 +647,17 @@ function createSessionItem(s) {
     selectSession(s.id);
   });
 
-  // Create a dropdown menu button
+  // Crear a dropdown menu button
   const menuBtn = document.createElement('button');
   menuBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
   menuBtn.title = 'Session actions';
   menuBtn.className = 'hamburger session-menu-btn';
 
-  // Create dropdown menu
+  // Crear dropdown menu
   const dropdown = document.createElement('div');
   dropdown.className = 'dropdown session-dropdown session-dropdown-menu';
 
-  // Create menu items
+  // Crear menu items
   const _icon = (svg) => `<span class="dropdown-icon">${svg}</span>`;
   const _renameIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
   const _archiveIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>';
@@ -666,15 +666,15 @@ function createSessionItem(s) {
 
   const renameItem = document.createElement('div');
   renameItem.className = 'dropdown-item-compact';
-  renameItem.innerHTML = _icon(_renameIcon) + '<span>Rename</span>';
+  renameItem.innerHTML = _icon(_renameIcon) + '<span>Renombrar</span>';
 
   const archiveItem = document.createElement('div');
   archiveItem.className = 'dropdown-item-compact';
-  archiveItem.innerHTML = _icon(_archiveIcon) + '<span>Archive</span>';
+  archiveItem.innerHTML = _icon(_archiveIcon) + '<span>Archivar</span>';
 
   const deleteItem = document.createElement('div');
   deleteItem.className = 'dropdown-item-compact dropdown-item-danger';
-  deleteItem.innerHTML = _icon(_deleteIcon) + '<span>Delete</span><span class="dropdown-shortcut">' + _mod + '+Alt+D</span>';
+  deleteItem.innerHTML = _icon(_deleteIcon) + '<span>Eliminar</span><span class="dropdown-shortcut">' + _mod + '+Alt+D</span>';
 
 
 
@@ -703,7 +703,7 @@ function createSessionItem(s) {
 
   const copyItem = document.createElement('div');
   copyItem.className = 'dropdown-item-compact';
-  copyItem.innerHTML = _icon(_copyIcon) + '<span>Copy Chat</span>';
+  copyItem.innerHTML = _icon(_copyIcon) + '<span>Copiar Chat</span>';
   copyItem.addEventListener('click', async (e) => {
     e.stopPropagation();
     dropdown.style.display = 'none';
@@ -734,12 +734,12 @@ function createSessionItem(s) {
       }
       uiModule.showToast('Chat copied to clipboard');
     } catch (e) {
-      console.error('Copy chat failed:', e);
+      console.error('Copiar chat failed:', e);
       uiModule.showError('Failed to copy chat');
     }
   });
 
-  // Rename is already appended above (line 393)
+  // Renombrar is already appended above (line 393)
 
   // "Select" — enter bulk select mode with this session pre-selected
   if (!isOpenClaw) {
@@ -762,7 +762,7 @@ function createSessionItem(s) {
     }
   }
 
-  // Copy & Move to folder
+  // Copiar & Mover to folder
   const folderItem = buildFolderSubmenu(s.id, s.folder, dropdown);
   dropdown.appendChild(copyItem);
   dropdown.appendChild(folderItem);
@@ -775,22 +775,22 @@ function createSessionItem(s) {
   dropdown.appendChild(archiveItem);
   dropdown.appendChild(deleteItem);
 
-  // Mobile-only Cancel — explicit close for touch users. CSS hides it on
+  // Mobile-only Cancelar — explicit close for touch users. CSS hides it on
   // desktop (outside-click already dismisses cleanly there).
   const _cancelIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const cancelItem = document.createElement('div');
   cancelItem.className = 'dropdown-item-compact dropdown-cancel-mobile';
-  cancelItem.innerHTML = _icon(_cancelIcon) + '<span>Cancel</span>';
+  cancelItem.innerHTML = _icon(_cancelIcon) + '<span>Cancelar</span>';
   cancelItem.addEventListener('click', (e) => {
     e.stopPropagation();
     dropdown.style.display = 'none';
   });
   dropdown.appendChild(cancelItem);
 
-  // Add event listeners
+  // Agregar event listeners
   menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    // Close any other open dropdowns
+    // Cerrar any other open dropdowns
     document.querySelectorAll('.dropdown').forEach(d => {
       if (d !== dropdown) d.style.display = 'none';
     });
@@ -830,7 +830,7 @@ function createSessionItem(s) {
     span.replaceWith(input);
     input.focus();
     input.select();
-    const _stopGuard = _guardSidebarDuringRename();
+    const _stopGuard = _guardSidebarDuringRenombrar();
     const commit = async () => {
       const newName = input.value.trim();
       if (newName && newName !== s.name) {
@@ -838,7 +838,7 @@ function createSessionItem(s) {
         fd.append('name', newName);
         await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'PATCH', body: fd });
         s.name = newName;
-        uiModule.showToast('Renamed');
+        uiModule.showToast('Renombrard');
       }
       _forceSidebarOpen();
       renderSessionList();
@@ -858,7 +858,7 @@ function createSessionItem(s) {
       return;
     }
     dropdown.style.display = 'none';
-    if (!await uiModule.styledConfirm('Delete this session?', { confirmText: 'Delete', danger: true })) {
+    if (!await uiModule.styledConfirmar('Eliminar this session?', { confirmText: 'Eliminar', danger: true })) {
       _forceSidebarOpen();
       return;
     }
@@ -957,7 +957,7 @@ function _dateBucketLabel(value) {
   const day = dayStart(d);
   const diff = Math.round((today - day) / 86400000);
   if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
+  if (diff === 1) return 'Síterday';
   if (diff > 1 && diff < 7) return d.toLocaleDateString([], { weekday: 'long' });
   if (diff >= 365) {
     const years = Math.floor(diff / 365);
@@ -1108,7 +1108,7 @@ function _renderSessionListImpl() {
     }
   });
 
-  // Move starred sessions to top of each group, preserving relative order
+  // Mover starred sessions to top of each group, preserving relative order
   const starPartition = (arr) => {
     const starred = arr.filter(s => s.is_important);
     const rest = arr.filter(s => !s.is_important);
@@ -1161,15 +1161,15 @@ function _renderSessionListImpl() {
     countSpan.textContent = `(${folders[folderName].length})`;
     header.appendChild(countSpan);
 
-    // Delete folder button
+    // Eliminar folder button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'folder-delete-btn';
     deleteBtn.textContent = '\u00d7';
-    deleteBtn.title = 'Delete folder and all sessions';
+    deleteBtn.title = 'Eliminar folder and all sessions';
     deleteBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const count = folders[folderName].length;
-      if (!await uiModule.styledConfirm(`Delete folder "${folderName}" and all ${count} session(s) inside it?`, { confirmText: 'Delete', danger: true })) return;
+      if (!await uiModule.styledConfirmar(`Eliminar folder "${folderName}" and all ${count} session(s) inside it?`, { confirmText: 'Eliminar', danger: true })) return;
       for (const s of folders[folderName]) {
         try {
           await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' });
@@ -1182,13 +1182,13 @@ function _renderSessionListImpl() {
     });
     header.appendChild(deleteBtn);
 
-    let _folderTouchMoved = false;
-    header.addEventListener('touchstart', () => { _folderTouchMoved = false; }, { passive: true });
-    header.addEventListener('touchmove', () => { _folderTouchMoved = true; }, { passive: true });
+    let _folderTouchMoverd = false;
+    header.addEventListener('touchstart', () => { _folderTouchMoverd = false; }, { passive: true });
+    header.addEventListener('touchmove', () => { _folderTouchMoverd = true; }, { passive: true });
     header.addEventListener('click', (e) => {
       e.stopPropagation();
       if (e.target.closest('.folder-drag-handle') || e.target.closest('.folder-delete-btn')) return;
-      if (_folderTouchMoved) { _folderTouchMoved = false; return; }
+      if (_folderTouchMoverd) { _folderTouchMoverd = false; return; }
       const state = loadFolderState();
       const isCollapsed = state[folderName] === false;
       state[folderName] = isCollapsed ? true : false;
@@ -1200,10 +1200,10 @@ function _renderSessionListImpl() {
     header.addEventListener('dblclick', async (e) => {
       e.stopPropagation();
       if (e.target.closest('.folder-delete-btn')) return;
-      const newName = await styledPrompt('Rename folder:', {
-        title: 'Rename folder',
+      const newName = await styledPrompt('Renombrar folder:', {
+        title: 'Renombrar folder',
         defaultValue: folderName,
-        confirmText: 'Rename',
+        confirmText: 'Renombrar',
       });
       if (!newName || !newName.trim() || newName.trim() === folderName) return;
       const promises = folders[folderName].map(s => moveToFolder(s.id, newName.trim()));
@@ -1291,10 +1291,10 @@ function _renderSessionListImpl() {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'folder-delete-btn';
     deleteBtn.textContent = '\u00d7';
-    deleteBtn.title = 'Delete all unsorted sessions';
+    deleteBtn.title = 'Eliminar all unsorted sessions';
     deleteBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!await uiModule.styledConfirm(`Delete all ${unfiled.length} unsorted session(s)?`, { confirmText: 'Delete', danger: true })) return;
+      if (!await uiModule.styledConfirmar(`Eliminar all ${unfiled.length} unsorted session(s)?`, { confirmText: 'Eliminar', danger: true })) return;
       for (const s of unfiled) {
         try {
           await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' });
@@ -1354,7 +1354,7 @@ function _renderSessionListImpl() {
   _postRenderSessionList(list);
 }
 
-/** Shared post-render: highlight, keyboard nav, swipe hint, drag sort */
+/** Compartird post-render: highlight, keyboard nav, swipe hint, drag sort */
 function _postRenderSessionList(list) {
   if (currentSessionId) {
     const activeEl = document.querySelector(`.list-item[data-session-id="${currentSessionId}"]`);
@@ -1365,7 +1365,7 @@ function _postRenderSessionList(list) {
   }
 
   _initKeyboardNav(list);
-  _initSwipeToDelete(list);
+  _initSwipeToEliminar(list);
   initDragSort();
   _showSwipeHint(list);
 }
@@ -1381,7 +1381,7 @@ function _initKeyboardNav(list) {
   }
 }
 
-function _initSwipeToDelete(list) {
+function _initSwipeToEliminar(list) {
   // handled by existing swipe code — placeholder for consistency
 }
 
@@ -1405,9 +1405,9 @@ function _showSwipeHint(list) {
 function _forceSidebarOpen() {
   if (window.innerWidth > 768) return;
   // Suppress backdrop close
-  if (window._suppressSidebarClose !== undefined) {
-    window._suppressSidebarClose = true;
-    setTimeout(() => { window._suppressSidebarClose = false; }, 2000);
+  if (window._suppressSidebarCerrar !== undefined) {
+    window._suppressSidebarCerrar = true;
+    setTimeout(() => { window._suppressSidebarCerrar = false; }, 2000);
   }
   // Force sidebar visible
   requestAnimationFrame(() => {
@@ -1423,7 +1423,7 @@ function _forceSidebarOpen() {
 // sidebar (backdrop tap, soft-keyboard viewport resize, dropdown dismiss). Watch
 // the sidebar directly and re-open it if anything hides it — bulletproof against
 // whichever path fires. Returns a stopper to call once the rename is committed.
-function _guardSidebarDuringRename() {
+function _guardSidebarDuringRenombrar() {
   if (window.innerWidth > 768 || !window.MutationObserver) return () => {};
   const sb = document.getElementById('sidebar');
   if (!sb) return () => {};
@@ -1451,7 +1451,7 @@ function _enterSelectMode() {
   if (bulkBar) bulkBar.classList.remove('hidden');
   const selectBtn = document.getElementById('session-select-btn');
   if (selectBtn) selectBtn.style.opacity = '1';
-  // Add select dots to all session items
+  // Agregar select dots to all session items
   document.querySelectorAll('.list-item[data-session-id]').forEach(item => {
     if (item.querySelector('.session-select-cb')) return;
     const dot = document.createElement('span');
@@ -1556,14 +1556,14 @@ function _initBulkSelect() {
     archiveBtn.addEventListener('click', async () => {
       if (_selectedIds.size === 0) return;
       const count = _selectedIds.size;
-      if (!await uiModule.styledConfirm(`Archive ${count} session(s)?`, { confirmText: 'Archive' })) return;
+      if (!await uiModule.styledConfirmar(`Archivar ${count} session(s)?`, { confirmText: 'Archivar' })) return;
       for (const sid of _selectedIds) {
         try {
           await fetch(`${API_BASE}/api/session/${sid}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         } catch (_) {}
       }
       _exitSelectMode();
-      if (window._suppressSidebarClose !== undefined) { window._suppressSidebarClose = true; setTimeout(() => { window._suppressSidebarClose = false; }, 1500); }
+      if (window._suppressSidebarCerrar !== undefined) { window._suppressSidebarCerrar = true; setTimeout(() => { window._suppressSidebarCerrar = false; }, 1500); }
       await loadSessions();
       uiModule.showToast(`${count} session(s) archived`);
     });
@@ -1574,7 +1574,7 @@ function _initBulkSelect() {
     deleteBtn.addEventListener('click', async () => {
       if (_selectedIds.size === 0) return;
       const count = _selectedIds.size;
-      if (!await uiModule.styledConfirm(`Delete ${count} session(s)? This cannot be undone.`, { confirmText: 'Delete', danger: true })) return;
+      if (!await uiModule.styledConfirmar(`Eliminar ${count} session(s)? This cannot be undone.`, { confirmText: 'Eliminar', danger: true })) return;
       const deletedIds = [];
       for (const sid of _selectedIds) {
         try {
@@ -1584,7 +1584,7 @@ function _initBulkSelect() {
       }
       await _animateSessionRowsRemoving(deletedIds, '#session-list .list-item[data-session-id]');
       _exitSelectMode();
-      if (window._suppressSidebarClose !== undefined) { window._suppressSidebarClose = true; setTimeout(() => { window._suppressSidebarClose = false; }, 1500); }
+      if (window._suppressSidebarCerrar !== undefined) { window._suppressSidebarCerrar = true; setTimeout(() => { window._suppressSidebarCerrar = false; }, 1500); }
       await loadSessions();
       uiModule.showToast(`${deletedIds.length} session(s) deleted`);
     });
@@ -1606,7 +1606,7 @@ function _animateSessionRowsRemoving(ids, selector) {
 
 export async function loadSessions() {
   try {
-    // Delete incognito sessions left over from a previous page load
+    // Eliminar incognito sessions left over from a previous page load
     await _cleanupIncognitoSessions();
 
     // Use prefetched data from login page if available (first load only)
@@ -1634,7 +1634,7 @@ export async function loadSessions() {
     // session. Treat them as not-restorable so coming back to the app lands
     // on the user's last actual conversation, not whichever check-in task
     // most recently appended a message.
-    const _isTransient = (s) => !!s && (s.folder === 'Assistant' || s.folder === 'Tasks');
+    const _isTransient = (s) => !!s && (s.folder === 'Assistant' || s.folder === 'Tareas');
     const _realSessions = activeSessions.filter(s => !_isTransient(s));
     let hashId = window.location.hash.replace('#', '');
     if (/^(document|note|image|email|event|task|skill|research)-/.test(hashId) || /^open=notes&note=/.test(hashId)) {
@@ -1653,7 +1653,7 @@ export async function loadSessions() {
     const hasPendingChat = !!_pendingChat;
     let targetId = null;
     if (hasPendingChat) {
-      // A model was picked and the UI is showing a fresh New Chat, but the
+      // A model was picked and the UI is showing a fresh Nuevo chat, but the
       // session is not created until the first message. Background stream
       // completions call loadSessions() later; without this guard that reload
       // sees no current session and auto-selects the previous chat.
@@ -1668,7 +1668,7 @@ export async function loadSessions() {
     } else if (savedId && activeSessions.some(s => s.id === savedId)) {
       targetId = savedId;
     } else if (!_skipAutoSelect && _realSessions.length > 0) {
-      // Most-recent NON-transient session — skip Assistant / Tasks so the
+      // Most-recent NON-transient session — skip Assistant / Tareas so the
       // auto-firing assistant doesn't become the apparent default chat.
       targetId = _realSessions[0].id;
     } else if (!_skipAutoSelect && activeSessions.length > 0) {
@@ -1738,10 +1738,10 @@ export async function loadSessions() {
       if (window.chatModule && window.chatModule.showWelcomeScreen) {
         window.chatModule.showWelcomeScreen();
       }
-      updateModelPicker();
+      updateModeloPicker();
       // Only auto-create if there are truly zero sessions (not just unselected)
-      if (activeSessions.length === 0 && !_autoCreateInProgress) {
-        _autoCreateInProgress = true;
+      if (activeSessions.length === 0 && !_autoCrearInProgress) {
+        _autoCrearInProgress = true;
         try {
           const dcRes = await fetch(`${API_BASE}/api/default-chat`);
           const dc = await dcRes.json();
@@ -1749,7 +1749,7 @@ export async function loadSessions() {
             await createDirectChat(dc.endpoint_url, dc.model, dc.endpoint_id);
           }
         } catch (_) { /* no default model — that's fine, user can /setup */ }
-        _autoCreateInProgress = false;
+        _autoCrearInProgress = false;
       }
     }
   } catch (error) {
@@ -1759,7 +1759,7 @@ export async function loadSessions() {
 }
 
 export async function selectSession(id, { keepSidebar = false, showLoading = true, immediateLoading = false } = {}) {
-  // Exit compare mode cleanly if active
+  // Salir compare mode cleanly if active
   if (window.compareModule && window.compareModule.isActive()) {
     window.compareModule.deactivate(true);
     return; // deactivate does a page reload
@@ -1781,15 +1781,15 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
     // landing them on the auto-firing task-log chat instead of their last
     // real conversation.
     const _meta = sessions.find(s => s.id === id);
-    const _isTransientChat = !!_meta && (_meta.folder === 'Assistant' || _meta.folder === 'Tasks');
+    const _isTransientChat = !!_meta && (_meta.folder === 'Assistant' || _meta.folder === 'Tareas');
     if (!_isTransientChat) {
       Storage.set('lastSessionId', id);
-      // Update URL hash without triggering hashchange handler
+      // Actualizar URL hash without triggering hashchange handler
       if (window.location.hash !== '#' + id) {
         history.replaceState(null, '', '#' + id);
       }
     }
-    // Restore character preset for persistent chats
+    // Restaurar character preset for persistent chats
     try {
       const presetsModule = window.presetsModule || (await import('./presets.js')).default;
       if (presetsModule && presetsModule.onSessionSwitch) presetsModule.onSessionSwitch(id);
@@ -1817,7 +1817,7 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
     if (sendBtn && sendBtn.dataset.mode === 'streaming') {
       sendBtn.dataset.mode = '';
       sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
-      sendBtn.title = 'Send message';
+      sendBtn.title = 'Enviar mensaje';
     }
     // Deactivate compare mode on session switch
     if (window.compareModule) {
@@ -1857,8 +1857,8 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
     if (currentMetaEl) {
       currentMetaEl.textContent = meta ? meta.name : 'Odysseus Chat';
     }
-    // Update model picker visibility
-    updateModelPicker();
+    // Actualizar model picker visibility
+    updateModeloPicker();
 
     // Refresh session cost badge for the newly selected session
     if (chatRenderer.updateSessionCostUI) chatRenderer.updateSessionCostUI();
@@ -1911,7 +1911,7 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
         const sMeta = sessions.find(s => s.id === id);
         if (sMeta && sMeta.model !== modelName) {
           sMeta.model = modelName;
-          updateModelPicker();
+          updateModeloPicker();
         }
       }
     }
@@ -1971,7 +1971,7 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
       // Don't highlight ordinary empty sessions — feels like nothing is
       // selected. Keep document/email-scoped sessions highlighted though: a
       // new email/reply chat starts empty but immediately owns an email doc.
-      const isDocScopedEmptySession = !!(meta && (meta.has_documents || /^Email:|^New Email$/i.test(meta.name || '')));
+      const isDocScopedEmptySession = !!(meta && (meta.has_documents || /^Correo:|^New Correo$/i.test(meta.name || '')));
       if (!isDocScopedEmptySession) {
         document.querySelectorAll('.list-item.active-session').forEach(el => el.classList.remove('active-session'));
       }
@@ -1999,10 +1999,10 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
     if (_rChk) _rChk.checked = false;
 
     // Check for pending/completed research that survived a page refresh
-    if (window.chatModule && window.chatModule.checkPendingResearch) {
-      window.chatModule.checkPendingResearch(id);
+    if (window.chatModule && window.chatModule.checkPendingInvestigación) {
+      window.chatModule.checkPendingInvestigación(id);
     }
-    // Restore group chat state if this is a group session
+    // Restaurar group chat state if this is a group session
     if (window.groupModule && window.groupModule.restoreState && window.groupModule.restoreState(id)) {
       if (window._syncGroupIndicator) window._syncGroupIndicator(true);
       // Hide model picker for group sessions
@@ -2061,7 +2061,7 @@ export async function selectSession(id, { keepSidebar = false, showLoading = tru
     }
     uiModule.showError('Failed to load session: ' + error.message);
   } finally {
-    // Memory warmup must not block chat switching. The memories panel can load
+    // Memoria warmup must not block chat switching. The memories panel can load
     // on demand; this is only a delayed cache refresh when the foreground chat
     // is idle.
     if (window.memoryModule && window.memoryModule.loadMemories) {
@@ -2111,7 +2111,7 @@ export function createDirectChat(url, modelId, endpointId) {
     el.classList.remove('active-session', 'active');
   });
 
-  // Close document panel — new chat has no docs
+  // Cerrar document panel — new chat has no docs
   if (window.documentModule && window.documentModule.isPanelOpen()) {
     window.documentModule.closePanel();
   }
@@ -2130,13 +2130,13 @@ export function createDirectChat(url, modelId, endpointId) {
     window.chatModule.showWelcomeScreen();
   }
 
-  // Update model picker to show the pending model
-  updateModelPicker();
+  // Actualizar model picker to show the pending model
+  updateModeloPicker();
 
-  // Update current-meta header
+  // Actualizar current-meta header
   const metaEl = document.getElementById('current-meta');
   if (metaEl) {
-    metaEl.textContent = 'New Chat';
+    metaEl.textContent = 'Nuevo chat';
   }
 
   // Enable input
@@ -2217,7 +2217,7 @@ export function getSessions() {
   return sessions;
 }
 
-export function getCurrentModel() {
+export function getCurrentModelo() {
   const sess = sessions.find(x => x.id === currentSessionId);
   if (sess && sess.model) return sess.model;
   // Pending session not yet materialized — read from model picker label
@@ -2247,7 +2247,7 @@ export function setCurrentSessionId(id) {
   }
 }
 
-// Session list keyboard navigation: arrows to move, Delete to delete
+// Session list keyboard navigation: arrows to move, Eliminar to delete
 async function _onSessionListKeydown(e) {
   const item = e.target.closest('.list-item[data-session-id]');
   if (!item) return;
@@ -2267,7 +2267,7 @@ async function _onSessionListKeydown(e) {
     return;
   }
 
-  if (e.key === 'Delete' || e.key === 'Backspace') {
+  if (e.key === 'Eliminar' || e.key === 'Backspace') {
     if (item.querySelector('.session-rename-input')) return;
     e.preventDefault();
     const sid = item.dataset.sessionId;
@@ -2277,7 +2277,7 @@ async function _onSessionListKeydown(e) {
       uiModule.showToast('Unfavorite before deleting');
       return;
     }
-    const ok = await uiModule.styledConfirm('Delete this session?', { confirmText: 'Delete', danger: true });
+    const ok = await uiModule.styledConfirmar('Eliminar this session?', { confirmText: 'Eliminar', danger: true });
     if (!ok) return;
     _sessionListFocused = true;
     (async () => {
@@ -2343,8 +2343,8 @@ window.addEventListener('hashchange', () => {
   }
 });
 
-// ── Research indicator management ──
-function _updateResearchDots() {
+// ── Investigación indicator management ──
+function _updateInvestigaciónDots() {
   document.querySelectorAll('.session-star[data-session-id]').forEach(function(star) {
     var sid = star.dataset.sessionId;
     var isRunning = _researchingSessions.has(sid) || _streamingSessions.has(sid);
@@ -2362,7 +2362,7 @@ function _updateResearchDots() {
   });
 }
 
-function _startResearchPolling() {
+function _startInvestigaciónPolling() {
   if (_researchPollTimer) return;
   _researchPollTimer = setInterval(async function() {
     if (_researchingSessions.size === 0) {
@@ -2382,7 +2382,7 @@ function _startResearchPolling() {
         _researchingSessions.delete(sid);
       }
     }
-    _updateResearchDots();
+    _updateInvestigaciónDots();
     if (_researchingSessions.size === 0 && _researchPollTimer) {
       clearInterval(_researchPollTimer);
       _researchPollTimer = null;
@@ -2390,28 +2390,28 @@ function _startResearchPolling() {
   }, 5000);
 }
 
-export function markResearching(sessionId) {
+export function markInvestigacióning(sessionId) {
   _researchingSessions.add(sessionId);
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
-  _startResearchPolling();
+  _startInvestigaciónPolling();
 }
 
-export function clearResearching(sessionId) {
+export function clearInvestigacióning(sessionId) {
   _researchingSessions.delete(sessionId);
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
 }
 
 export function markStreaming(sessionId) {
   _streamingSessions.add(sessionId);
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
 }
 
 export function clearStreaming(sessionId) {
   _streamingSessions.delete(sessionId);
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
 }
 
@@ -2421,7 +2421,7 @@ function _clearRunningState(sessionId) {
   if (_researchingSessions.delete(sessionId)) changed = true;
   if (_streamingSessions.delete(sessionId)) changed = true;
   if (changed) {
-    _updateResearchDots();
+    _updateInvestigaciónDots();
     _updateRailNotifs();
   }
 }
@@ -2431,12 +2431,12 @@ export function markStreamComplete(sessionId) {
   _streamingSessions.delete(sessionId);
   // Don't pulse if user is already viewing this session — they can see the response
   if (currentSessionId === sessionId) {
-    _updateResearchDots();
+    _updateInvestigaciónDots();
     _updateRailNotifs();
     return;
   }
   _completedSessions.add(sessionId);
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
   // Show notification dot on Chats section if collapsed
   const sessSection = document.getElementById('sessions-section');
@@ -2447,7 +2447,7 @@ export function markStreamComplete(sessionId) {
   // Safety net: re-apply after a tick in case a concurrent renderSessionList overwrites the DOM
   setTimeout(function() {
     if (_completedSessions.has(sessionId)) {
-      _updateResearchDots();
+      _updateInvestigaciónDots();
     }
   }, 300);
 }
@@ -2455,13 +2455,13 @@ export function markStreamComplete(sessionId) {
 // ── Rail notification dots ──
 // Keep rail buttons lit when background work is happening / finished
 function _updateRailNotifs() {
-  // Research rail — pulsing while any session is researching
-  const railResearch = document.getElementById('rail-research');
-  if (railResearch) {
-    // OR in the Deep Research panel's job state (set by panel.js)
+  // Investigación rail — pulsing while any session is researching
+  const railInvestigación = document.getElementById('rail-research');
+  if (railInvestigación) {
+    // OR in the Deep Investigación panel's job state (set by panel.js)
     // so inline-research and panel-research both keep the rail lit.
     const researching = _researchingSessions.size > 0 || !!window._researchJobsActive;
-    railResearch.classList.toggle('rail-notify', researching);
+    railInvestigación.classList.toggle('rail-notify', researching);
   }
   // Chats rail — show when a background stream completed
   const railChats = document.getElementById('rail-chats');
@@ -2576,18 +2576,18 @@ async function _checkServerStream(sessionId) {
 
 export function clearStreamComplete(sessionId) {
   _completedSessions.delete(sessionId);
-  // Direct DOM cleanup in case _updateResearchDots misses it
+  // Direct DOM cleanup in case _updateInvestigaciónDots misses it
   var item = document.querySelector(`.list-item[data-session-id="${sessionId}"]`);
   if (item) item.classList.remove('stream-complete');
   var star = document.querySelector(`.session-star[data-session-id="${sessionId}"]`);
   if (star) { star.classList.remove('notify', 'processing'); star.style.opacity = ''; }
-  _updateResearchDots();
+  _updateInvestigaciónDots();
   _updateRailNotifs();
 }
 
 // Initialize dropdowns once DOM is ready
 function _initAllDropdowns() {
-  initModelPicker({
+  initModeloPicker({
     getCurrentSessionId: () => currentSessionId,
     getSessions: () => sessions,
     getPendingChat: () => _pendingChat,
@@ -2603,7 +2603,7 @@ if (document.readyState === 'loading') {
   _initAllDropdowns();
 }
 
-// Shared global listener to close all session dropdowns on click-away or Escape
+// Compartird global listener to close all session dropdowns on click-away or Escape
 function _initDropdownDismiss() {
   document.addEventListener('click', (e) => {
     if (e.target.closest('.session-dropdown-menu, .session-folder-submenu')) return;
@@ -2622,7 +2622,7 @@ function _initDropdownDismiss() {
   }
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    // Esc must dismiss both the parent dropdown AND the Move-to-folder
+    // Esc must dismiss both the parent dropdown AND the Mover-to-folder
     // submenu in one keypress — previously only the dropdown closed and
     // the submenu was left orphaned on screen.
     document.querySelectorAll('.session-dropdown-menu, .session-folder-submenu').forEach(d => d.style.display = 'none');
@@ -2630,7 +2630,7 @@ function _initDropdownDismiss() {
 }
 
 // ──────────────────────────────────────────────
-// Shared: positioned dropdown menu
+// Compartird: positioned dropdown menu
 // ──────────────────────────────────────────────
 
 /**
@@ -2640,7 +2640,7 @@ function _initDropdownDismiss() {
  * Returns a close() function.
  */
 function _showDropdown(anchorEl, items) {
-  // Close any open archive dropdown
+  // Cerrar any open archive dropdown
   document.querySelectorAll('.session-dropdown-menu.archive-dd').forEach(d => d.remove());
 
   const dd = document.createElement('div');
@@ -2677,11 +2677,11 @@ function _showDropdown(anchorEl, items) {
 
 
 // ──────────────────────────────────────────────
-// Archive Browser
+// Archivar Browser
 // ──────────────────────────────────────────────
 
-// All mutable archive state lives here; reset on each openArchive().
-const _arc = { data: [], total: 0, search: '', offset: 0, sort: 'recent', model: '', debounce: null, selectMode: false, selected: new Set(), allModelCounts: null };
+// All mutable archive state lives here; reset on each openArchivar().
+const _arc = { data: [], total: 0, search: '', offset: 0, sort: 'recent', model: '', debounce: null, selectMode: false, selected: new Set(), allModeloCounts: null };
 
 function _arcRelativeTime(iso) {
   if (!iso) return '';
@@ -2703,7 +2703,7 @@ let _peekingSessionId = null;
 async function _arcPeekOpen(sid) {
   try {
     _peekingSessionId = sid;
-    closeArchive();
+    closeArchivar();
     // Load history directly without unarchiving
     const res = await fetch(`${API_BASE}/api/history/${sid}`);
     const data = await res.json();
@@ -2715,7 +2715,7 @@ async function _arcPeekOpen(sid) {
     // Find the archived session metadata
     const meta = _arc.data.find(s => s.id === sid);
     const metaEl = document.getElementById('current-meta');
-    if (metaEl) metaEl.textContent = (meta?.name || 'Archived') + ' (archived)';
+    if (metaEl) metaEl.textContent = (meta?.name || 'Archivard') + ' (archived)';
 
     // Render the chat history
     const chatBox = document.getElementById('chat-history');
@@ -2746,7 +2746,7 @@ function _checkPeekCleanup(newSessionId) {
   }
 }
 
-async function _arcRestore(sid) {
+async function _arcRestaurar(sid) {
   try {
     const res = await fetch(`${API_BASE}/api/session/${sid}/unarchive`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed');
@@ -2757,8 +2757,8 @@ async function _arcRestore(sid) {
   } catch { uiModule.showError('Failed to restore session'); }
 }
 
-async function _arcDelete(sid) {
-  if (!await window.styledConfirm('Delete this session permanently?', { confirmText: 'Delete', danger: true })) return;
+async function _arcEliminar(sid) {
+  if (!await window.styledConfirmar('Eliminar this session permanently?', { confirmText: 'Eliminar', danger: true })) return;
   try {
     const res = await fetch(`${API_BASE}/api/session/${sid}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed');
@@ -2775,7 +2775,7 @@ function _arcRemove(sid) {
   _arc.selected.delete(sid);
 }
 
-async function _arcBulkRestore() {
+async function _arcBulkRestaurar() {
   const ids = [..._arc.selected];
   if (!ids.length) return;
   for (const sid of ids) {
@@ -2790,10 +2790,10 @@ async function _arcBulkRestore() {
   loadSessions();
 }
 
-async function _arcBulkDelete() {
+async function _arcBulkEliminar() {
   const ids = [..._arc.selected];
   if (!ids.length) return;
-  const ok = await uiModule.styledConfirm(`Delete ${ids.length} session${ids.length > 1 ? 's' : ''} permanently?`, { confirmText: 'Delete', danger: true });
+  const ok = await uiModule.styledConfirmar(`Eliminar ${ids.length} session${ids.length > 1 ? 's' : ''} permanently?`, { confirmText: 'Eliminar', danger: true });
   if (!ok) return;
   const deletedIds = [];
   for (const sid of ids) {
@@ -2817,14 +2817,14 @@ function _arcToggleSelectMode() {
   _arcRefreshUI();
 }
 
-function _arcUpdateBulkBar() {
+function _arcActualizarBulkBar() {
   const bar = document.getElementById('archive-bulk-bar');
   const count = document.getElementById('archive-selected-count');
   const selectBtn = document.getElementById('archive-select-btn');
   if (bar) bar.classList.toggle('hidden', !_arc.selectMode);
   if (count) count.textContent = `${_arc.selected.size} selected`;
   if (selectBtn) {
-    selectBtn.textContent = _arc.selectMode ? 'Cancel' : 'Select';
+    selectBtn.textContent = _arc.selectMode ? 'Cancelar' : 'Select';
     selectBtn.classList.toggle('active', _arc.selectMode);
   }
 }
@@ -2833,7 +2833,7 @@ function _arcUpdateBulkBar() {
 
 async function _arcFetch(append) {
   if (!append) _arc.offset = 0;
-  const params = new URLSearchParams({ offset: String(_arc.offset), limit: '20', sort: _arc.sort });
+  const params = new URLBuscarParams({ offset: String(_arc.offset), limit: '20', sort: _arc.sort });
   if (_arc.search) params.set('search', _arc.search);
   if (_arc.model) params.set('model', _arc.model);
   try {
@@ -2843,17 +2843,17 @@ async function _arcFetch(append) {
     _arc.data = append ? _arc.data.concat(data.sessions) : data.sessions;
     _arc.total = data.total;
     // Cache model counts from unfiltered first fetch
-    if (!_arc.allModelCounts && !_arc.model && !_arc.search) {
+    if (!_arc.allModeloCounts && !_arc.model && !_arc.search) {
       const counts = {};
       _arc.data.forEach(s => {
         const m = (s.model || '').split('/').pop();
         if (m) counts[m] = (counts[m] || 0) + 1;
       });
-      _arc.allModelCounts = { counts, total: _arc.total };
+      _arc.allModeloCounts = { counts, total: _arc.total };
     }
     _arcRefreshUI();
   } catch (e) {
-    console.error('Archive fetch failed:', e);
+    console.error('Archivar fetch failed:', e);
   }
 }
 
@@ -2864,7 +2864,7 @@ function _arcRefreshUI() {
   _arcRenderChips();
   _arcRenderGrid();
   _arcRenderLoadMore();
-  _arcUpdateBulkBar();
+  _arcActualizarBulkBar();
 }
 
 function _arcRenderStats() {
@@ -2876,7 +2876,7 @@ function _arcRenderChips() {
   const el = document.getElementById('archive-chips');
   if (!el) return;
   // Use cached counts so chips don't disappear when filtering
-  const cached = _arc.allModelCounts;
+  const cached = _arc.allModeloCounts;
   if (!cached) return;
   const modelCounts = cached.counts;
   const models = Object.keys(modelCounts).sort();
@@ -2927,15 +2927,15 @@ function _arcRenderCard(s) {
       if (e.target.checked) _arc.selected.add(s.id);
       else _arc.selected.delete(s.id);
       card.classList.toggle('selected', e.target.checked);
-      _arcUpdateBulkBar();
+      _arcActualizarBulkBar();
     });
   }
   card.querySelector('.archive-menu-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     _showDropdown(e.currentTarget, [
       { label: 'Open', action: () => _arcPeekOpen(s.id) },
-      { label: 'Restore', action: () => _arcRestore(s.id) },
-      { label: 'Delete', action: () => _arcDelete(s.id), danger: true },
+      { label: 'Restaurar', action: () => _arcRestaurar(s.id) },
+      { label: 'Eliminar', action: () => _arcEliminar(s.id), danger: true },
     ]);
   });
   card.addEventListener('click', () => {
@@ -2945,7 +2945,7 @@ function _arcRenderCard(s) {
       const cb = card.querySelector('.archive-checkbox');
       if (cb) cb.checked = _arc.selected.has(s.id);
       card.classList.toggle('selected', _arc.selected.has(s.id));
-      _arcUpdateBulkBar();
+      _arcActualizarBulkBar();
     } else {
       _arcPeekOpen(s.id);
     }
@@ -2971,12 +2971,12 @@ function _arcRenderLoadMore() {
 }
 
 
-// ── Unified Library Modal (Chats / Documents / Archive) ──
+// ── Unified Library Modal (Chats / Documentos / Archivar) ──
 
 const _lib = { tab: 'chats', search: '', sort: 'recent', debounce: null, selectMode: false, selected: new Set() };
 
 export function openLibrary(defaultTab) {
-  // Delegate everything to the document module's library (has tabs for Chats/Documents/Archive)
+  // Delegate everything to the document module's library (has tabs for Chats/Documentos/Archivar)
   if (window.documentModule && window.documentModule.openLibrary) {
     window.documentModule.openLibrary({ tab: defaultTab || 'documents' });
     return;
@@ -2996,9 +2996,9 @@ export function openLibrary(defaultTab) {
       <div class="modal-body">
         <div class="lib-tabs" id="lib-tabs">
           <button class="lib-tab${_lib.tab === 'chats' ? ' active' : ''}" data-lib-tab="chats">Chats</button>
-          <button class="lib-tab${_lib.tab === 'documents' ? ' active' : ''}" data-lib-tab="documents">Documents</button>
-          <button class="lib-tab${_lib.tab === 'archive' ? ' active' : ''}" data-lib-tab="archive">Archive</button>
-          <button class="lib-tab${_lib.tab === 'research' ? ' active' : ''}" data-lib-tab="research">Research</button>
+          <button class="lib-tab${_lib.tab === 'documents' ? ' active' : ''}" data-lib-tab="documents">Documentos</button>
+          <button class="lib-tab${_lib.tab === 'archive' ? ' active' : ''}" data-lib-tab="archive">Archivar</button>
+          <button class="lib-tab${_lib.tab === 'research' ? ' active' : ''}" data-lib-tab="research">Investigación</button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
           <select class="memory-sort-select" id="lib-sort">
@@ -3014,7 +3014,7 @@ export function openLibrary(defaultTab) {
           <label class="memory-bulk-check-all"><input type="checkbox" id="lib-select-all"> All</label>
           <span id="lib-selected-count" style="color:color-mix(in srgb, var(--fg) 50%, transparent);font-size:10px;flex:1;">0 selected</span>
           <button class="memory-toolbar-btn" id="lib-bulk-action1"></button>
-          <button class="memory-toolbar-btn danger" id="lib-bulk-delete">Delete</button>
+          <button class="memory-toolbar-btn danger" id="lib-bulk-delete">Eliminar</button>
         </div>
         <div class="doclib-grid archive-list" id="lib-grid"></div>
       </div>
@@ -3034,7 +3034,7 @@ export function openLibrary(defaultTab) {
   // Tab switching
   modal.querySelectorAll('.lib-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      // Documents tab — open the document module's library (has expand/preview)
+      // Documentos tab — open the document module's library (has expand/preview)
       if (tab.dataset.libTab === 'documents' && window.documentModule && window.documentModule.openLibrary) {
         closeLibrary();
         window.documentModule.openLibrary();
@@ -3048,10 +3048,10 @@ export function openLibrary(defaultTab) {
       tab.classList.add('active');
       document.getElementById('lib-search').value = '';
       document.getElementById('lib-bulk-bar').classList.add('hidden');
-      // Update bulk action button label based on tab
+      // Actualizar bulk action button label based on tab
       const action1 = document.getElementById('lib-bulk-action1');
-      if (_lib.tab === 'archive') { action1.textContent = 'Restore'; }
-      else if (_lib.tab === 'chats') { action1.textContent = 'Archive'; }
+      if (_lib.tab === 'archive') { action1.textContent = 'Restaurar'; }
+      else if (_lib.tab === 'chats') { action1.textContent = 'Archivar'; }
       else if (_lib.tab === 'research') { action1.textContent = 'Open Report'; }
       else { action1.textContent = 'Export'; }
       _renderLibGrid();
@@ -3060,7 +3060,7 @@ export function openLibrary(defaultTab) {
 
   // Set initial bulk action label
   const _initAction = document.getElementById('lib-bulk-action1');
-  if (_initAction) _initAction.textContent = _lib.tab === 'archive' ? 'Restore' : _lib.tab === 'documents' ? 'Export' : 'Archive';
+  if (_initAction) _initAction.textContent = _lib.tab === 'archive' ? 'Restaurar' : _lib.tab === 'documents' ? 'Export' : 'Archivar';
 
   document.getElementById('lib-sort').addEventListener('change', () => { _lib.sort = document.getElementById('lib-sort').value; _renderLibGrid(); });
   document.getElementById('lib-search').addEventListener('input', (e) => {
@@ -3085,14 +3085,14 @@ export function openLibrary(defaultTab) {
     _updateLibCount();
   });
 
-  // Bulk action 1 (Archive/Restore/Export)
+  // Bulk action 1 (Archivar/Restaurar/Export)
   document.getElementById('lib-bulk-action1').addEventListener('click', async () => {
     if (_lib.tab === 'chats') {
       for (const sid of _lib.selected) await fetch(`${API_BASE}/api/session/${sid}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      uiModule.showToast(`Archived ${_lib.selected.size} sessions`);
+      uiModule.showToast(`Archivard ${_lib.selected.size} sessions`);
     } else if (_lib.tab === 'archive') {
       for (const sid of _lib.selected) await fetch(`${API_BASE}/api/session/${sid}/restore`, { method: 'POST' });
-      uiModule.showToast(`Restored ${_lib.selected.size} sessions`);
+      uiModule.showToast(`Restaurard ${_lib.selected.size} sessions`);
     }
     _lib.selected.clear();
     _lib.selectMode = false;
@@ -3103,7 +3103,7 @@ export function openLibrary(defaultTab) {
 
   // Bulk delete
   document.getElementById('lib-bulk-delete').addEventListener('click', async () => {
-    if (!await uiModule.styledConfirm(`Delete ${_lib.selected.size} items?`, { confirmText: 'Delete', danger: true })) return;
+    if (!await uiModule.styledConfirmar(`Eliminar ${_lib.selected.size} items?`, { confirmText: 'Eliminar', danger: true })) return;
     if (_lib.tab === 'chats' || _lib.tab === 'archive') {
       for (const sid of _lib.selected) await fetch(`${API_BASE}/api/session/${sid}`, { method: 'DELETE' });
     } else if (_lib.tab === 'documents') {
@@ -3131,9 +3131,9 @@ function _renderLibGrid() {
   if (!grid) return;
 
   if (_lib.tab === 'chats') _renderLibChats(grid);
-  else if (_lib.tab === 'archive') _renderLibArchive(grid);
-  else if (_lib.tab === 'documents') _renderLibDocuments(grid);
-  else if (_lib.tab === 'research') _renderLibResearch(grid);
+  else if (_lib.tab === 'archive') _renderLibArchivar(grid);
+  else if (_lib.tab === 'documents') _renderLibDocumentos(grid);
+  else if (_lib.tab === 'research') _renderLibInvestigación(grid);
 }
 
 function _renderLibChats(grid) {
@@ -3167,19 +3167,19 @@ function _renderLibChats(grid) {
       e.stopPropagation();
       _showDropdown(e.currentTarget, [
         { label: 'Open', action: () => { closeLibrary(); selectSession(s.id); } },
-        { label: 'Archive', action: async () => { await fetch(`${API_BASE}/api/session/${s.id}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); await loadSessions(); _renderLibGrid(); } },
-        { label: 'Delete', action: async () => { if (!await uiModule.styledConfirm('Delete?', { confirmText: 'Delete', danger: true })) return; await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' }); await loadSessions(); _renderLibGrid(); }, danger: true },
+        { label: 'Archivar', action: async () => { await fetch(`${API_BASE}/api/session/${s.id}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); await loadSessions(); _renderLibGrid(); } },
+        { label: 'Eliminar', action: async () => { if (!await uiModule.styledConfirmar('Eliminar?', { confirmText: 'Eliminar', danger: true })) return; await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' }); await loadSessions(); _renderLibGrid(); }, danger: true },
       ]);
     });
     grid.appendChild(card);
   }
 }
 
-async function _renderLibArchive(grid) {
+async function _renderLibArchivar(grid) {
   grid.innerHTML = '';
   grid.appendChild(spinnerModule.createLoadingRow('Loading…'));
   try {
-    const params = new URLSearchParams({ limit: '50', sort: _lib.sort === 'most-messages' ? 'messages' : _lib.sort });
+    const params = new URLBuscarParams({ limit: '50', sort: _lib.sort === 'most-messages' ? 'messages' : _lib.sort });
     if (_lib.search) params.set('search', _lib.search);
     const res = await fetch(`${API_BASE}/api/sessions/archived?${params}`);
     const data = await res.json();
@@ -3197,8 +3197,8 @@ async function _renderLibArchive(grid) {
       card.querySelector('.archive-menu-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         _showDropdown(e.currentTarget, [
-          { label: 'Restore', action: async () => { await fetch(`${API_BASE}/api/session/${s.id}/restore`, { method: 'POST' }); await loadSessions(); _renderLibGrid(); } },
-          { label: 'Delete', action: async () => { if (!await uiModule.styledConfirm('Delete?', { confirmText: 'Delete', danger: true })) return; await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' }); _renderLibGrid(); }, danger: true },
+          { label: 'Restaurar', action: async () => { await fetch(`${API_BASE}/api/session/${s.id}/restore`, { method: 'POST' }); await loadSessions(); _renderLibGrid(); } },
+          { label: 'Eliminar', action: async () => { if (!await uiModule.styledConfirmar('Eliminar?', { confirmText: 'Eliminar', danger: true })) return; await fetch(`${API_BASE}/api/session/${s.id}`, { method: 'DELETE' }); _renderLibGrid(); }, danger: true },
         ]);
       });
       grid.appendChild(card);
@@ -3206,11 +3206,11 @@ async function _renderLibArchive(grid) {
   } catch (e) { console.error('Library archive error:', e); grid.innerHTML = '<div class="doclib-empty">Failed to load archive</div>'; }
 }
 
-async function _renderLibDocuments(grid) {
+async function _renderLibDocumentos(grid) {
   grid.innerHTML = '';
   grid.appendChild(spinnerModule.createLoadingRow('Loading…'));
   try {
-    const params = new URLSearchParams({ limit: '50', sort: _lib.sort });
+    const params = new URLBuscarParams({ limit: '50', sort: _lib.sort });
     if (_lib.search) params.set('search', _lib.search);
     const res = await fetch(`${API_BASE}/api/documents/library?${params}`);
     const data = await res.json();
@@ -3236,7 +3236,7 @@ async function _renderLibDocuments(grid) {
         e.stopPropagation();
         _showDropdown(e.currentTarget, [
           { label: 'Open', action: () => { if (d.session_id) { closeLibrary(); selectSession(d.session_id); } } },
-          { label: 'Delete', action: async () => { if (!await uiModule.styledConfirm('Delete?', { confirmText: 'Delete', danger: true })) return; await fetch(`${API_BASE}/api/document/${d.id}`, { method: 'DELETE' }); _renderLibGrid(); }, danger: true },
+          { label: 'Eliminar', action: async () => { if (!await uiModule.styledConfirmar('Eliminar?', { confirmText: 'Eliminar', danger: true })) return; await fetch(`${API_BASE}/api/document/${d.id}`, { method: 'DELETE' }); _renderLibGrid(); }, danger: true },
         ]);
       });
       grid.appendChild(card);
@@ -3244,11 +3244,11 @@ async function _renderLibDocuments(grid) {
   } catch (e) { console.error('Library documents error:', e); grid.innerHTML = '<div class="doclib-empty">Failed to load documents</div>'; }
 }
 
-async function _renderLibResearch(grid) {
+async function _renderLibInvestigación(grid) {
   grid.innerHTML = '';
   grid.appendChild(spinnerModule.createLoadingRow('Loading research…'));
   try {
-    const params = new URLSearchParams({ limit: '50', sort: _lib.sort });
+    const params = new URLBuscarParams({ limit: '50', sort: _lib.sort });
     if (_lib.search) params.set('search', _lib.search);
     const res = await fetch(`${API_BASE}/api/research/library?${params}`);
     if (!res.ok) throw new Error(res.status);
@@ -3288,10 +3288,10 @@ async function _renderLibResearch(grid) {
               if (modal) modal.style.display = 'none';
               const msgInput = document.getElementById('message');
               if (msgInput) { msgInput.value = item.query; msgInput.focus(); }
-              uiModule.showToast('Toggle Research and send to re-run');
+              uiModule.showToast('Toggle Investigación and send to re-run');
             }},
-            { label: 'Delete', danger: true, action: async () => {
-              if (!await window.styledConfirm('Delete this research?', { confirmText: 'Delete', danger: true })) return;
+            { label: 'Eliminar', danger: true, action: async () => {
+              if (!await window.styledConfirmar('Eliminar this research?', { confirmText: 'Eliminar', danger: true })) return;
               await fetch(`${API_BASE}/api/research/${item.id}`, { method: 'DELETE' });
               _renderLibGrid();
             }},
@@ -3350,9 +3350,9 @@ export function closeLibrary() {
   }
 }
 
-export function openArchive() {
+export function openArchivar() {
   if (document.getElementById('archive-modal')) return;
-  Object.assign(_arc, { data: [], total: 0, search: '', offset: 0, sort: 'recent', model: '', debounce: null, selectMode: false, selected: new Set(), allModelCounts: null });
+  Object.assign(_arc, { data: [], total: 0, search: '', offset: 0, sort: 'recent', model: '', debounce: null, selectMode: false, selected: new Set(), allModeloCounts: null });
 
   const modal = document.createElement('div');
   modal.className = 'modal';
@@ -3360,7 +3360,7 @@ export function openArchive() {
   modal.innerHTML = `
     <div class="modal-content doclib-modal-content">
       <div class="modal-header">
-        <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archive <span id="archive-stats" style="font-size:0.8em;opacity:0.5;font-weight:normal;margin-left:4px"></span></h4>
+        <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archivar <span id="archive-stats" style="font-size:0.8em;opacity:0.5;font-weight:normal;margin-left:4px"></span></h4>
         <button class="close-btn" id="archive-close">✖</button>
       </div>
       <div class="modal-body">
@@ -3378,8 +3378,8 @@ export function openArchive() {
         <div class="memory-bulk-bar hidden" id="archive-bulk-bar">
           <label class="memory-bulk-check-all"><input type="checkbox" id="archive-select-all"> All</label>
           <span id="archive-selected-count" style="color:color-mix(in srgb, var(--fg) 50%, transparent);font-size:10px;flex:1;">0 selected</span>
-          <button class="memory-toolbar-btn" id="archive-bulk-restore">Restore</button>
-          <button class="memory-toolbar-btn danger" id="archive-bulk-delete">Delete</button>
+          <button class="memory-toolbar-btn" id="archive-bulk-restore">Restaurar</button>
+          <button class="memory-toolbar-btn danger" id="archive-bulk-delete">Eliminar</button>
         </div>
         <div class="doclib-grid archive-list" id="archive-grid"></div>
         <button class="doclib-load-more" id="archive-load-more" style="display:none">Load more</button>
@@ -3395,7 +3395,7 @@ export function openArchive() {
     themeModule.makeDraggable(_arcContent, _arcHeader);
   }
 
-  document.getElementById('archive-close').addEventListener('click', closeArchive);
+  document.getElementById('archive-close').addEventListener('click', closeArchivar);
   document.getElementById('archive-sort').addEventListener('change', (e) => { _arc.sort = e.target.value; _arcFetch(false); });
   document.getElementById('archive-search').addEventListener('input', (e) => {
     clearTimeout(_arc.debounce);
@@ -3403,19 +3403,19 @@ export function openArchive() {
   });
   document.getElementById('archive-load-more').addEventListener('click', () => { _arc.offset = _arc.data.length; _arcFetch(true); });
   document.getElementById('archive-select-btn').addEventListener('click', _arcToggleSelectMode);
-  document.getElementById('archive-bulk-restore').addEventListener('click', _arcBulkRestore);
-  document.getElementById('archive-bulk-delete').addEventListener('click', _arcBulkDelete);
+  document.getElementById('archive-bulk-restore').addEventListener('click', _arcBulkRestaurar);
+  document.getElementById('archive-bulk-delete').addEventListener('click', _arcBulkEliminar);
   document.getElementById('archive-select-all').addEventListener('change', (e) => {
     if (e.target.checked) _arc.data.forEach(s => _arc.selected.add(s.id));
     else _arc.selected.clear();
     _arcRefreshUI();
   });
-  modal.addEventListener('click', (e) => { if (uiModule.isTouchInsideModal()) return; if (e.target === modal) closeArchive(); });
+  modal.addEventListener('click', (e) => { if (uiModule.isTouchInsideModal()) return; if (e.target === modal) closeArchivar(); });
 
   _arcFetch(false);
 }
 
-export function closeArchive() {
+export function closeArchivar() {
   const modal = document.getElementById('archive-modal');
   if (modal) {
     const content = modal.querySelector('.modal-content');
@@ -3429,7 +3429,7 @@ export function closeArchive() {
   }
 }
 
-/** Update has_documents flag for a session and re-render the sidebar icon */
+/** Actualizar has_documents flag for a session and re-render the sidebar icon */
 export function getSortMode() { return _sortMode; }
 export function setSortMode(mode) {
   _sortMode = mode || null;
@@ -3458,26 +3458,26 @@ const sessionModule = {
   getPendingChat,
   getCurrentSessionId,
   getSessions,
-  getCurrentModel,
+  getCurrentModelo,
   getCurrentEndpointUrl,
   setCurrentSessionId,
   initDragSort,
-  updateModelPicker,
-  markResearching,
-  clearResearching,
+  updateModeloPicker,
+  markInvestigacióning,
+  clearInvestigacióning,
   markStreaming,
   clearStreaming,
   markStreamComplete,
   clearStreamComplete,
   openLibrary,
   closeLibrary,
-  openArchive,
-  closeArchive,
+  openArchivar,
+  closeArchivar,
   setSessionHasDocs,
   getSortMode,
   setSortMode
 };
 
-export { updateModelPicker };
+export { updateModeloPicker };
 
 export default sessionModule;

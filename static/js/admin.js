@@ -4,7 +4,7 @@
 import uiModule from './ui.js';
 import settingsModule from './settings.js';
 import { providerLogo, providerLogoFromUrl } from './providers.js';
-import { sortModelObjects } from './modelSort.js';
+import { sortModeloObjects } from './modelSort.js';
 import { PROVIDER_DEVICE_FLOWS, formatDeviceFlowError, runProviderDeviceFlow } from './providerDeviceFlow.js';
 
 let initialized = false;
@@ -12,7 +12,7 @@ let modalEl = null;
 // When the user adds an endpoint, store its id so the next render of
 // the endpoints list can flash a glow on that row. Cleared once the
 // animation fires.
-let _recentlyAddedEpId = null;
+let _recentlyAgregaredEpId = null;
 let _authPolicy = { password_min_length: 8, reserved_usernames: [] };
 
 function el(id) { return document.getElementById(id); }
@@ -28,7 +28,7 @@ const PRIV_LABELS = {
   can_use_documents: 'Document editor',
   can_use_research: 'Deep research',
   can_generate_images: 'Image generation',
-  can_manage_memory: 'Memory & skills',
+  can_manage_memory: 'Memoria & skills',
 };
 
 async function loadUsers() {
@@ -57,7 +57,7 @@ async function loadUsers() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="admin-btn-sm" data-adm-toggle-admin="${esc(u.username)}" data-make-admin="${u.is_admin ? '0' : '1'}" style="font-size:11px;">${u.is_admin ? 'Revoke admin' : 'Make admin'}</button>
-          <button class="admin-btn-sm" data-adm-rename-user="${esc(u.username)}" style="font-size:11px;">Rename</button>
+          <button class="admin-btn-sm" data-adm-rename-user="${esc(u.username)}" style="font-size:11px;">Renombrar</button>
           ${u.is_admin ? '' : `<button class="admin-btn-delete" data-adm-del-user="${esc(u.username)}" style="font-size:11px;">Remove</button>`}
           ${u.is_admin ? '' : '<svg class="admin-user-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;transition:transform 0.2s,opacity 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>'}
         </div>
@@ -90,12 +90,12 @@ async function loadUsers() {
           <input type="number" min="0" value="${maxMsg}" data-priv="max_messages_per_day" data-user="${esc(u.username)}" style="width:70px;padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);font-size:12px;text-align:center;">
         </div>`;
         // Allowed models — checkbox list
-        const allowedModels = Array.isArray(u.privileges && u.privileges.allowed_models)
+        const allowedModelos = Array.isArray(u.privileges && u.privileges.allowed_models)
           ? u.privileges.allowed_models
           : [];
-        const allowedSet = new Set(allowedModels);
+        const allowedSet = new Set(allowedModelos);
         const modelsRestricted = !!(u.privileges && u.privileges.allowed_models_restricted);
-        const blockAllModels = !!(u.privileges && u.privileges.block_all_models);
+        const blockAllModelos = !!(u.privileges && u.privileges.block_all_models);
         html += `<div style="padding:4px 0;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <span style="font-size:12px;">Allowed models</span>
@@ -104,7 +104,7 @@ async function loadUsers() {
               <a href="#" class="priv-models-none" data-user="${esc(u.username)}" style="font-size:10px;opacity:0.5;">None</a>
             </div>
           </div>
-          <div style="font-size:10px;opacity:0.4;margin-bottom:4px;">${blockAllModels ? 'No models allowed' : (!modelsRestricted ? 'All models allowed (no restrictions)' : (allowedSet.size === 0 ? 'No models allowed' : allowedSet.size + ' model(s) allowed'))}</div>
+          <div style="font-size:10px;opacity:0.4;margin-bottom:4px;">${blockAllModelos ? 'No models allowed' : (!modelsRestricted ? 'All models allowed (no restrictions)' : (allowedSet.size === 0 ? 'No models allowed' : allowedSet.size + ' model(s) allowed'))}</div>
           <div class="priv-models-list" data-user="${esc(u.username)}">
             <span style="opacity:0.4;font-size:11px;">Loading models...</span>
           </div>
@@ -126,7 +126,7 @@ async function loadUsers() {
           // Load models list on first expand
           if (!_modelsLoaded && !privPanel.classList.contains('hidden')) {
             _modelsLoaded = true;
-            _loadModelsForUser(u.username, allowedSet, modelsRestricted, blockAllModels, privPanel);
+            _loadModelosForUser(u.username, allowedSet, modelsRestricted, blockAllModelos, privPanel);
           }
         });
 
@@ -152,21 +152,21 @@ async function loadUsers() {
         });
       }
 
-      // Rename button
+      // Renombrar button
       const renameBtn = row.querySelector('[data-adm-rename-user]');
       if (renameBtn) {
         renameBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const oldUsername = renameBtn.dataset.admRenameUser;
-          const next = await uiModule.styledPrompt(`Rename "${oldUsername}"`, {
-            defaultValue: oldUsername,
+          const oldUsuario = renameBtn.dataset.admRenombrarUser;
+          const next = await uiModule.styledPrompt(`Renombrar "${oldUsuario}"`, {
+            defaultValue: oldUsuario,
             placeholder: 'New username',
-            confirmText: 'Rename',
+            confirmText: 'Renombrar',
           });
           const username = (next || '').trim();
-          if (!username || username === oldUsername) return;
+          if (!username || username === oldUsuario) return;
           try {
-            const res = await fetch(`/api/auth/users/${encodeURIComponent(oldUsername)}/rename`, {
+            const res = await fetch(`/api/auth/users/${encodeURIComponent(oldUsuario)}/rename`, {
               method: 'PUT',
               credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
@@ -188,13 +188,13 @@ async function loadUsers() {
         });
       }
 
-      // Delete button
+      // Eliminar button
       const delBtn = row.querySelector('[data-adm-del-user]');
       if (delBtn) {
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const username = delBtn.dataset.admDelUser;
-          if (!await uiModule.styledConfirm(`Remove user "${username}"?`, { confirmText: 'Remove', danger: true })) return;
+          if (!await uiModule.styledConfirmar(`Remove user "${username}"?`, { confirmText: 'Remove', danger: true })) return;
           const res = await fetch('/api/auth/users', { method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
           if (res.ok) loadUsers();
           else uiModule.showError('Failed to delete user');
@@ -211,7 +211,7 @@ async function loadUsers() {
           const confirmMsg = makeAdmin
             ? `Grant admin rights to "${username}"? They'll get full access to all settings and users — including the power to demote or remove other admins (you included).`
             : `Revoke admin rights from "${username}"? They'll lose access to the admin panel.`;
-          if (!await uiModule.styledConfirm(confirmMsg, { confirmText: makeAdmin ? 'Make admin' : 'Revoke admin', danger: !makeAdmin })) return;
+          if (!await uiModule.styledConfirmar(confirmMsg, { confirmText: makeAdmin ? 'Make admin' : 'Revoke admin', danger: !makeAdmin })) return;
           adminToggleBtn.disabled = true;
           try {
             const res = await fetch(`/api/auth/users/${encodeURIComponent(username)}/admin`, {
@@ -242,7 +242,7 @@ async function loadUsers() {
   } catch (e) { list.innerHTML = '<div class="admin-error">Failed to load users</div>'; }
 }
 
-async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockAllModels, privPanel) {
+async function _loadModelosForUser(username, allowedSet, modelsRestricted, blockAllModelos, privPanel) {
   const listEl = privPanel.querySelector(`.priv-models-list[data-user="${username}"]`);
   if (!listEl) return;
   try {
@@ -253,20 +253,20 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
     // endpoints listing always reflects every configured endpoint.
     const res = await fetch('/api/model-endpoints', { credentials: 'same-origin' });
     const data = await res.json();
-    const allModels = [];
+    const allModelos = [];
     (Array.isArray(data) ? data : []).forEach(ep => {
       if (!ep.online) return;
       (ep.models || []).forEach(mid => {
-        allModels.push({ mid, epName: ep.name || '', display: mid.split('/').pop() });
+        allModelos.push({ mid, epName: ep.name || '', display: mid.split('/').pop() });
       });
     });
-    if (!allModels.length) {
+    if (!allModelos.length) {
       listEl.innerHTML = '<span style="opacity:0.4;font-size:11px;">No models available</span>';
       return;
     }
     let restricted = modelsRestricted;
-    let blockAll = blockAllModels;
-    listEl.innerHTML = sortModelObjects(allModels).map(m => {
+    let blockAll = blockAllModelos;
+    listEl.innerHTML = sortModeloObjects(allModelos).map(m => {
       const checked = !blockAll && (!restricted || allowedSet.has(m.mid)) ? 'checked' : '';
       return `<label>
         <input type="checkbox" class="priv-model-cb" data-mid="${esc(m.mid)}" ${checked}>
@@ -275,8 +275,8 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
       </label>`;
     }).join('');
 
-    // Save on change
-    function _saveModels() {
+    // Guardar on change
+    function _saveModelos() {
       const checked = [];
       listEl.querySelectorAll('.priv-model-cb').forEach(cb => {
         if (cb.checked) checked.push(cb.dataset.mid);
@@ -286,7 +286,7 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
       //  - none checked  -> block everything (allowed_models: [], block_all_models: true)
       //  - some checked  -> allowlist (allowed_models: checked, block_all_models: false)
       let value, hintText;
-      if (checked.length === allModels.length) {
+      if (checked.length === allModelos.length) {
         restricted = false;
         blockAll = false;
         value = [];
@@ -310,18 +310,18 @@ async function _loadModelsForUser(username, allowedSet, modelsRestricted, blockA
         body: JSON.stringify({ allowed_models: value, allowed_models_restricted: restricted, block_all_models: blockAll }),
       }).catch(() => {});
     }
-    listEl.querySelectorAll('.priv-model-cb').forEach(cb => cb.addEventListener('change', _saveModels));
+    listEl.querySelectorAll('.priv-model-cb').forEach(cb => cb.addEventListener('change', _saveModelos));
 
     // All / None buttons
     privPanel.querySelector(`.priv-models-all[data-user="${username}"]`)?.addEventListener('click', (e) => {
       e.preventDefault();
       listEl.querySelectorAll('.priv-model-cb').forEach(cb => cb.checked = true);
-      _saveModels();
+      _saveModelos();
     });
     privPanel.querySelector(`.priv-models-none[data-user="${username}"]`)?.addEventListener('click', (e) => {
       e.preventDefault();
       listEl.querySelectorAll('.priv-model-cb').forEach(cb => cb.checked = false);
-      _saveModels();
+      _saveModelos();
     });
   } catch (e) {
     listEl.innerHTML = '<span style="opacity:0.4;font-size:11px;">Failed to load models</span>';
@@ -343,12 +343,12 @@ function initSignupToggle() {
   });
 }
 
-function initShareDefaultsToggle() {
+function initCompartirDefaultsToggle() {
   const toggle = el('adm-shareDefaultsToggle');
   fetch('/api/auth/settings', { credentials: 'same-origin' })
     .then(r => r.json())
     .then(d => { toggle.checked = !!d.share_defaults_with_users; })
-    .catch(e => console.warn('Settings fetch failed:', e));
+    .catch(e => console.warn('Configuración fetch failed:', e));
   toggle.addEventListener('change', async () => {
     try {
       const res = await fetch('/api/auth/settings', {
@@ -365,30 +365,30 @@ function initShareDefaultsToggle() {
   });
 }
 
-function initAddUser() {
+function initAgregarUser() {
   fetch('/api/auth/policy', { credentials: 'same-origin' })
     .then(r => r.ok ? r.json() : null)
     .then(policy => {
       if (!policy) return;
       _authPolicy = policy;
-      const admPw = el('adm-newPassword');
-      if (admPw) admPw.placeholder = `Password (min ${policy.password_min_length})`;
+      const admPw = el('adm-newContraseña');
+      if (admPw) admPw.placeholder = `Contraseña (min ${policy.password_min_length})`;
     })
     .catch(() => {});
   el('adm-addBtn').addEventListener('click', async () => {
     const msg = el('adm-addMsg');
     msg.textContent = ''; msg.className = '';
-    const username = el('adm-newUsername').value.trim();
-    const password = el('adm-newPassword').value;
+    const username = el('adm-newUsuario').value.trim();
+    const password = el('adm-newContraseña').value;
     const is_admin = el('adm-newIsAdmin').checked;
-    if (!username) { msg.textContent = 'Username required'; msg.className = 'admin-error'; return; }
-    if (password.length < _authPolicy.password_min_length) { msg.textContent = `Password must be at least ${_authPolicy.password_min_length} characters`; msg.className = 'admin-error'; return; }
+    if (!username) { msg.textContent = 'Usuario required'; msg.className = 'admin-error'; return; }
+    if (password.length < _authPolicy.password_min_length) { msg.textContent = `Contraseña must be at least ${_authPolicy.password_min_length} characters`; msg.className = 'admin-error'; return; }
     if (_authPolicy.reserved_usernames.includes(username.toLowerCase())) { msg.textContent = 'This username is reserved'; msg.className = 'admin-error'; return; }
     el('adm-addBtn').disabled = true;
     try {
       const res = await fetch('/api/auth/users', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, is_admin }) });
       const data = await res.json();
-      if (res.ok) { msg.textContent = 'User created'; msg.className = 'admin-success'; el('adm-newUsername').value = ''; el('adm-newPassword').value = ''; el('adm-newIsAdmin').checked = false; loadUsers(); }
+      if (res.ok) { msg.textContent = 'User created'; msg.className = 'admin-success'; el('adm-newUsuario').value = ''; el('adm-newContraseña').value = ''; el('adm-newIsAdmin').checked = false; loadUsers(); }
       else { msg.textContent = data.detail || 'Failed'; msg.className = 'admin-error'; }
     } catch (e) { msg.textContent = 'Request failed'; msg.className = 'admin-error'; }
     el('adm-addBtn').disabled = false;
@@ -427,8 +427,8 @@ async function _refreshAfterEndpointChange(deletedEndpointId) {
     }
   } catch (_) {}
   try {
-    if (window.modelsModule && window.modelsModule.refreshModels) {
-      await window.modelsModule.refreshModels(true);
+    if (window.modelsModule && window.modelsModule.refreshModelos) {
+      await window.modelsModule.refreshModelos(true);
     }
   } catch (_) {}
   try {
@@ -437,18 +437,18 @@ async function _refreshAfterEndpointChange(deletedEndpointId) {
     }));
   } catch (_) {}
   try {
-    if (window.sessionModule && window.sessionModule.updateModelPicker) {
-      window.sessionModule.updateModelPicker();
+    if (window.sessionModule && window.sessionModule.updateModeloPicker) {
+      window.sessionModule.updateModeloPicker();
     }
   } catch (_) {}
 }
 
-async function _selectAddedModelInChat(endpoint) {
+async function _selectAgregaredModeloInChat(endpoint) {
   const modelId = endpoint && Array.isArray(endpoint.models) ? endpoint.models[0] : '';
   if (!modelId) return;
   try {
-    if (window.modelsModule && window.modelsModule.refreshModels) {
-      await window.modelsModule.refreshModels(true);
+    if (window.modelsModule && window.modelsModule.refreshModelos) {
+      await window.modelsModule.refreshModelos(true);
     }
   } catch (_) {}
   try {
@@ -470,16 +470,16 @@ async function loadEndpoints() {
   // (older HTML or third-party embedding).
   const listLegacy = el('adm-epList');
   // Refresh model picker so new endpoints show up in chat
-  if (window.modelsModule && window.modelsModule.refreshModels) {
-    window.modelsModule.refreshModels(true);
+  if (window.modelsModule && window.modelsModule.refreshModelos) {
+    window.modelsModule.refreshModelos(true);
     setTimeout(() => {
-      if (window.sessionModule && window.sessionModule.updateModelPicker) {
-        window.sessionModule.updateModelPicker();
+      if (window.sessionModule && window.sessionModule.updateModeloPicker) {
+        window.sessionModule.updateModeloPicker();
       }
     }, 1500);
   }
-  if (settingsModule && typeof settingsModule.refreshAiModelEndpoints === 'function') {
-    settingsModule.refreshAiModelEndpoints();
+  if (settingsModule && typeof settingsModule.refreshAiModeloEndpoints === 'function') {
+    settingsModule.refreshAiModeloEndpoints();
   }
   try {
     const res = await fetch('/api/model-endpoints', { credentials: 'same-origin' });
@@ -499,27 +499,27 @@ async function loadEndpoints() {
       return;
     }
     const rowHtml = data.map(ep => {
-      const epModels = Array.isArray(ep.models) ? ep.models : [];
-      const visibleCount = epModels.length;
+      const epModelos = Array.isArray(ep.models) ? ep.models : [];
+      const visibleCount = epModelos.length;
       const totalCount = visibleCount + (ep.hidden_count || 0);
       // `ep.models` is the *visible* set — when every model is hidden it's
       // empty, but we still need to render the expand panel so the user can
       // un-hide them. Gate on the total instead.
-      const hasModels = ep.online && totalCount > 0;
+      const hasModelos = ep.online && totalCount > 0;
       const statusBadge = ep.status === 'empty'
         ? '<span class="admin-badge">no models</span>'
         : ep.online
           ? `<span class="admin-badge">${visibleCount}/${totalCount} models enabled</span>`
           : '<span class="admin-badge admin-badge-off">offline</span>';
-      const justAddedClass = (_recentlyAddedEpId && String(ep.id) === _recentlyAddedEpId) ? ' adm-ep-just-added' : '';
+      const justAgregaredClass = (_recentlyAgregaredEpId && String(ep.id) === _recentlyAgregaredEpId) ? ' adm-ep-just-added' : '';
       const category = ep.category || (_isLocalEndpoint(ep.base_url) ? 'local' : 'api');
       const kindLabel = ep.endpoint_kind && ep.endpoint_kind !== 'auto' ? ep.endpoint_kind.toUpperCase() : '';
       const keyLabel = ep.has_key
         ? (ep.api_key_fingerprint ? ` (key ${esc(ep.api_key_fingerprint)})` : ' (key set)')
         : '';
       return `
-        <div class="admin-user-row${ep.is_enabled ? '' : ' admin-ep-disabled'}${justAddedClass}" data-adm-ep-id="${ep.id}">
-          <div style="display:flex;align-items:center;justify-content:space-between;${hasModels ? 'cursor:pointer;' : ''}padding:4px 0;" data-adm-ep-header="${ep.id}">
+        <div class="admin-user-row${ep.is_enabled ? '' : ' admin-ep-disabled'}${justAgregaredClass}" data-adm-ep-id="${ep.id}">
+          <div style="display:flex;align-items:center;justify-content:space-between;${hasModelos ? 'cursor:pointer;' : ''}padding:4px 0;" data-adm-ep-header="${ep.id}">
             <div class="admin-user-info" style="flex:1;flex-wrap:wrap;gap:0.3rem;align-items:center;">
               <span class="adm-ep-row-logo" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;opacity:0.9;">${providerLogoFromUrl(ep.base_url) || ''}</span>
               <span class="admin-user-name">${esc(ep.name)}</span>
@@ -527,16 +527,16 @@ async function loadEndpoints() {
               ${kindLabel ? `<span class="admin-badge">${esc(kindLabel)}</span>` : ''}
               ${statusBadge}
               ${ep.is_enabled ? '' : '<span class="admin-badge admin-badge-off">disabled</span>'}
-              ${hasModels ? `<span style="font-size:10px;opacity:0.4;${category === 'api' ? 'flex-basis:100%;' : ''}">Click to manage models</span>` : ''}
+              ${hasModelos ? `<span style="font-size:10px;opacity:0.4;${category === 'api' ? 'flex-basis:100%;' : ''}">Click to manage models</span>` : ''}
             </div>
             <div style="display:flex;gap:4px;align-items:center;">
               <button class="admin-btn-sm" data-adm-toggle-ep="${ep.id}">${ep.is_enabled ? 'Disable' : 'Enable'}</button>
-              <button class="admin-btn-delete" data-adm-del-ep="${ep.id}" data-adm-ep-online="${ep.online ? '1' : '0'}">Delete</button>
-              ${hasModels ? '<svg class="admin-user-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;transition:transform 0.2s,opacity 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>' : ''}
+              <button class="admin-btn-delete" data-adm-del-ep="${ep.id}" data-adm-ep-online="${ep.online ? '1' : '0'}">Eliminar</button>
+              ${hasModelos ? '<svg class="admin-user-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;transition:transform 0.2s,opacity 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>' : ''}
             </div>
           </div>
-          <div class="admin-ep-detail">${esc(ep.base_url)}${category === 'local' ? `<button type="button" class="admin-ep-copy-btn" data-adm-copy-url="${esc(ep.base_url)}" title="Copy URL" aria-label="Copy URL" style="background:none;border:none;padding:0 2px;margin-left:6px;cursor:pointer;color:inherit;opacity:0.45;vertical-align:-2px;line-height:1;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}${keyLabel}</div>
-          ${hasModels ? `<div class="mcp-tools-panel hidden" data-adm-ep-models-panel="${ep.id}"></div>` : ''}
+          <div class="admin-ep-detail">${esc(ep.base_url)}${category === 'local' ? `<button type="button" class="admin-ep-copy-btn" data-adm-copy-url="${esc(ep.base_url)}" title="Copiar URL" aria-label="Copiar URL" style="background:none;border:none;padding:0 2px;margin-left:6px;cursor:pointer;color:inherit;opacity:0.45;vertical-align:-2px;line-height:1;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}${keyLabel}</div>
+          ${hasModelos ? `<div class="mcp-tools-panel hidden" data-adm-ep-models-panel="${ep.id}"></div>` : ''}
         </div>`;
     });
     // Partition rows into Local vs API for the split sections.
@@ -577,7 +577,7 @@ async function loadEndpoints() {
     queryAll('[data-adm-copy-url]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const url = btn.dataset.admCopyUrl || '';
+        const url = btn.dataset.admCopiarUrl || '';
         if (!url) return;
         uiModule.copyToClipboard(url).then(() => {
           // Brief icon swap to a checkmark so the user gets feedback that
@@ -604,11 +604,11 @@ async function loadEndpoints() {
             var depData = await depRes.json();
             deps = depData.dependents || [];
           } catch (e) { /* proceed without warning */ }
-          var msg = 'Delete this endpoint?';
+          var msg = 'Eliminar this endpoint?';
           if (deps.length) {
             msg += '\n\nThe following settings use this endpoint and will be reset:\n— ' + deps.join('\n— ');
           }
-          if (!await uiModule.styledConfirm(msg, { confirmText: 'Delete', danger: true })) return;
+          if (!await uiModule.styledConfirmar(msg, { confirmText: 'Eliminar', danger: true })) return;
         }
         // Optimistic: remove from UI immediately
         const row = btn.closest('[data-adm-ep-id]');
@@ -622,8 +622,8 @@ async function loadEndpoints() {
     // Clear the just-added marker now that the row has been rendered
     // with the animation class — keeps the glow from re-firing on every
     // subsequent loadEndpoints() call (e.g. when toggling a model).
-    if (_recentlyAddedEpId) _recentlyAddedEpId = null;
-    // Models expand/collapse (click anywhere on card)
+    if (_recentlyAgregaredEpId) _recentlyAgregaredEpId = null;
+    // Modelos expand/collapse (click anywhere on card)
     queryAll('[data-adm-ep-id]').forEach(row => {
       const header = row.querySelector('[data-adm-ep-header]');
       if (!header) return;
@@ -661,8 +661,8 @@ async function loadEndpoints() {
           panel.appendChild(_ld);
           const _stopSpin = () => { try { _modelsSpin && _modelsSpin.stop(); } catch (_) {} };
           const _loadingHtml = (label) => `<span style="opacity:0.55;font-size:11px;display:inline-flex;align-items:center;gap:8px;">${esc(label)}</span>`;
-          const renderModels = (models, warning = '') => {
-            const sortedModels = sortModelObjects(models);
+          const renderModelos = (models, warning = '') => {
+            const sortedModelos = sortModeloObjects(models);
             const warningHtml = warning ? `<div class="admin-error" style="font-size:11px;margin:6px 0;">${esc(warning)}</div>` : '';
             const attachRefresh = () => {
               panel.querySelector(`[data-ep-refresh-models="${epId}"]`)?.addEventListener('click', async (e) => {
@@ -670,19 +670,19 @@ async function loadEndpoints() {
                 panel.innerHTML = _loadingHtml('Refreshing models...');
                 try {
                   const res = await fetch(`/api/model-endpoints/${epId}/models?refresh=true&refresh_timeout=60`, { credentials: 'same-origin' });
-                  const refreshWarning = res.headers.get('X-Model-Refresh-Warning') || '';
+                  const refreshAdvertencia = res.headers.get('X-Modelo-Refresh-Advertencia') || '';
                   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                  const refreshedModels = await res.json();
-                  renderModels(refreshedModels, refreshWarning);
-                  if (refreshWarning && uiModule?.showToast) uiModule.showToast(refreshWarning, 6000);
+                  const refreshedModelos = await res.json();
+                  renderModelos(refreshedModelos, refreshAdvertencia);
+                  if (refreshAdvertencia && uiModule?.showToast) uiModule.showToast(refreshAdvertencia, 6000);
                 } catch (_) {
-                  renderModels(sortedModels, 'Model refresh failed; kept cached models.');
+                  renderModelos(sortedModelos, 'Modelo refresh failed; kept cached models.');
                 }
               });
             };
-            if (!sortedModels.length) {
+            if (!sortedModelos.length) {
               panel.innerHTML = `<div class="mcp-tools-header">
-                <span>Models</span>
+                <span>Modelos</span>
                 <span style="display:flex;gap:8px;align-items:center;">
                   <span class="mcp-tools-count">0/0 enabled</span>
                   <a href="#" data-ep-refresh-models="${epId}">Refresh</a>
@@ -691,17 +691,17 @@ async function loadEndpoints() {
               attachRefresh();
               return;
             }
-            const hiddenSet = new Set(sortedModels.filter(m => m.is_hidden).map(m => m.id));
-            const showSearch = sortedModels.length >= 8;
+            const hiddenSet = new Set(sortedModelos.filter(m => m.is_hidden).map(m => m.id));
+            const showBuscar = sortedModelos.length >= 8;
             panel.innerHTML = `<div class="mcp-tools-header">
-              <span>Models</span>
+              <span>Modelos</span>
               <span style="display:flex;gap:8px;align-items:center;">
-                <span class="mcp-tools-count">${sortedModels.length - hiddenSet.size}/${sortedModels.length} enabled</span>
+                <span class="mcp-tools-count">${sortedModelos.length - hiddenSet.size}/${sortedModelos.length} enabled</span>
                 <a href="#" data-ep-refresh-models="${epId}">Refresh</a>
                 <a href="#" data-ep-select-all="${epId}">All</a>
                 <a href="#" data-ep-select-none="${epId}">None</a>
               </span>
-            </div>${warningHtml}${showSearch ? `<input type="search" class="mcp-tools-search" placeholder="Search ${sortedModels.length} models..." data-ep-search="${epId}">` : ''}<div class="mcp-tools-list">` + sortedModels.map(m =>
+            </div>${warningHtml}${showBuscar ? `<input type="search" class="mcp-tools-search" placeholder="Buscar ${sortedModelos.length} models..." data-ep-search="${epId}">` : ''}<div class="mcp-tools-list">` + sortedModelos.map(m =>
               `<label title="${esc(m.id)}" data-ep-model-row data-search="${esc((m.display + ' ' + m.id).toLowerCase())}" class="adm-model-row">
                 <input type="checkbox" class="adm-cb-hidden" data-ep-model-id="${esc(m.id)}" ${!m.is_hidden ? 'checked' : ''}>
                 <span class="adm-check-dot" aria-hidden="true"></span>
@@ -721,17 +721,17 @@ async function loadEndpoints() {
               panel.querySelectorAll('[data-ep-model-row]').forEach(row => {
                 if (row.style.display !== 'none') row.querySelector('input[type=checkbox]').checked = true;
               });
-              _saveEpModelState(epId, panel);
+              _saveEpModeloState(epId, panel);
             });
             panel.querySelector(`[data-ep-select-none="${epId}"]`)?.addEventListener('click', (e) => {
               e.preventDefault();
               panel.querySelectorAll('[data-ep-model-row]').forEach(row => {
                 if (row.style.display !== 'none') row.querySelector('input[type=checkbox]').checked = false;
               });
-              _saveEpModelState(epId, panel);
+              _saveEpModeloState(epId, panel);
             });
             panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
-              cb.addEventListener('change', () => _saveEpModelState(epId, panel));
+              cb.addEventListener('change', () => _saveEpModeloState(epId, panel));
             });
           };
           try {
@@ -739,7 +739,7 @@ async function loadEndpoints() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const models = await res.json();
             _stopSpin();
-            renderModels(models);
+            renderModelos(models);
           } catch (e) { _stopSpin(); panel.innerHTML = '<span class="admin-error" style="font-size:11px;">Failed to load models</span>'; }
         }
       });
@@ -750,10 +750,10 @@ async function loadEndpoints() {
   }
 }
 
-async function _saveEpModelState(epId, panel) {
+async function _saveEpModeloState(epId, panel) {
   const hidden = [];
   panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
-    if (!cb.checked) hidden.push(cb.dataset.epModelId);
+    if (!cb.checked) hidden.push(cb.dataset.epModeloId);
   });
   const total = panel.querySelectorAll('input[type=checkbox]').length;
   try {
@@ -770,8 +770,8 @@ async function _saveEpModelState(epId, panel) {
       const badge = row.querySelector('.admin-badge');
       if (badge && !badge.classList.contains('admin-badge-off')) badge.textContent = `${total - hidden.length}/${total} models enabled`;
     }
-    if (settingsModule && typeof settingsModule.refreshAiModelEndpoints === 'function') {
-      settingsModule.refreshAiModelEndpoints();
+    if (settingsModule && typeof settingsModule.refreshAiModeloEndpoints === 'function') {
+      settingsModule.refreshAiModeloEndpoints();
     }
   } catch (e) { /* silent */ }
 }
@@ -807,7 +807,7 @@ function initEndpointForm() {
     const deviceAuthConfig = PROVIDER_DEVICE_FLOWS[deviceAuthProvider] || null;
     const apiKey = el('adm-epApiKey');
     const testBtn = el('adm-epApiTestBtn');
-    const addBtn = el('adm-epAddBtn');
+    const addBtn = el('adm-epAgregarBtn');
     const status = el('adm-deviceAuthStatus');
     const msg = _endpointMsg('api');
     if (deviceAuthConfig) {
@@ -828,7 +828,7 @@ function initEndpointForm() {
       }
       if (addBtn) {
         addBtn.disabled = false;
-        addBtn.textContent = 'Add';
+        addBtn.textContent = 'Agregar';
         addBtn.style.width = '55px';
         addBtn.style.display = '';
       }
@@ -851,7 +851,7 @@ function initEndpointForm() {
       }
       if (addBtn) {
         addBtn.disabled = false;
-        addBtn.textContent = 'Add';
+        addBtn.textContent = 'Agregar';
         addBtn.style.width = '55px';
         addBtn.style.display = '';
       }
@@ -948,7 +948,7 @@ function initEndpointForm() {
     u = u.replace(/^htp:/, 'http:').replace(/^htps:/, 'https:');
     u = u.replace(/^http:\/\/\//, 'http://');  // http:/// → http://
     u = u.replace(/^https:\/\/\//, 'https://');
-    // Add http:// if no protocol
+    // Agregar http:// if no protocol
     if (!/^https?:\/\//.test(u)) u = 'http://' + u;
     // Strip trailing slashes
     u = u.replace(/\/+$/, '');
@@ -1012,7 +1012,7 @@ function initEndpointForm() {
 
   let apiTestController = null;
   const apiTestBtn = el('adm-epApiTestBtn');
-  const apiCancelTestBtn = el('adm-epApiCancelTestBtn');
+  const apiCancelarTestBtn = el('adm-epApiCancelarTestBtn');
   if (apiTestBtn) {
     apiTestBtn.addEventListener('click', async () => {
       if (_isDeviceAuthSelected()) {
@@ -1031,7 +1031,7 @@ function initEndpointForm() {
       apiTestController = new AbortController();
       apiTestBtn.disabled = true;
       apiTestBtn.textContent = 'Testing...';
-      if (apiCancelTestBtn) apiCancelTestBtn.classList.remove('hidden');
+      if (apiCancelarTestBtn) apiCancelarTestBtn.classList.remove('hidden');
       try {
         const fd = new FormData();
         fd.append('base_url', url);
@@ -1058,19 +1058,19 @@ function initEndpointForm() {
       apiTestController = null;
       apiTestBtn.disabled = false;
       apiTestBtn.textContent = 'Test';
-      if (apiCancelTestBtn) apiCancelTestBtn.classList.add('hidden');
+      if (apiCancelarTestBtn) apiCancelarTestBtn.classList.add('hidden');
     });
   }
-  if (apiCancelTestBtn) {
-    apiCancelTestBtn.addEventListener('click', () => {
+  if (apiCancelarTestBtn) {
+    apiCancelarTestBtn.addEventListener('click', () => {
       if (apiTestController) apiTestController.abort();
     });
   }
 
-  el('adm-epAddBtn').addEventListener('click', async () => {
+  el('adm-epAgregarBtn').addEventListener('click', async () => {
     const deviceAuthProvider = _selectedDeviceAuthProvider();
     if (deviceAuthProvider) {
-      await _startProviderDeviceAuth(deviceAuthProvider, el('adm-epAddBtn'));
+      await _startProviderDeviceAuth(deviceAuthProvider, el('adm-epAgregarBtn'));
       return;
     }
     const msg = _endpointMsg('api');
@@ -1081,8 +1081,8 @@ function initEndpointForm() {
     if (provider.value && !apiKey) { msg.textContent = 'API key is required for cloud providers'; msg.className = 'admin-error'; return; }
     // Normalize URL (fix typos, add /v1, strip wrong paths)
     const url = provider.value && rawUrl === provider.value ? rawUrl : _normalizeBaseUrl(rawUrl);
-    const btn = el('adm-epAddBtn');
-    btn.disabled = true; btn.textContent = 'Adding...';
+    const btn = el('adm-epAgregarBtn');
+    btn.disabled = true; btn.textContent = 'Agregaring...';
     try {
       const fd = new FormData();
       fd.append('base_url', url);
@@ -1107,23 +1107,23 @@ function initEndpointForm() {
         el('adm-epApiKey').value = ''; provider.value = '';
         if (kindSel) kindSel.value = 'proxy';
         if (epType) epType.value = 'llm';
-        if (d.id) _recentlyAddedEpId = String(d.id);
+        if (d.id) _recentlyAgregaredEpId = String(d.id);
         await loadEndpoints();
-        await _selectAddedModelInChat(d);
-        const goLink = ' <a href="#" data-go-added-models style="margin-left:6px;text-decoration:underline;color:inherit;font-weight:600;">Added Models →</a>';
+        await _selectAgregaredModeloInChat(d);
+        const goLink = ' <a href="#" data-go-added-models style="margin-left:6px;text-decoration:underline;color:inherit;font-weight:600;">Agregared Modelos →</a>';
         if (!d.online) {
-          msg.innerHTML = 'Added (endpoint offline — will retry on next load)' + goLink;
+          msg.innerHTML = 'Agregared (endpoint offline — will retry on next load)' + goLink;
           msg.className = 'admin-error';
         } else if (d.status === 'empty') {
-          msg.innerHTML = 'Added — endpoint reachable, no models found' + goLink;
+          msg.innerHTML = 'Agregared — endpoint reachable, no models found' + goLink;
           msg.className = 'admin-success';
         } else {
-          msg.innerHTML = `Added — found ${count} model${count !== 1 ? 's' : ''}` + goLink;
+          msg.innerHTML = `Agregared — found ${count} model${count !== 1 ? 's' : ''}` + goLink;
           msg.className = 'admin-success';
         }
       } else { msg.textContent = d.detail || 'Failed'; msg.className = 'admin-error'; }
     } catch (e) { msg.textContent = 'Request failed'; msg.className = 'admin-error'; }
-    btn.disabled = false; btn.textContent = 'Add';
+    btn.disabled = false; btn.textContent = 'Agregar';
   });
 
   async function _startProviderDeviceAuth(providerKey, triggerEl = null) {
@@ -1149,7 +1149,7 @@ function initEndpointForm() {
     const reset = () => {
       if (triggerEl) {
         triggerEl.disabled = false;
-        triggerEl.textContent = triggerText || 'Add';
+        triggerEl.textContent = triggerText || 'Agregar';
       }
       deviceAuthPolling = false;
       _setApiFormForProvider();
@@ -1179,7 +1179,7 @@ function initEndpointForm() {
               '<div class="adm-copilot-coderow">' +
                 '<span class="adm-copilot-code-label">Code</span>' +
                 '<code class="adm-copilot-code">' + esc(start.user_code) + '</code>' +
-                '<button type="button" class="admin-btn-sm adm-device-auth-copy">Copy</button>' +
+                '<button type="button" class="admin-btn-sm adm-device-auth-copy">Copiar</button>' +
               '</div>' +
               '<a class="admin-btn-add adm-copilot-auth" href="' + encodeURI(authUrl || '') + '" target="_blank" rel="noopener">' + esc(authLabel) + ' ↗</a>' +
             '</div>';
@@ -1207,7 +1207,7 @@ function initEndpointForm() {
               ta.remove();
             }
             copyBtn.textContent = ok ? 'Copied' : 'Failed';
-            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+            setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 1500);
           });
         },
       });
@@ -1216,9 +1216,9 @@ function initEndpointForm() {
         const n = ((endpoint && endpoint.models) || []).length;
         status.className = 'admin-success';
         status.textContent = 'Connected - ' + n + ' ' + config.label + ' model' + (n !== 1 ? 's' : '') + ' available.';
-        if (endpoint && endpoint.id) _recentlyAddedEpId = String(endpoint.id);
+        if (endpoint && endpoint.id) _recentlyAgregaredEpId = String(endpoint.id);
         await loadEndpoints();
-        await _selectAddedModelInChat(endpoint || {});
+        await _selectAgregaredModeloInChat(endpoint || {});
         reset();
         return;
       }
@@ -1238,7 +1238,7 @@ function initEndpointForm() {
     }
   }
 
-  // API Key reveal toggle. The key inputs are hidden by default so the Add
+  // API Key reveal toggle. The key inputs are hidden by default so the Agregar
   // form reads as a single action row; the Key button toggles the input row
   // and flips aria-expanded for screen readers / CSS pseudo-classes.
   const _wireKeyToggle = (btnId, rowId) => {
@@ -1259,7 +1259,7 @@ function initEndpointForm() {
   _wireKeyToggle('adm-epLocalKeyBtn', 'adm-epLocalApiKey-row');
 
   // Delegated link handler for jumping between settings tabs.
-  //   [data-go-added-models]              → quick shortcut for the Added Models tab
+  //   [data-go-added-models]              → quick shortcut for the Agregared Modelos tab
   //   [data-go-settings-tab="X"]          → any tab whose nav button has data-settings-tab="X"
   //   [data-go-scroll-to="#elementId"]    → after switching, scroll the element into view
   document.addEventListener('click', (e) => {
@@ -1377,7 +1377,7 @@ function initEndpointForm() {
   // open/close + outside-click + Esc.
   _wireKebab('adm-epLocalMoreBtn', 'adm-epLocalMoreMenu');
 
-  // ── Added Models toolbar: Probe + Clear offline ────────────────────
+  // ── Agregared Modelos toolbar: Probe + Clear offline ────────────────────
   // Both buttons act over the currently-rendered endpoint list. The
   // online/offline marker is stamped on each row's [data-adm-ep-online]
   // attribute by loadEndpoints(), so both buttons just iterate the DOM
@@ -1411,7 +1411,7 @@ function initEndpointForm() {
       clearTimeout(timer);
     }
   };
-  const _collectAddedEndpointIds = async () => {
+  const _collectAgregaredEndpointIds = async () => {
     const domIds = Array.from(document.querySelectorAll('[data-adm-ep-id]'))
       .map(r => r.getAttribute('data-adm-ep-id'))
       .filter(Boolean);
@@ -1448,7 +1448,7 @@ function initEndpointForm() {
           probeAllBtn.innerHTML = '<span style="opacity:0.7;">Probing...</span>';
         }
         await _fetchWithTimeout('/api/model-endpoints/probe-local', { credentials: 'same-origin' }, 12000).catch(() => null);
-        const ids = await _collectAddedEndpointIds();
+        const ids = await _collectAgregaredEndpointIds();
         if (!ids.length) {
           await loadEndpoints();
           if (uiModule && uiModule.showToast) uiModule.showToast('No endpoints to probe', 1800);
@@ -1461,7 +1461,7 @@ function initEndpointForm() {
             const res = await _fetchWithTimeout(`/api/model-endpoints/${encodeURIComponent(id)}/models?refresh=true&refresh_timeout=20`, {
               credentials: 'same-origin'
             }, 25000);
-            if (!res || !res.ok || res.headers.get('X-Model-Refresh-Status') === 'failed') failed += 1;
+            if (!res || !res.ok || res.headers.get('X-Modelo-Refresh-Status') === 'failed') failed += 1;
             else await res.json().catch(() => null);
           } catch (err) {
             failed += 1;
@@ -1507,8 +1507,8 @@ function initEndpointForm() {
       const confirmMsg = ids.length === 1
         ? 'Remove 1 offline endpoint?'
         : `Remove ${ids.length} offline endpoints?`;
-      if (uiModule && uiModule.styledConfirm) {
-        const ok = await uiModule.styledConfirm(confirmMsg, { confirmText: 'Remove', danger: true });
+      if (uiModule && uiModule.styledConfirmar) {
+        const ok = await uiModule.styledConfirmar(confirmMsg, { confirmText: 'Remove', danger: true });
         if (!ok) return;
       } else if (!confirm(confirmMsg)) {
         return;
@@ -1552,8 +1552,8 @@ function initEndpointForm() {
     }
   } catch (_) {}
 
-  // Local "Add" button — sibling form for self-hosted base URLs.
-  const localAddBtn = el('adm-epLocalAddBtn');
+  // Local "Agregar" button — sibling form for self-hosted base URLs.
+  const localAgregarBtn = el('adm-epLocalAgregarBtn');
   const localTestBtn = el('adm-epLocalTestBtn');
   if (localTestBtn) {
     localTestBtn.addEventListener('click', async () => {
@@ -1582,9 +1582,9 @@ function initEndpointForm() {
       localTestBtn.innerHTML = testOriginalHtml;
     });
   }
-  if (localAddBtn) {
-    localAddBtn.addEventListener('click', async () => {
-      const addOriginalHtml = localAddBtn.innerHTML || '>Add';
+  if (localAgregarBtn) {
+    localAgregarBtn.addEventListener('click', async () => {
+      const addOriginalHtml = localAgregarBtn.innerHTML || '>Agregar';
       const msg = _endpointMsg('local');
       msg.textContent = ''; msg.className = 'adm-ep-inline-msg';
       const raw = (el('adm-epLocalUrl').value || '').trim();
@@ -1592,8 +1592,8 @@ function initEndpointForm() {
       const url = _normalizeBaseUrl(raw);
       const keyEl = el('adm-epLocalApiKey');
       const apiKey = keyEl ? keyEl.value.trim() : '';
-      localAddBtn.disabled = true;
-      localAddBtn.innerHTML = addOriginalHtml.replace(/>Add\s*$/, '>Adding...');
+      localAgregarBtn.disabled = true;
+      localAgregarBtn.innerHTML = addOriginalHtml.replace(/>Agregar\s*$/, '>Agregaring...');
       try {
         const fd = new FormData();
         fd.append('base_url', url);
@@ -1609,21 +1609,21 @@ function initEndpointForm() {
           el('adm-epLocalUrl').value = '';
           if (keyEl) keyEl.value = '';
           if (lt) lt.value = 'llm';
-          if (d.id) _recentlyAddedEpId = String(d.id);
+          if (d.id) _recentlyAgregaredEpId = String(d.id);
           await loadEndpoints();
-          await _selectAddedModelInChat(d);
+          await _selectAgregaredModeloInChat(d);
           const count = (d.models || []).length;
           const baseText = d.status === 'empty'
-            ? 'Added — Ollama is running, no models pulled yet'
+            ? 'Agregared — Ollama is running, no models pulled yet'
             : d.online
-            ? `Added — found ${count} model${count !== 1 ? 's' : ''}`
-            : 'Added (offline — will retry on next load)';
-          msg.innerHTML = `${baseText} <a href="#" data-go-added-models style="margin-left:6px;text-decoration:underline;color:inherit;font-weight:600;">Added Models →</a>`;
+            ? `Agregared — found ${count} model${count !== 1 ? 's' : ''}`
+            : 'Agregared (offline — will retry on next load)';
+          msg.innerHTML = `${baseText} <a href="#" data-go-added-models style="margin-left:6px;text-decoration:underline;color:inherit;font-weight:600;">Agregared Modelos →</a>`;
           msg.className = d.online ? 'admin-success' : 'admin-error';
         } else { msg.textContent = d.detail || 'Failed'; msg.className = 'admin-error'; }
       } catch (e) { msg.textContent = 'Request failed'; msg.className = 'admin-error'; }
-      localAddBtn.disabled = false;
-      localAddBtn.innerHTML = addOriginalHtml;
+      localAgregarBtn.disabled = false;
+      localAgregarBtn.innerHTML = addOriginalHtml;
     });
   }
 
@@ -1701,16 +1701,16 @@ function initEndpointForm() {
               try {
                 const dd = await r.json();
                 if (dd && dd.existing) { skipped++; }
-                else { added++; if (dd && dd.id) _recentlyAddedEpId = String(dd.id); }
+                else { added++; if (dd && dd.id) _recentlyAgregaredEpId = String(dd.id); }
               } catch (_) { added++; }
             }
           }
-          const totalModels = items.reduce((n, i) => n + (i.models ? i.models.length : 0), 0);
+          const totalModelos = items.reduce((n, i) => n + (i.models ? i.models.length : 0), 0);
           const serverNames = items.map(i =>
             (_PROVIDER_DISPLAY[i.provider] || i.url.replace(/^https?:\/\//, '').split('/')[0])
           );
           const parts = [
-            `Found ${items.length} server${items.length !== 1 ? 's' : ''} (${serverNames.join(', ')}) with ${totalModels} model${totalModels !== 1 ? 's' : ''}`,
+            `Found ${items.length} server${items.length !== 1 ? 's' : ''} (${serverNames.join(', ')}) with ${totalModelos} model${totalModelos !== 1 ? 's' : ''}`,
           ];
           if (added) parts.push(`added ${added} new`);
           if (skipped) parts.push(`${skipped} already added`);
@@ -1731,7 +1731,7 @@ function initEndpointForm() {
   document.querySelectorAll('.adm-quickstart-section').forEach((sec) => {
     const head = sec.querySelector('.adm-quickstart-toggle');
     if (!head) return;
-    const key = 'odysseus.addModels.' + sec.id + '.open';
+    const key = 'odysseus.addModelos.' + sec.id + '.open';
     let open = false;
     try { open = localStorage.getItem(key) === '1'; } catch {}
     const apply = () => {
@@ -1757,12 +1757,12 @@ function initEndpointForm() {
 
 const _GOOGLE_OAUTH_HELP = `To get Google OAuth credentials:
 1. Go to console.cloud.google.com
-2. Click the project dropdown (top left) > New Project > name it > Create
-3. APIs & Services > Library > enable the API you need (Gmail, Calendar, Drive, etc.)
+2. Click the project dropdown (top left) > New Project > name it > Crear
+3. APIs & Services > Library > enable the API you need (Gmail, Calendario, Drive, etc.)
 4. APIs & Services > OAuth consent screen > configure (External, app name + email)
-5. Under Audience, click Add Users > add your Google email as a test user
-6. APIs & Services > Credentials > + Create Credentials > OAuth Client ID > Desktop App
-7. Copy the Client ID and Client Secret into the fields above
+5. Under Audience, click Agregar Users > add your Google email as a test user
+6. APIs & Services > Credentials > + Crear Credentials > OAuth Client ID > Desktop App
+7. Copiar the Client ID and Client Secret into the fields above
 8. After adding the server, click Authorize to sign in with Google
 9. If accessing remotely: sign in, then copy the URL from the error page and paste it back`;
 
@@ -1780,12 +1780,12 @@ const MCP_PRESETS = [
 2. APIs & Services > Library > search "Gmail API" > Enable
 3. APIs & Services > OAuth consent screen > set up (External is fine)
 4. Under Audience, add your Gmail address as a test user
-5. APIs & Services > Credentials > + Create Credentials > OAuth Client ID
-6. Application type: Desktop App > Create
-7. Copy the Client ID and Client Secret into the fields above
-8. Click Add Server, then click the Authorize button
-9. Sign in with Google, copy the URL from the error page, paste it back` },
-  { name: "Email (IMAP/SMTP)", command: "npx", args: ["-y", "@codefuturist/email-mcp", "stdio"],        env: { MCP_EMAIL_ADDRESS: "", MCP_EMAIL_PASSWORD: "", MCP_EMAIL_IMAP_HOST: "", MCP_EMAIL_SMTP_HOST: "" },
+5. APIs & Services > Credentials > + Crear Credentials > OAuth Client ID
+6. Application type: Desktop App > Crear
+7. Copiar the Client ID and Client Secret into the fields above
+8. Click Agregar Server, then click the Authorize button
+9. Iniciar sesión with Google, copy the URL from the error page, paste it back` },
+  { name: "Correo (IMAP/SMTP)", command: "npx", args: ["-y", "@codefuturist/email-mcp", "stdio"],        env: { MCP_EMAIL_ADDRESS: "", MCP_EMAIL_PASSWORD: "", MCP_EMAIL_IMAP_HOST: "", MCP_EMAIL_SMTP_HOST: "" },
     providerDropdown: {
       label: "Provider",
       targets: { MCP_EMAIL_IMAP_HOST: "imap", MCP_EMAIL_SMTP_HOST: "smtp" },
@@ -1800,38 +1800,38 @@ const MCP_PRESETS = [
         { name: "Custom",        imap: "",                    smtp: "" },
       ],
     },
-    help: "Works with any IMAP/SMTP email provider.\n1. Pick your provider from the dropdown (or choose Custom)\n2. Enter your email address and password (or app password)\n3. Click Add Server" },
+    help: "Works with any IMAP/SMTP email provider.\n1. Pick your provider from the dropdown (or choose Custom)\n2. Enter your email address and password (or app password)\n3. Click Agregar Server" },
   { name: "CalDAV (Radicale/Nextcloud)", command: "npx", args: ["-y", "caldav-mcp"],                     env: { CALDAV_BASE_URL: "http://localhost:5232", CALDAV_USERNAME: "", CALDAV_PASSWORD: "" },
-    help: "Works with any CalDAV server (Radicale, Nextcloud, etc.).\n1. Enter your CalDAV server URL (e.g. http://localhost:5232)\n2. Enter your username and password\n3. Click Add Server" },
-  { name: "Google Calendar", command: "npx", args: ["-y", "@cocal/google-calendar-mcp"],                 env: { GOOGLE_OAUTH_CREDENTIALS: "" },
+    help: "Works with any CalDAV server (Radicale, Nextcloud, etc.).\n1. Enter your CalDAV server URL (e.g. http://localhost:5232)\n2. Enter your username and password\n3. Click Agregar Server" },
+  { name: "Google Calendario", command: "npx", args: ["-y", "@cocal/google-calendar-mcp"],                 env: { GOOGLE_OAUTH_CREDENTIALS: "" },
     help: `Setup:
 1. Go to console.cloud.google.com > create/select a project
-2. APIs & Services > Library > enable Google Calendar API
-3. APIs & Services > Credentials > + Create Credentials > OAuth Client ID
-4. Application type: Desktop App > Create
-5. Click "Download JSON" on the credential you just created
+2. APIs & Services > Library > enable Google Calendario API
+3. APIs & Services > Credentials > + Crear Credentials > OAuth Client ID
+4. Application type: Desktop App > Crear
+5. Click "Descargar JSON" on the credential you just created
 6. Set Google Oauth Credentials to the full path of the downloaded JSON file` },
   { name: "Google Drive",    command: "npx", args: ["-y", "@modelcontextprotocol/server-gdrive"],        env: {},
-    help: "Google Drive uses browser-based OAuth on first run. No env vars needed — just click Add and authorize when prompted." },
+    help: "Google Drive uses browser-based OAuth on first run. No env vars needed — just click Agregar and authorize when prompted." },
   { name: "GitHub",          command: "npx", args: ["-y", "@modelcontextprotocol/server-github"],        env: { GITHUB_PERSONAL_ACCESS_TOKEN: "" },
-    help: "1. Go to github.com > Settings > Developer Settings > Personal Access Tokens > Fine-grained tokens\n2. Generate a new token with the repo permissions you need\n3. Paste it as Github Personal Access Token" },
+    help: "1. Go to github.com > Configuración > Developer Configuración > Personal Access Tokens > Fine-grained tokens\n2. Generate a new token with the repo permissions you need\n3. Paste it as Github Personal Access Token" },
   { name: "Slack",           command: "npx", args: ["-y", "@modelcontextprotocol/server-slack"],         env: { SLACK_BOT_TOKEN: "", SLACK_TEAM_ID: "" },
-    help: "1. Go to api.slack.com/apps > Create New App > From Scratch\n2. Add Bot Token Scopes (channels:read, chat:write, etc.)\n3. Install to workspace, copy the Bot User OAuth Token (xoxb-...)\n4. Team ID is in your workspace URL or Slack admin settings" },
+    help: "1. Go to api.slack.com/apps > Crear New App > From Scratch\n2. Agregar Bot Token Scopes (channels:read, chat:write, etc.)\n3. Install to workspace, copy the Bot User OAuth Token (xoxb-...)\n4. Team ID is in your workspace URL or Slack admin settings" },
   { name: "Notion",          command: "npx", args: ["-y", "@notionhq/notion-mcp-server"],               env: { OPENAPI_MCP_HEADERS: "" },
-    help: "1. Go to notion.so/my-integrations\n2. Create a new integration\n3. Copy the Internal Integration Secret\n4. Share the Notion pages/databases you want accessible with the integration\n5. For Openapi Mcp Headers enter:\n   {\"Authorization\": \"Bearer YOUR_SECRET\", \"Notion-Version\": \"2022-06-28\"}" },
+    help: "1. Go to notion.so/my-integrations\n2. Crear a new integration\n3. Copiar the Internal Integration Secret\n4. Compartir the Notion pages/databases you want accessible with the integration\n5. For Openapi Mcp Headers enter:\n   {\"Authorization\": \"Bearer YOUR_SECRET\", \"Notion-Version\": \"2022-06-28\"}" },
   { name: "Linear",          command: "npx", args: ["-y", "mcp-linear"],                                env: { LINEAR_API_KEY: "" },
-    help: "1. Go to linear.app > Settings > API\n2. Create a Personal API Key\n3. Paste it as Linear Api Key" },
-  { name: "Brave Search",    command: "npx", args: ["-y", "@modelcontextprotocol/server-brave-search"], env: { BRAVE_API_KEY: "" },
-    help: "1. Go to brave.com/search/api\n2. Sign up for a free plan (2000 queries/month)\n3. Copy your API key" },
+    help: "1. Go to linear.app > Configuración > API\n2. Crear a Personal API Key\n3. Paste it as Linear Api Key" },
+  { name: "Brave Buscar",    command: "npx", args: ["-y", "@modelcontextprotocol/server-brave-search"], env: { BRAVE_API_KEY: "" },
+    help: "1. Go to brave.com/search/api\n2. Registrarse for a free plan (2000 queries/month)\n3. Copiar your API key" },
   { name: "Browser (Playwright)", command: "npx", args: ["-y", "@playwright/mcp@latest", "--headless"],  env: {},
     help: "Browser automation via Playwright. The AI can navigate pages, click, fill forms, and read content.\nRuns headless by default. Remove --headless from Args to see the browser window.\nFirst run installs Chromium automatically." },
   { name: "Filesystem",      command: "npx", args: ["-y", "@modelcontextprotocol/server-filesystem", "/home"], env: {},
-    help: "Edit the Args field to change which directory the server has access to." },
-  { name: "Memory",          command: "npx", args: ["-y", "@modelcontextprotocol/server-memory"],        env: {} },
+    help: "Editar the Args field to change which directory the server has access to." },
+  { name: "Memoria",          command: "npx", args: ["-y", "@modelcontextprotocol/server-memory"],        env: {} },
   { name: "Postgres",        command: "npx", args: ["-y", "@modelcontextprotocol/server-postgres", "postgresql://user:pass@localhost/db"], env: {},
     help: "Replace the connection string in the Args field with your actual Postgres connection URL." },
   { name: "Todoist",         command: "npx", args: ["-y", "todoist-mcp-server"],                         env: { TODOIST_API_TOKEN: "" },
-    help: "1. Go to todoist.com > Settings > Integrations > Developer\n2. Copy your API token" },
+    help: "1. Go to todoist.com > Configuración > Integrations > Developer\n2. Copiar your API token" },
 ];
 // ── Built-in tools management ──
 const TOOL_META = {
@@ -1839,33 +1839,33 @@ const TOOL_META = {
   python:            { name: 'Python',           desc: 'Run Python scripts',              cat: 'Code',       ctx: '~200' },
   read_file:         { name: 'Read File',        desc: 'Read files from disk',            cat: 'Code',       ctx: '~150' },
   write_file:        { name: 'Write File',       desc: 'Write/create files',              cat: 'Code',       ctx: '~150' },
-  web_search:        { name: 'Web Search',       desc: 'Search the web via SearXNG',      cat: 'Search',     ctx: '~300' },
-  search_chats:      { name: 'Search Chats',     desc: 'Search conversation history',     cat: 'Search',     ctx: '~150' },
-  create_document:   { name: 'Create Document',  desc: 'Create new documents',            cat: 'Documents',  ctx: '~200' },
-  update_document:   { name: 'Update Document',  desc: 'Modify existing documents',       cat: 'Documents',  ctx: '~200' },
-  edit_document:     { name: 'Edit Document',    desc: 'Find & replace in documents',     cat: 'Documents',  ctx: '~200' },
-  suggest_document:  { name: 'Suggest Changes',  desc: 'Propose document edits',          cat: 'Documents',  ctx: '~200' },
-  manage_documents:  { name: 'Manage Documents', desc: 'List, delete, organize docs',     cat: 'Documents',  ctx: '~150' },
-  generate_image:    { name: 'Generate Image',   desc: 'Create images via AI',            cat: 'Media',      ctx: '~150' },
-  manage_memory:     { name: 'Memory',           desc: 'Save and recall memories',        cat: 'Knowledge',  ctx: '~200' },
+  web_search:        { name: 'Web Buscar',       desc: 'Buscar the web via SearXNG',      cat: 'Buscar',     ctx: '~300' },
+  search_chats:      { name: 'Buscar Chats',     desc: 'Buscar conversation history',     cat: 'Buscar',     ctx: '~150' },
+  create_document:   { name: 'Crear Document',  desc: 'Crear new documents',            cat: 'Documentos',  ctx: '~200' },
+  update_document:   { name: 'Actualizar Document',  desc: 'Modify existing documents',       cat: 'Documentos',  ctx: '~200' },
+  edit_document:     { name: 'Editar Document',    desc: 'Find & replace in documents',     cat: 'Documentos',  ctx: '~200' },
+  suggest_document:  { name: 'Suggest Changes',  desc: 'Propose document edits',          cat: 'Documentos',  ctx: '~200' },
+  manage_documents:  { name: 'Manage Documentos', desc: 'List, delete, organize docs',     cat: 'Documentos',  ctx: '~150' },
+  generate_image:    { name: 'Generate Image',   desc: 'Crear images via AI',            cat: 'Media',      ctx: '~150' },
+  manage_memory:     { name: 'Memoria',           desc: 'Guardar and recall memories',        cat: 'Knowledge',  ctx: '~200' },
   manage_skills:     { name: 'Skills',           desc: 'Learn and use procedures',        cat: 'Knowledge',  ctx: '~200' },
   manage_rag:        { name: 'RAG / Docs',       desc: 'Query indexed documents',         cat: 'Knowledge',  ctx: '~150' },
-  chat_with_model:   { name: 'Chat with Model',  desc: 'Talk to another AI model',        cat: 'Multi-Agent', ctx: '~200' },
+  chat_with_model:   { name: 'Chat with Modelo',  desc: 'Talk to another AI model',        cat: 'Multi-Agent', ctx: '~200' },
   pipeline:          { name: 'Pipeline',         desc: 'Multi-step AI workflows',         cat: 'Multi-Agent', ctx: '~200' },
   ask_teacher:       { name: 'Ask Teacher',      desc: 'Query a more capable model',      cat: 'Multi-Agent', ctx: '~150' },
-  send_to_session:   { name: 'Send to Session',  desc: 'Send message to another chat',    cat: 'Sessions',   ctx: '~100' },
-  create_session:    { name: 'Create Session',   desc: 'Start a new chat session',        cat: 'Sessions',   ctx: '~100' },
+  send_to_session:   { name: 'Send to Session',  desc: 'Enviar mensaje to another chat',    cat: 'Sessions',   ctx: '~100' },
+  create_session:    { name: 'Crear Session',   desc: 'Start a new chat session',        cat: 'Sessions',   ctx: '~100' },
   list_sessions:     { name: 'List Sessions',    desc: 'Browse existing sessions',        cat: 'Sessions',   ctx: '~100' },
-  manage_session:    { name: 'Manage Session',   desc: 'Rename, archive, configure',      cat: 'Sessions',   ctx: '~100' },
-  list_models:       { name: 'List Models',      desc: 'Show available models',           cat: 'System',     ctx: '~100' },
+  manage_session:    { name: 'Manage Session',   desc: 'Renombrar, archive, configure',      cat: 'Sessions',   ctx: '~100' },
+  list_models:       { name: 'List Modelos',      desc: 'Show available models',           cat: 'System',     ctx: '~100' },
   ui_control:        { name: 'UI Control',       desc: 'Change theme, layout, settings',  cat: 'System',     ctx: '~150' },
-  manage_tasks:      { name: 'Tasks',            desc: 'Schedule automated tasks',        cat: 'System',     ctx: '~150' },
+  manage_tasks:      { name: 'Tareas',            desc: 'Schedule automated tasks',        cat: 'System',     ctx: '~150' },
   api_call:          { name: 'API Call',         desc: 'Make HTTP requests',              cat: 'System',     ctx: '~200' },
-  manage_endpoints:  { name: 'Endpoints',        desc: 'Add/remove model endpoints',      cat: 'System',     ctx: '~100' },
+  manage_endpoints:  { name: 'Endpoints',        desc: 'Agregar/remove model endpoints',      cat: 'System',     ctx: '~100' },
   manage_mcp:        { name: 'MCP Servers',      desc: 'Manage MCP connections',          cat: 'System',     ctx: '~100' },
   manage_webhooks:   { name: 'Webhooks',         desc: 'Configure webhook events',        cat: 'System',     ctx: '~100' },
   manage_tokens:     { name: 'API Tokens',       desc: 'Manage API access tokens',        cat: 'System',     ctx: '~100' },
-  manage_settings:   { name: 'Settings',         desc: 'Change app settings',             cat: 'System',     ctx: '~100' },
+  manage_settings:   { name: 'Configuración',         desc: 'Change app settings',             cat: 'System',     ctx: '~100' },
 };
 
 async function loadBuiltinTools() {
@@ -1887,7 +1887,7 @@ async function loadBuiltinTools() {
     }
 
     // Category order
-    const catOrder = ['Code', 'Search', 'Documents', 'Media', 'Knowledge', 'Multi-Agent', 'Sessions', 'System', 'Other'];
+    const catOrder = ['Code', 'Buscar', 'Documentos', 'Media', 'Knowledge', 'Multi-Agent', 'Sessions', 'System', 'Other'];
     let html = '';
     for (const cat of catOrder) {
       const items = groups[cat];
@@ -2017,7 +2017,7 @@ async function loadMcpServers() {
             ${s.needs_oauth ? `<a href="/api/mcp/oauth/authorize/${s.id}" target="_blank" class="admin-btn-sm" style="background:var(--red);color:#fff;text-decoration:none;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;">Authorize</a>` : ''}
             <button class="admin-btn-sm" data-adm-mcp-reconnect="${s.id}">Reconnect</button>
             <button class="admin-btn-delete" style="border-color:${s.is_enabled ? 'color-mix(in srgb, var(--red) 30%, transparent)' : 'color-mix(in srgb, var(--fg) 30%, transparent)'};color:${s.is_enabled ? 'var(--red)' : 'var(--fg)'};" data-adm-mcp-toggle="${s.id}" data-adm-mcp-enable="${!s.is_enabled}">${s.is_enabled ? 'Disable' : 'Enable'}</button>
-            <button class="admin-btn-delete" data-adm-mcp-delete="${s.id}">Delete</button>
+            <button class="admin-btn-delete" data-adm-mcp-delete="${s.id}">Eliminar</button>
             ${hasTools ? '<svg class="admin-user-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3;transition:transform 0.2s,opacity 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>' : ''}
           </div>
         </div>
@@ -2045,8 +2045,8 @@ async function loadMcpServers() {
     });
     list.querySelectorAll('[data-adm-mcp-delete]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!await uiModule.styledConfirm('Delete this MCP server?', { confirmText: 'Delete', danger: true })) return;
-        await fetch(`/api/mcp/servers/${btn.dataset.admMcpDelete}`, { method: 'DELETE', credentials: 'same-origin' });
+        if (!await uiModule.styledConfirmar('Eliminar this MCP server?', { confirmText: 'Eliminar', danger: true })) return;
+        await fetch(`/api/mcp/servers/${btn.dataset.admMcpEliminar}`, { method: 'DELETE', credentials: 'same-origin' });
         loadMcpServers();
       });
     });
@@ -2122,10 +2122,10 @@ async function _saveMcpToolState(serverId, panel) {
       credentials: 'same-origin',
       body: JSON.stringify({ disabled }),
     });
-    // Update the count label in the panel
+    // Actualizar the count label in the panel
     const countLabel = panel.querySelector('.mcp-tools-count');
     if (countLabel) countLabel.textContent = `${total - disabled.length}/${total} enabled`;
-    // Update badge in the server row
+    // Actualizar badge in the server row
     const row = panel.closest('[data-adm-mcp-id]');
     if (row) {
       const badge = row.querySelector('.admin-badge');
@@ -2162,7 +2162,7 @@ function initMcpForm() {
     if (!keys.length) return;
     _envKeys = keys;
 
-    // Provider dropdown (e.g. for Email IMAP/SMTP)
+    // Provider dropdown (e.g. for Correo IMAP/SMTP)
     if (preset?.providerDropdown) {
       const pd = preset.providerDropdown;
       const row = document.createElement('div');
@@ -2281,11 +2281,11 @@ function initMcpForm() {
       // Focus first env field if keys are needed
       const firstInput = envFieldsWrap.querySelector('.mcp-env-input');
       if (firstInput) firstInput.focus();
-      else el('adm-mcpAddBtn').focus();
+      else el('adm-mcpAgregarBtn').focus();
     });
   }
 
-  el('adm-mcpAddBtn').addEventListener('click', async () => {
+  el('adm-mcpAgregarBtn').addEventListener('click', async () => {
     const name = el('adm-mcpName').value.trim();
     const transport = transportSel.value;
     const command = el('adm-mcpCommand').value.trim();
@@ -2313,16 +2313,16 @@ function initMcpForm() {
     if (_activeOauth) {
       fd.append('oauth_config', JSON.stringify(_activeOauth));
     }
-    msg.textContent = 'Adding...'; msg.className = '';
+    msg.textContent = 'Agregaring...'; msg.className = '';
     try {
       const res = await fetch('/api/mcp/servers', { method: 'POST', body: fd, credentials: 'same-origin' });
       const data = await res.json();
       if (data.needs_oauth) {
-        msg.innerHTML = `Added ${esc(name)} — <a href="/api/mcp/oauth/authorize/${data.id}" target="_blank" style="color:var(--red);font-weight:600;">Authorize with Google</a> to connect`;
+        msg.innerHTML = `Agregared ${esc(name)} — <a href="/api/mcp/oauth/authorize/${data.id}" target="_blank" style="color:var(--red);font-weight:600;">Authorize with Google</a> to connect`;
         msg.className = 'admin-success';
       } else if (data.connected) {
-        msg.textContent = `Added ${name} (${data.tool_count} tools discovered)`; msg.className = 'admin-success';
-      } else { msg.textContent = `Added but connection failed: ${data.error || 'unknown'}`; msg.className = 'admin-error'; }
+        msg.textContent = `Agregared ${name} (${data.tool_count} tools discovered)`; msg.className = 'admin-success';
+      } else { msg.textContent = `Agregared but connection failed: ${data.error || 'unknown'}`; msg.className = 'admin-error'; }
       el('adm-mcpName').value = ''; el('adm-mcpCommand').value = ''; el('adm-mcpArgs').value = ''; el('adm-mcpUrl').value = '';
       _clearEnvFields(); helpBox.style.display = 'none'; _activeHelp = null; _activeOauthFile = null; _activeOauth = null;
       loadMcpServers();
@@ -2348,7 +2348,7 @@ async function loadRag() {
       dirList.innerHTML = dirs.map(d => `<div class="admin-rag-item"><span class="admin-rag-item-name" title="${esc(d)}">${esc(d)}</span><button class="admin-btn-delete" data-adm-rag-dir="${esc(d)}">Remove</button></div>`).join('');
       dirList.querySelectorAll('[data-adm-rag-dir]').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!await uiModule.styledConfirm(`Remove directory "${btn.dataset.admRagDir}" from RAG?`, { confirmText: 'Remove', danger: true })) return;
+          if (!await uiModule.styledConfirmar(`Remove directory "${btn.dataset.admRagDir}" from RAG?`, { confirmText: 'Remove', danger: true })) return;
           btn.disabled = true; btn.textContent = '...';
           try {
             const res = await fetch('/api/personal/remove_directory?directory=' + encodeURIComponent(btn.dataset.admRagDir), { method: 'DELETE' });
@@ -2364,11 +2364,11 @@ async function loadRag() {
     else {
       fileList.innerHTML = files.map(f => {
         const size = f.size ? (f.size > 1024 ? (f.size / 1024).toFixed(1) + ' KB' : f.size + ' B') : '';
-        return `<div class="admin-rag-item"><span class="admin-rag-item-name" title="${esc(f.path || f.name)}">${esc(f.name)}</span><span class="admin-rag-item-meta">${size}</span><button class="admin-btn-delete" data-adm-rag-file="${esc(f.path || f.name)}">Delete</button></div>`;
+        return `<div class="admin-rag-item"><span class="admin-rag-item-name" title="${esc(f.path || f.name)}">${esc(f.name)}</span><span class="admin-rag-item-meta">${size}</span><button class="admin-btn-delete" data-adm-rag-file="${esc(f.path || f.name)}">Eliminar</button></div>`;
       }).join('');
       fileList.querySelectorAll('[data-adm-rag-file]').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!await uiModule.styledConfirm(`Delete "${btn.dataset.admRagFile}" from RAG?`, { confirmText: 'Delete', danger: true })) return;
+          if (!await uiModule.styledConfirmar(`Eliminar "${btn.dataset.admRagFile}" from RAG?`, { confirmText: 'Eliminar', danger: true })) return;
           btn.disabled = true; btn.textContent = '...';
           try {
             const res = await fetch('/api/personal/file?filepath=' + encodeURIComponent(btn.dataset.admRagFile), { method: 'DELETE' });
@@ -2392,31 +2392,31 @@ function ragMsg(text, isError, persist) {
   if (text && !persist) _ragMsgTimer = setTimeout(() => { s.textContent = ''; }, 5000);
 }
 
-async function ragUpload(files) {
+async function ragSubir(files) {
   if (!files || files.length === 0) return;
-  ragMsg('Uploading ' + files.length + ' file(s)...', false, true);
+  ragMsg('Subiring ' + files.length + ' file(s)...', false, true);
   const fd = new FormData();
   for (const f of files) fd.append('files', f);
   try {
     const res = await fetch('/api/personal/upload', { method: 'POST', body: fd });
     const data = await res.json();
-    if (data.success) { ragMsg(`Uploaded ${data.uploaded.length} file(s), ${data.indexed_count} chunks indexed`); loadRag(); }
-    else ragMsg(data.detail || 'Upload failed', true);
-  } catch (e) { ragMsg('Upload error: ' + e.message, true); }
+    if (data.success) { ragMsg(`Subired ${data.uploaded.length} file(s), ${data.indexed_count} chunks indexed`); loadRag(); }
+    else ragMsg(data.detail || 'Subir failed', true);
+  } catch (e) { ragMsg('Subir error: ' + e.message, true); }
 }
 
 function initRag() {
   const dropZone = el('adm-ragDropZone');
   const fileInput = el('adm-ragFileInput');
   dropZone.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => ragUpload(fileInput.files));
+  fileInput.addEventListener('change', () => ragSubir(fileInput.files));
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); ragUpload(e.dataTransfer.files); });
-  el('adm-ragAddDirBtn').addEventListener('click', async () => {
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); ragSubir(e.dataTransfer.files); });
+  el('adm-ragAgregarDirBtn').addEventListener('click', async () => {
     const dir = el('adm-ragDirInput').value.trim();
     if (!dir) return;
-    const btn = el('adm-ragAddDirBtn');
+    const btn = el('adm-ragAgregarDirBtn');
     btn.disabled = true; btn.textContent = 'Indexing...';
     try {
       const res = await fetch('/api/personal/add_directory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: dir }) });
@@ -2424,7 +2424,7 @@ function initRag() {
       if (data.success) { ragMsg(`Indexed ${data.indexed_count} chunks from directory`); el('adm-ragDirInput').value = ''; loadRag(); }
       else ragMsg(data.detail || data.message || 'Failed', true);
     } catch (e) { ragMsg('Error: ' + e.message, true); }
-    btn.disabled = false; btn.textContent = 'Add Directory';
+    btn.disabled = false; btn.textContent = 'Agregar Directory';
   });
   el('adm-ragReloadBtn').addEventListener('click', async () => {
     const btn = el('adm-ragReloadBtn');
@@ -2446,18 +2446,18 @@ function initRag() {
 // sync with the backend scope allowlist.
 const _TOKEN_SCOPES = [
   { key: 'todos:read',        label: 'Todos read',        detail: 'Read notes and checklists' },
-  { key: 'todos:write',       label: 'Todos write',       detail: 'Create, update, delete, and toggle todo items' },
-  { key: 'documents:read',    label: 'Documents read',    detail: 'Read documents when a document API is enabled' },
-  { key: 'documents:write',   label: 'Documents write',   detail: 'Create and update draft documents' },
-  { key: 'email:read',        label: 'Email read',        detail: 'Read email when an email API is enabled' },
-  { key: 'email:draft',       label: 'Email draft',       detail: 'Create email reply drafts without sending' },
-  { key: 'email:send',        label: 'Email send',        detail: 'Send email directly' },
-  { key: 'calendar:read',     label: 'Calendar read',     detail: 'Read calendar events when enabled' },
-  { key: 'calendar:write',    label: 'Calendar write',    detail: 'Create and update calendar events' },
-  { key: 'memory:read',       label: 'Memory read',       detail: 'Read memory when enabled' },
-  { key: 'memory:write',      label: 'Memory write',      detail: 'Write memory when enabled' },
-  { key: 'cookbook:read',     label: 'Cookbook read',     detail: 'List cookbook tasks + tail their tmux output' },
-  { key: 'cookbook:launch',   label: 'Cookbook launch',   detail: 'Launch and stop cookbook serve tasks' },
+  { key: 'todos:write',       label: 'Todos write',       detail: 'Crear, update, delete, and toggle todo items' },
+  { key: 'documents:read',    label: 'Documentos read',    detail: 'Read documents when a document API is enabled' },
+  { key: 'documents:write',   label: 'Documentos write',   detail: 'Crear and update draft documents' },
+  { key: 'email:read',        label: 'Correo read',        detail: 'Read email when an email API is enabled' },
+  { key: 'email:draft',       label: 'Correo draft',       detail: 'Crear email reply drafts without sending' },
+  { key: 'email:send',        label: 'Correo send',        detail: 'Send email directly' },
+  { key: 'calendar:read',     label: 'Calendario read',     detail: 'Read calendar events when enabled' },
+  { key: 'calendar:write',    label: 'Calendario write',    detail: 'Crear and update calendar events' },
+  { key: 'memory:read',       label: 'Memoria read',       detail: 'Read memory when enabled' },
+  { key: 'memory:write',      label: 'Memoria write',      detail: 'Write memory when enabled' },
+  { key: 'cookbook:read',     label: 'Recetas read',     detail: 'List cookbook tasks + tail their tmux output' },
+  { key: 'cookbook:launch',   label: 'Recetas launch',   detail: 'Launch and stop cookbook serve tasks' },
 ];
 
 function _renderTokenScopeRows(t) {
@@ -2506,10 +2506,10 @@ async function loadTokens() {
     // Revoke
     list.querySelectorAll('[data-adm-del-token]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!await uiModule.styledConfirm('Revoke this API token? External integrations using it will stop working.', { confirmText: 'Revoke', danger: true })) return;
+        if (!await uiModule.styledConfirmar('Revoke this API token? External integrations using it will stop working.', { confirmText: 'Revoke', danger: true })) return;
         await fetch(`/api/tokens/${btn.dataset.admDelToken}`, { method: 'DELETE', credentials: 'same-origin' });
         loadTokens();
-        // Codex / Claude integration cards on the Integrations panel are
+        // Códex / Claude integration cards on the Integrations panel are
         // backed by these tokens — let them re-render so the deleted token
         // disappears there too.
         try { window.dispatchEvent(new CustomEvent('odysseus-integrations-changed')); } catch (_) {}
@@ -2523,7 +2523,7 @@ async function loadTokens() {
         panel.style.display = panel.style.display === 'none' ? '' : 'none';
       });
     });
-    // Rename
+    // Renombrar
     list.querySelectorAll('.adm-tok-rename').forEach(input => {
       const original = input.value;
       const commit = async () => {
@@ -2535,7 +2535,7 @@ async function loadTokens() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name }),
           });
-          if (!r.ok) throw new Error('Save failed');
+          if (!r.ok) throw new Error('Guardar failed');
           loadTokens();
         } catch (_) { input.value = original; }
       };
@@ -2557,7 +2557,7 @@ async function loadTokens() {
           });
           const d = await r.json().catch(() => ({}));
           if (!r.ok) throw new Error(d.detail || 'Failed');
-          if (msg) { msg.textContent = 'Saved'; msg.style.color = 'var(--green, #50fa7b)'; setTimeout(() => { msg.textContent = ''; }, 1200); }
+          if (msg) { msg.textContent = 'Guardard'; msg.style.color = 'var(--green, #50fa7b)'; setTimeout(() => { msg.textContent = ''; }, 1200); }
         } catch (err) {
           cb.checked = !cb.checked;
           if (msg) { msg.textContent = (err && err.message) || 'Failed'; msg.style.color = 'var(--red)'; }
@@ -2568,7 +2568,7 @@ async function loadTokens() {
 }
 
 function initTokenForm() {
-  const addBtn = el('adm-tokenAddBtn');
+  const addBtn = el('adm-tokenAgregarBtn');
   if (!addBtn || addBtn.dataset.bound) return;
   addBtn.dataset.bound = '1';
   addBtn.addEventListener('click', async () => {
@@ -2595,9 +2595,9 @@ function initTokenForm() {
   });
   const TOKEN_COPY_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   const TOKEN_CHECK_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  el('adm-tokenCopyBtn').addEventListener('click', () => {
+  el('adm-tokenCopiarBtn').addEventListener('click', () => {
     const val = el('adm-tokenValue').textContent;
-    const btn = el('adm-tokenCopyBtn');
+    const btn = el('adm-tokenCopiarBtn');
     navigator.clipboard.writeText(val).then(() => {
       btn.innerHTML = TOKEN_CHECK_ICON;
       btn.style.color = 'var(--accent, var(--red))';
@@ -2637,7 +2637,7 @@ async function loadWebhooks() {
           <div class="admin-ep-actions">
             <button class="admin-btn-sm" data-adm-wh-test="${w.id}">Test</button>
             <button class="admin-btn-sm" data-adm-wh-toggle="${w.id}">${w.is_active ? 'Disable' : 'Enable'}</button>
-            <button class="admin-btn-delete" data-adm-wh-delete="${w.id}">Delete</button>
+            <button class="admin-btn-delete" data-adm-wh-delete="${w.id}">Eliminar</button>
           </div>
         </div>`;
     }).join('');
@@ -2656,15 +2656,15 @@ async function loadWebhooks() {
     });
     list.querySelectorAll('[data-adm-wh-delete]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!await uiModule.styledConfirm('Delete this webhook?', { confirmText: 'Delete', danger: true })) return;
-        await fetch(`/api/webhooks/${btn.dataset.admWhDelete}`, { method: 'DELETE', credentials: 'same-origin' }); loadWebhooks();
+        if (!await uiModule.styledConfirmar('Eliminar this webhook?', { confirmText: 'Eliminar', danger: true })) return;
+        await fetch(`/api/webhooks/${btn.dataset.admWhEliminar}`, { method: 'DELETE', credentials: 'same-origin' }); loadWebhooks();
       });
     });
   } catch (e) { list.innerHTML = '<div class="admin-error">Failed to load webhooks</div>'; }
 }
 
 function initWebhookForm() {
-  el('adm-whAddBtn').addEventListener('click', async () => {
+  el('adm-whAgregarBtn').addEventListener('click', async () => {
     const msg = el('adm-whMsg');
     msg.textContent = ''; msg.className = '';
     const name = el('adm-whName').value.trim();
@@ -2686,9 +2686,9 @@ function initWebhookForm() {
 
 /* ── Features ── */
 const featureLabels = {
-  web_search: 'Web Search', deep_research: 'Deep Research',
-  memory: 'Memory', document_editor: 'Document Editor', rag: 'RAG Knowledge Base', sensitive_filter: 'Sensitive Info Filter',
-  gallery: 'Gallery'
+  web_search: 'Web Buscar', deep_research: 'Deep Investigación',
+  memory: 'Memoria', document_editor: 'Document Editaror', rag: 'RAG Knowledge Base', sensitive_filter: 'Sensitive Info Filter',
+  gallery: 'Galería'
 };
 
 async function loadFeatures() {
@@ -2737,7 +2737,7 @@ function initCalDAV() {
         body: JSON.stringify({ caldav_url: urlIn.value, caldav_username: userIn.value, caldav_password: passIn.value }),
       });
       const d = await res.json();
-      status.textContent = d.ok ? 'Saved' : 'Error';
+      status.textContent = d.ok ? 'Guardard' : 'Error';
       status.style.color = d.ok ? 'var(--green)' : 'var(--red)';
     } catch (e) { status.textContent = 'Error'; status.style.color = 'var(--red)'; }
     setTimeout(() => { status.textContent = ''; status.style.color = ''; }, 3000);
@@ -2746,7 +2746,7 @@ function initCalDAV() {
   testBtn.addEventListener('click', async () => {
     status.textContent = 'Testing...';
     try {
-      // Save first
+      // Guardar first
       await fetch(`${API_BASE}/api/calendar/config`, {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -2835,8 +2835,8 @@ function initDangerZone() {
       const kind = btn.dataset.wipeKind;
       const isAll = kind === '__all__';
       const label = isAll ? 'data across every category' : (_LABELS[kind] || kind);
-      if (!await uiModule.styledConfirm(`Delete ALL ${label}? This cannot be undone.`, { confirmText: 'Delete', danger: true })) return;
-      if (!await uiModule.styledConfirm(`Really delete every one of your ${label}?`, { confirmText: isAll ? 'Yes, delete everything' : 'Yes, delete everything', danger: true })) return;
+      if (!await uiModule.styledConfirmar(`Eliminar ALL ${label}? This cannot be undone.`, { confirmText: 'Eliminar', danger: true })) return;
+      if (!await uiModule.styledConfirmar(`Really delete every one of your ${label}?`, { confirmText: isAll ? 'Sí, delete everything' : 'Sí, delete everything', danger: true })) return;
       btn.disabled = true;
       const prevHtml = btn.innerHTML;
       btn.innerHTML = isAll ? 'Deleting all…' : 'Deleting…';
@@ -2861,10 +2861,10 @@ function initDangerZone() {
           const fails = results.filter(r => !r.ok).map(r => r.k);
           if (_wipeMsg) {
             if (!fails.length) {
-              _wipeMsg.textContent = `Deleted ${total} items across all ${okCount} categories.`;
+              _wipeMsg.textContent = `Eliminard ${total} items across all ${okCount} categories.`;
               _wipeMsg.className = 'admin-success';
             } else {
-              _wipeMsg.textContent = `Deleted ${total} items; failed: ${fails.join(', ')}.`;
+              _wipeMsg.textContent = `Eliminard ${total} items; failed: ${fails.join(', ')}.`;
               _wipeMsg.className = 'admin-error';
             }
           }
@@ -2872,7 +2872,7 @@ function initDangerZone() {
           const res = await fetch(`/api/admin/wipe/${kind}`, { method: 'DELETE', credentials: 'same-origin' });
           const data = await res.json().catch(() => ({}));
           if (res.ok) {
-            if (_wipeMsg) { _wipeMsg.textContent = `Deleted ${data.count ?? 0} ${label}.`; _wipeMsg.className = 'admin-success'; }
+            if (_wipeMsg) { _wipeMsg.textContent = `Eliminard ${data.count ?? 0} ${label}.`; _wipeMsg.className = 'admin-success'; }
           } else {
             if (_wipeMsg) { _wipeMsg.textContent = data.detail || 'Failed'; _wipeMsg.className = 'admin-error'; }
           }
@@ -3081,7 +3081,7 @@ function initLogsView() {
 function initAll() {
   modalEl = el('settings-modal');
   const inits = [
-    initSignupToggle, initShareDefaultsToggle, initAddUser, initEndpointForm, initMcpForm,
+    initSignupToggle, initCompartirDefaultsToggle, initAgregarUser, initEndpointForm, initMcpForm,
     initCalDAV, initBackup, initDangerZone, initTokenForm, initLogsView,
     () => settingsModule.initIntegrations()
   ];

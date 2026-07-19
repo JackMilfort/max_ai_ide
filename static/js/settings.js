@@ -1,11 +1,11 @@
-// static/js/settings.js — Settings panel module (ES6)
+// static/js/settings.js — Configuración panel module (ES6)
 // User-facing preferences: AI models, search, appearance
 
 import uiModule from './ui.js';
 import searchModule from './search.js';
 import { makeWindowDraggable } from './windowDrag.js';
 import { clearDockSide } from './modalSnap.js';
-import { sortModelIds } from './modelSort.js';
+import { sortModeloIds } from './modelSort.js';
 import { providerLogo } from './providers.js';
 import { isAltGrEvent } from './platform.js';
 import { bindMenuDismiss } from './escMenuStack.js';
@@ -40,7 +40,7 @@ function initTabs() {
       // they flip toggles instead of having to close + reopen the modal.
       document.body.classList.toggle('settings-appearance-open', tab === 'appearance');
       syncAppearanceOpacity(tab === 'appearance');
-      if (tab === 'ai') refreshAiModelEndpoints();
+      if (tab === 'ai') refreshAiModeloEndpoints();
     });
   });
 }
@@ -84,13 +84,13 @@ function resetWindowPlacement() {
   ].forEach(prop => content.style.removeProperty(prop));
 }
 
-/* ── Delegated link: close Settings + open the Prompt (characters) modal ── */
+/* ── Delegated link: close Configuración + open the Prompt (characters) modal ── */
 function initOpenPromptModalLink() {
   document.addEventListener('click', async (e) => {
     const link = e.target.closest('[data-open-prompt-modal]');
     if (!link) return;
     e.preventDefault();
-    // Close settings first so the prompt modal isn't stacked on top.
+    // Cerrar settings first so the prompt modal isn't stacked on top.
     if (modalEl && !modalEl.classList.contains('hidden')) close();
     try {
       const m = await import('./presets.js');
@@ -107,8 +107,8 @@ function initOpenPromptModalLink() {
   });
 }
 
-/* ── Close on backdrop / X ── */
-function initClose() {
+/* ── Cerrar on backdrop / X ── */
+function initCerrar() {
   modalEl.querySelector('.close-btn').addEventListener('click', close);
   modalEl.addEventListener('mousedown', e => {
     if (uiModule.isTouchInsideModal()) return;
@@ -144,12 +144,12 @@ function initClose() {
 }
 
 /* ── Appearance-tab opacity slider ──
-   Mirrors the Theme customizer's slider: fades the settings modal's
+   Mirrors the Tema customizer's slider: fades the settings modal's
    background (and inner cards) via color-mix so the user can watch the
    rest of the UI react to toggles, while keeping text/controls crisp
    (no element opacity). Only shown/active on the Appearance tab. */
 const _SETTINGS_PEEK = 55; // % opacity when the Peek toggle is on
-function _applySettingsOpacity(on) {
+function _applyConfiguraciónOpacity(on) {
   const content = modalEl && modalEl.querySelector('.settings-modal-content, .modal-content');
   if (!content) return;
   const cards = content.querySelectorAll('.admin-card');
@@ -181,9 +181,9 @@ function syncAppearanceOpacity(active) {
   const toggle = el('settings-opacity-wrap');
   if (toggle) toggle.classList.toggle('hidden', !active);
   if (active) {
-    _applySettingsOpacity(toggle ? toggle.classList.contains('active') : false);
+    _applyConfiguraciónOpacity(toggle ? toggle.classList.contains('active') : false);
   } else {
-    _applySettingsOpacity(false); // clear the fade off the Appearance tab
+    _applyConfiguraciónOpacity(false); // clear the fade off the Appearance tab
   }
 }
 
@@ -195,7 +195,7 @@ function initOpacityToggle() {
     const on = !toggle.classList.contains('active');
     toggle.classList.toggle('active', on);
     toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-    _applySettingsOpacity(on);
+    _applyConfiguraciónOpacity(on);
   });
 }
 
@@ -206,7 +206,7 @@ function initOpacityToggle() {
 const _aiEndpointRefreshers = new Set();
 let _aiEndpointRefreshInFlight = null;
 
-async function _fetchModelEndpoints() {
+async function _fetchModeloEndpoints() {
   const epRes = await fetch('/api/model-endpoints', { credentials: 'same-origin' });
   const endpoints = await epRes.json();
   return Array.isArray(endpoints) ? endpoints : [];
@@ -247,7 +247,7 @@ function _fillEndpointSelect(selectEl, endpoints, selected, keepBlank) {
 // Mirror the selected model's provider logo into a sibling <span id="<selectId>-logo">.
 // Wires the change listener exactly once so we can call this every time the
 // select is repopulated without piling on duplicate handlers.
-function _syncModelLogo(selectEl) {
+function _syncModeloLogo(selectEl) {
   if (!selectEl) return;
   const logoEl = document.getElementById(selectEl.id + '-logo');
   if (!logoEl) return;
@@ -278,7 +278,7 @@ function _syncEndpointLogo(selectEl) {
   }
 }
 
-function _fillModelSelect(selectEl, models, selected, keepBlank) {
+function _fillModeloSelect(selectEl, models, selected, keepBlank) {
   if (!selectEl) return;
   const previous = selected !== undefined ? selected : selectEl.value;
   const blankText = keepBlank && selectEl.options[0] && selectEl.options[0].value === ''
@@ -291,7 +291,7 @@ function _fillModelSelect(selectEl, models, selected, keepBlank) {
     blank.textContent = blankText;
     selectEl.appendChild(blank);
   }
-  sortModelIds(models).forEach(function(m) {
+  sortModeloIds(models).forEach(function(m) {
     const opt = document.createElement('option');
     opt.value = m;
     opt.textContent = String(m).split('/').pop();
@@ -302,18 +302,18 @@ function _fillModelSelect(selectEl, models, selected, keepBlank) {
   } else if (blankText !== null) {
     selectEl.value = '';
   }
-  _syncModelLogo(selectEl);
+  _syncModeloLogo(selectEl);
 }
 
 function _registerAiEndpointRefresh(fn) {
   _aiEndpointRefreshers.add(fn);
 }
 
-export async function refreshAiModelEndpoints() {
+export async function refreshAiModeloEndpoints() {
   if (_aiEndpointRefreshInFlight) return _aiEndpointRefreshInFlight;
   _aiEndpointRefreshInFlight = (async function() {
     try {
-      const endpoints = await _fetchModelEndpoints();
+      const endpoints = await _fetchModeloEndpoints();
       _aiEndpointRefreshers.forEach(function(fn) {
         try { fn(endpoints); } catch (e) { console.warn('[settings] endpoint refresh handler failed', e); }
       });
@@ -326,7 +326,7 @@ export async function refreshAiModelEndpoints() {
   return _aiEndpointRefreshInFlight;
 }
 
-/* Shared fallback-chain widget — mirrors the Default Chat Model fallback UI
+/* Compartird fallback-chain widget — mirrors the Default Chat Modelo fallback UI
  * for other model cards (Utility, Vision, …). Pass in the container/button
  * IDs, the endpoints list, the settings key to persist under, and the
  * model-filter (for Vision we exclude non-chat-capable models).
@@ -343,11 +343,11 @@ function _bindFallbackWidget(opts) {
 
   function enabledEps() { return (endpointsRef() || []).filter(function(e) { return e.is_enabled; }); }
 
-  function fillModels(selectEl, epId, selected) {
+  function fillModelos(selectEl, epId, selected) {
     while (selectEl.options.length) selectEl.remove(0);
     var ep = (endpointsRef() || []).find(function(e) { return e.id === epId; });
     if (ep && ep.models) {
-      sortModelIds(ep.models).forEach(function(m) {
+      sortModeloIds(ep.models).forEach(function(m) {
         if (!modelsFilter(m, ep)) return;
         var o = document.createElement('option');
         o.value = m;
@@ -393,14 +393,14 @@ function _bindFallbackWidget(opts) {
 
       var mS = document.createElement('select');
       mS.className = 'settings-select';
-      fillModels(mS, epS.value, fb.model);
+      fillModelos(mS, epS.value, fb.model);
 
       fb.endpoint_id = epS.value;
       fb.model = mS.value;
 
       epS.addEventListener('change', function() {
         fb.endpoint_id = epS.value;
-        fillModels(mS, epS.value, '');
+        fillModelos(mS, epS.value, '');
         fb.model = mS.value;
         save();
       });
@@ -440,13 +440,13 @@ function _bindFallbackWidget(opts) {
   };
 }
 
-/* ── Default Chat Model ── */
+/* ── Default Chat Modelo ── */
 async function initDefaultChat() {
   var epSel = el('set-defaultEpSelect');
-  var modelSel = el('set-defaultModelSelect');
+  var modelSel = el('set-defaultModeloSelect');
   var msg = el('set-defaultChatMsg');
   var fbContainer = el('set-defaultFallbacks');
-  var addFbBtn = el('set-defaultAddFallback');
+  var addFbBtn = el('set-defaultAgregarFallback');
   var _endpoints = [];
   var _fallbacks = []; // [{endpoint_id, model}] — tried in order if primary fails
 
@@ -455,20 +455,20 @@ async function initDefaultChat() {
   }
 
   // Fill any <select> with the models for a given endpoint id.
-  function fillModels(selectEl, epId, selected) {
+  function fillModelos(selectEl, epId, selected) {
     var ep = _endpoints.find(function(e) { return e.id === epId; });
-    _fillModelSelect(selectEl, ep ? ep.models : [], selected, false);
+    _fillModeloSelect(selectEl, ep ? ep.models : [], selected, false);
   }
 
   try {
-    _endpoints = await _fetchModelEndpoints();
+    _endpoints = await _fetchModeloEndpoints();
     _fillEndpointSelect(epSel, _endpoints, epSel.value, false);
   } catch (e) { console.warn('Failed to load endpoints for default chat', e); }
 
-  function refreshModels(selectedModel) { fillModels(modelSel, epSel.value, selectedModel); }
-  function refreshEndpointOptions(selectedEndpoint, selectedModel) {
+  function refreshModelos(selectedModelo) { fillModelos(modelSel, epSel.value, selectedModelo); }
+  function refreshEndpointOptions(selectedEndpoint, selectedModelo) {
     _fillEndpointSelect(epSel, _endpoints, selectedEndpoint !== undefined ? selectedEndpoint : epSel.value, false);
-    refreshModels(selectedModel !== undefined ? selectedModel : modelSel.value);
+    refreshModelos(selectedModelo !== undefined ? selectedModelo : modelSel.value);
     renderFallbacks();
   }
 
@@ -496,7 +496,7 @@ async function initDefaultChat() {
 
       var mS = document.createElement('select');
       mS.className = 'settings-select';
-      fillModels(mS, epS.value, fb.model);
+      fillModelos(mS, epS.value, fb.model);
 
       // Keep the model in sync with the values actually shown.
       fb.endpoint_id = epS.value;
@@ -504,7 +504,7 @@ async function initDefaultChat() {
 
       epS.addEventListener('change', function() {
         fb.endpoint_id = epS.value;
-        fillModels(mS, epS.value, '');
+        fillModelos(mS, epS.value, '');
         fb.model = mS.value;
         saveDefault();
       });
@@ -533,7 +533,7 @@ async function initDefaultChat() {
     var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     var settings = await res.json();
     if (settings.default_endpoint_id) epSel.value = settings.default_endpoint_id;
-    refreshModels(settings.default_model || '');
+    refreshModelos(settings.default_model || '');
     _fallbacks = Array.isArray(settings.default_model_fallbacks)
       ? settings.default_model_fallbacks.map(function(f) {
           return { endpoint_id: (f && f.endpoint_id) || '', model: (f && f.model) || '' };
@@ -542,7 +542,7 @@ async function initDefaultChat() {
     renderFallbacks();
   } catch (e) { console.warn('Failed to load default chat settings', e); }
 
-  epSel.addEventListener('change', function() { refreshModels(''); saveDefault(); });
+  epSel.addEventListener('change', function() { refreshModelos(''); saveDefault(); });
   modelSel.addEventListener('change', saveDefault);
 
   async function saveDefault() {
@@ -556,7 +556,7 @@ async function initDefaultChat() {
           default_model_fallbacks: clean
         })
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(function() { msg.textContent = ''; }, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
@@ -574,10 +574,10 @@ async function initDefaultChat() {
   });
 }
 
-/* ── Utility Model ── */
-async function initUtilityModel() {
+/* ── Utility Modelo ── */
+async function initUtilityModelo() {
   var epSel = el('set-utilityEpSelect');
-  var modelSel = el('set-utilityModelSelect');
+  var modelSel = el('set-utilityModeloSelect');
   var msg = el('set-utilityChatMsg');
   var _endpoints = [];
   var fallbackWidget = null;
@@ -585,24 +585,24 @@ async function initUtilityModel() {
   if (modelSel && modelSel.options[0]) modelSel.options[0].textContent = 'Same as chat';
 
   try {
-    _endpoints = await _fetchModelEndpoints();
+    _endpoints = await _fetchModeloEndpoints();
     _fillEndpointSelect(epSel, _endpoints, epSel.value, true);
   } catch (e) { console.warn('Failed to load endpoints for utility model', e); }
 
-  function refreshModels(selectedModel) {
+  function refreshModelos(selectedModelo) {
     var epId = epSel.value;
     var ep = _endpoints.find(function(e) { return e.id === epId; });
-    _fillModelSelect(modelSel, ep ? ep.models : [], selectedModel, true);
+    _fillModeloSelect(modelSel, ep ? ep.models : [], selectedModelo, true);
   }
 
   try {
     var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     var settings = await res.json();
     if (settings.utility_endpoint_id) epSel.value = settings.utility_endpoint_id;
-    refreshModels(settings.utility_model || '');
+    refreshModelos(settings.utility_model || '');
     fallbackWidget = _bindFallbackWidget({
       containerId: 'set-utilityFallbacks',
-      addBtnId: 'set-utilityAddFallback',
+      addBtnId: 'set-utilityAgregarFallback',
       endpoints: function() { return _endpoints; },
       settingKey: 'utility_model_fallbacks',
       initial: Array.isArray(settings.utility_model_fallbacks)
@@ -623,46 +623,46 @@ async function initUtilityModel() {
           utility_model: modelSel.value || ''
         })
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(function() { msg.textContent = ''; }, 1500);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
 
-  epSel.addEventListener('change', function() { refreshModels(''); saveUtility(); });
+  epSel.addEventListener('change', function() { refreshModelos(''); saveUtility(); });
   modelSel.addEventListener('change', saveUtility);
 
   _registerAiEndpointRefresh(function(endpoints) {
     _endpoints = endpoints;
     _fillEndpointSelect(epSel, _endpoints, epSel.value, true);
-    refreshModels(modelSel.value);
+    refreshModelos(modelSel.value);
     if (fallbackWidget && fallbackWidget.refresh) fallbackWidget.refresh();
   });
 }
 
-/* ── Teacher Model ── */
+/* ── Teacher Modelo ── */
 // SOTA model called automatically when a self-hosted student model
 // fails an agent-mode task. Stored as a single `teacher_model` string
 // in the form `model@endpoint_name` so the backend's _resolve_model
 // can dispatch directly. Master toggle is the separate
 // `teacher_enabled` flag so the user can pause the feature without
 // losing their endpoint+model selection.
-async function initTeacherModel() {
+async function initTeacherModelo() {
   var enabledToggle = el('set-teacherEnabledToggle');
   var epSel = el('set-teacherEpSelect');
-  var modelSel = el('set-teacherModelSelect');
+  var modelSel = el('set-teacherModeloSelect');
   var msg = el('set-teacherChatMsg');
   if (!epSel || !modelSel) return;
   var _endpoints = [];
 
   try {
-    _endpoints = await _fetchModelEndpoints();
+    _endpoints = await _fetchModeloEndpoints();
     _fillEndpointSelect(epSel, _endpoints, epSel.value, true);
   } catch (e) { console.warn('Failed to load endpoints for teacher model', e); }
 
-  function refreshModels(selectedModel) {
+  function refreshModelos(selectedModelo) {
     var epId = epSel.value;
     var ep = _endpoints.find(function(e) { return e.id === epId; });
-    _fillModelSelect(modelSel, ep ? ep.models : [], selectedModel, true);
+    _fillModeloSelect(modelSel, ep ? ep.models : [], selectedModelo, true);
   }
 
   // Disable / enable the endpoint+model dropdowns based on the
@@ -689,11 +689,11 @@ async function initTeacherModel() {
     // teacher_model is stored as "model@endpoint_name". Split on the
     // LAST `@` so model ids that contain @ aren't mangled.
     var spec = settings.teacher_model || '';
-    var savedModel = spec;
+    var savedModelo = spec;
     var savedEpName = '';
     var at = spec.lastIndexOf('@');
     if (at >= 0) {
-      savedModel = spec.slice(0, at);
+      savedModelo = spec.slice(0, at);
       savedEpName = spec.slice(at + 1);
     }
     if (savedEpName) {
@@ -702,7 +702,7 @@ async function initTeacherModel() {
       });
       if (match) epSel.value = match.id;
     }
-    refreshModels(savedModel);
+    refreshModelos(savedModelo);
     syncEnabled();
   } catch (e) { console.warn('Failed to load teacher model settings', e); }
 
@@ -718,7 +718,7 @@ async function initTeacherModel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teacher_enabled: enabled, teacher_model: spec })
       });
-      msg.textContent = enabled ? (spec ? 'Saved' : 'Pick an endpoint + model') : 'Disabled';
+      msg.textContent = enabled ? (spec ? 'Guardard' : 'Pick an endpoint + model') : 'Disabled';
       msg.style.color = enabled && !spec ? 'var(--red)' : 'var(--fg)';
       setTimeout(function() { msg.textContent = ''; }, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
@@ -730,21 +730,21 @@ async function initTeacherModel() {
       saveTeacher();
     });
   }
-  epSel.addEventListener('change', function() { refreshModels(''); saveTeacher(); });
+  epSel.addEventListener('change', function() { refreshModelos(''); saveTeacher(); });
   modelSel.addEventListener('change', saveTeacher);
 
   _registerAiEndpointRefresh(function(endpoints) {
     _endpoints = endpoints;
     _fillEndpointSelect(epSel, _endpoints, epSel.value, true);
-    refreshModels(modelSel.value);
+    refreshModelos(modelSel.value);
   });
 }
 
 /* ── Image Generation ── */
-async function initImageSettings() {
-  const modelSel = el('set-imgModelSelect');
+async function initImageConfiguración() {
+  const modelSel = el('set-imgModeloSelect');
   const qualSel = el('set-imgQualitySelect');
-  const msg = el('set-imgSettingsMsg');
+  const msg = el('set-imgConfiguraciónMsg');
   const enabledToggle = el('set-imgEnabledToggle');
   const configWrap = modelSel ? modelSel.closest('div[style*="flex-direction"]') : null;
   try {
@@ -754,24 +754,24 @@ async function initImageSettings() {
     // so DALL-E / GPT-Image-1 (no inpaint API) are excluded. Currently:
     //   - any model with 'inpaint' in the id
     //   - Stable Diffusion 3.5 Medium (inpaint via diffusers pipeline)
-    const _isInpaintModel = (mid) => {
+    const _isInpaintModelo = (mid) => {
       const lower = String(mid || '').toLowerCase();
       return lower.includes('inpaint')
         || lower.includes('3.5-medium')
         || lower.includes('3-5-medium')
         || lower.includes('sd-3.5-med');
     };
-    const imageModels = [];
+    const imageModelos = [];
     (modelsData.items || []).forEach(item => {
       (item.models || []).forEach(mid => {
-        if (_isInpaintModel(mid)) imageModels.push(mid);
+        if (_isInpaintModelo(mid)) imageModelos.push(mid);
       });
     });
-    sortModelIds(imageModels).forEach(mid => { const opt = document.createElement('option'); opt.value = mid; opt.textContent = mid; modelSel.appendChild(opt); });
+    sortModeloIds(imageModelos).forEach(mid => { const opt = document.createElement('option'); opt.value = mid; opt.textContent = mid; modelSel.appendChild(opt); });
     // Hardcoded fallbacks shown as "(not detected)" so users know what to
     // download/serve to enable inpaint here.
     ['stable-diffusion-3.5-medium', 'stable-diffusion-inpainting'].forEach(mid => {
-      if (!imageModels.includes(mid)) { const opt = document.createElement('option'); opt.value = mid; opt.textContent = mid + ' (not detected)'; modelSel.appendChild(opt); }
+      if (!imageModelos.includes(mid)) { const opt = document.createElement('option'); opt.value = mid; opt.textContent = mid + ' (not detected)'; modelSel.appendChild(opt); }
     });
   } catch (e) { console.warn('Failed to load models for image settings', e); }
   try {
@@ -790,65 +790,65 @@ async function initImageSettings() {
   }
   syncImgDisabled();
 
-  async function saveSettings() {
+  async function saveConfiguración() {
     try {
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_gen_enabled: enabledToggle ? enabledToggle.checked : false, image_model: modelSel.value, image_quality: qualSel.value }) });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)'; setTimeout(() => { msg.textContent = ''; }, 2000);
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)'; setTimeout(() => { msg.textContent = ''; }, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
-  modelSel.addEventListener('change', saveSettings);
-  qualSel.addEventListener('change', saveSettings);
-  if (enabledToggle) enabledToggle.addEventListener('change', function() { syncImgDisabled(); saveSettings(); });
+  modelSel.addEventListener('change', saveConfiguración);
+  qualSel.addEventListener('change', saveConfiguración);
+  if (enabledToggle) enabledToggle.addEventListener('change', function() { syncImgDisabled(); saveConfiguración(); });
 }
 
 /* ── Vision ── */
-async function initVisionSettings() {
-  const vlSel = el('set-vlModelSelect');
-  const msg = el('set-visionSettingsMsg');
+async function initVisionConfiguración() {
+  const vlSel = el('set-vlModeloSelect');
+  const msg = el('set-visionConfiguraciónMsg');
   const enabledToggle = el('set-visionEnabledToggle');
   const configWrap = vlSel ? vlSel.closest('div[style*="flex-direction"]') : null;
   var _visionEndpoints = [];
   var visionFallbackWidget = null;
   var _vlExclude = ['audio', 'realtime', 'tts', 'dall-e', 'embedding', 'search', 'whisper'];
-  function _isVisionModel(mid) {
+  function _isVisionModelo(mid) {
     var lower = String(mid || '').toLowerCase();
     return !_vlExclude.some(function(kw) { return lower.includes(kw); });
   }
   try {
     const modelsRes = await fetch('/api/models', { credentials: 'same-origin' });
     const modelsData = await modelsRes.json();
-    const visionModels = [];
+    const visionModelos = [];
     (modelsData.items || []).forEach(item => {
       if (item.offline) return;
       (item.models || []).forEach(mid => {
-        if (_isVisionModel(mid)) {
-          visionModels.push(mid);
+        if (_isVisionModelo(mid)) {
+          visionModelos.push(mid);
         }
       });
     });
-    sortModelIds(visionModels).forEach(mid => {
+    sortModeloIds(visionModelos).forEach(mid => {
       var opt = document.createElement('option'); opt.value = mid; opt.textContent = mid; vlSel.appendChild(opt);
     });
   } catch (e) { console.warn('Failed to load models for vision settings', e); }
   // Also pull the raw endpoint list so the fallback widget can resolve
   // endpoint-id → models the same way the other cards do.
   try {
-    _visionEndpoints = await _fetchModelEndpoints();
+    _visionEndpoints = await _fetchModeloEndpoints();
   } catch (e) { console.warn('Failed to load endpoints for vision fallback', e); }
   try {
     const settingsRes = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     const settings = await settingsRes.json();
     if (settings.vision_model) vlSel.value = settings.vision_model;
-    _syncModelLogo(vlSel);
+    _syncModeloLogo(vlSel);
     if (enabledToggle) enabledToggle.checked = settings.vision_enabled !== false;
     visionFallbackWidget = _bindFallbackWidget({
       containerId: 'set-visionFallbacks',
-      addBtnId: 'set-visionAddFallback',
+      addBtnId: 'set-visionAgregarFallback',
       endpoints: function() { return _visionEndpoints; },
       // Vision fallback list filters to vision-capable models (same heuristic
       // as the primary select above — exclude audio/tts/embedding/etc.).
-      modelsFilter: function(mid) { return _isVisionModel(mid); },
+      modelsFilter: function(mid) { return _isVisionModelo(mid); },
       settingKey: 'vision_model_fallbacks',
       initial: Array.isArray(settings.vision_model_fallbacks)
         ? settings.vision_model_fallbacks.map(function(f) { return { endpoint_id: (f && f.endpoint_id) || '', model: (f && f.model) || '' }; })
@@ -864,15 +864,15 @@ async function initVisionSettings() {
   }
   syncVisionDisabled();
 
-  async function saveSettings() {
+  async function saveConfiguración() {
     try {
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vision_enabled: enabledToggle ? enabledToggle.checked : true, vision_model: vlSel.value }) });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)'; setTimeout(() => { msg.textContent = ''; }, 2000);
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)'; setTimeout(() => { msg.textContent = ''; }, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
-  vlSel.addEventListener('change', saveSettings);
-  if (enabledToggle) enabledToggle.addEventListener('change', function() { syncVisionDisabled(); saveSettings(); });
+  vlSel.addEventListener('change', saveConfiguración);
+  if (enabledToggle) enabledToggle.addEventListener('change', function() { syncVisionDisabled(); saveConfiguración(); });
 
   _registerAiEndpointRefresh(function(endpoints) {
     _visionEndpoints = endpoints;
@@ -883,23 +883,23 @@ async function initVisionSettings() {
 /* ── Face Recognition ── */
 
 /* ── Text to Speech ── */
-async function initTtsSettings() {
+async function initTtsConfiguración() {
   var provSel = el('set-ttsProviderSelect');
-  var modelSelect = el('set-ttsModelSelect');
-  var modelInput = el('set-ttsModelInput');
-  var voiceSelect = el('set-ttsVoiceSelect');
-  var voiceInput = el('set-ttsVoiceInput');
-  var modelRow = el('set-ttsModelRow');
-  var voiceRow = el('set-ttsVoiceRow');
+  var modelSelect = el('set-ttsModeloSelect');
+  var modelInput = el('set-ttsModeloInput');
+  var voiceSelect = el('set-ttsVozSelect');
+  var voiceInput = el('set-ttsVozInput');
+  var modelRow = el('set-ttsModeloRow');
+  var voiceRow = el('set-ttsVozRow');
   var speedSelect = el('set-ttsSpeedSelect');
   var speedRow = el('set-ttsSpeedRow');
-  var ttsMsg = el('set-ttsSettingsMsg');
+  var ttsMsg = el('set-ttsConfiguraciónMsg');
   var ttsEnabledToggle = el('set-ttsEnabledToggle');
   var ttsConfigWrap = provSel ? provSel.closest('div[style*="flex-direction"]') : null;
 
   function isEndpoint() { return provSel.value.startsWith('endpoint:'); }
-  function getModel() { return isEndpoint() ? modelSelect.value : modelInput.value; }
-  function getVoice() { return isEndpoint() ? voiceSelect.value : voiceInput.value; }
+  function getModelo() { return isEndpoint() ? modelSelect.value : modelInput.value; }
+  function getVoz() { return isEndpoint() ? voiceSelect.value : voiceInput.value; }
 
   function updateVisibility() {
     var prov = provSel.value;
@@ -949,8 +949,8 @@ async function initTtsSettings() {
   async function saveTTS() {
     try {
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tts_enabled: ttsEnabledToggle ? ttsEnabledToggle.checked : true, tts_provider: provSel.value, tts_model: getModel() || 'tts-1', tts_voice: getVoice() || 'alloy', tts_speed: speedSelect.value || '1' }) });
-      ttsMsg.textContent = 'Saved'; ttsMsg.style.color = 'var(--fg)'; setTimeout(() => { ttsMsg.textContent = ''; }, 2000);
+        body: JSON.stringify({ tts_enabled: ttsEnabledToggle ? ttsEnabledToggle.checked : true, tts_provider: provSel.value, tts_model: getModelo() || 'tts-1', tts_voice: getVoz() || 'alloy', tts_speed: speedSelect.value || '1' }) });
+      ttsMsg.textContent = 'Guardard'; ttsMsg.style.color = 'var(--fg)'; setTimeout(() => { ttsMsg.textContent = ''; }, 2000);
       if (window.aiTTSManager) window.aiTTSManager.checkAvailability();
     } catch (e) { ttsMsg.textContent = 'Failed to save'; ttsMsg.style.color = 'var(--red)'; }
   }
@@ -994,14 +994,14 @@ async function initTtsSettings() {
         setTimeout(function() { ttsMsg.textContent = ''; }, 2000); return;
       }
       var testText = 'Hello, this is a test of text to speech.';
-      previewPlaying = true; previewBtn.textContent = 'Loading...';
+      previewPlaying = true; previewBtn.textContent = 'Cargando...';
       try {
         if (prov === 'browser') {
           if (!('speechSynthesis' in window)) throw new Error('Browser TTS not supported');
           var utt = new SpeechSynthesisUtterance(testText);
-          var voiceVal = getVoice();
+          var voiceVal = getVoz();
           if (voiceVal) {
-            var voices = window.speechSynthesis.getVoices();
+            var voices = window.speechSynthesis.getVozs();
             var target = voiceVal.toLowerCase();
             var match = voices.find(function(v) { return v.name.toLowerCase() === target; }) ||
                         voices.find(function(v) { return v.name.toLowerCase().includes(target); });
@@ -1042,27 +1042,27 @@ async function initTtsSettings() {
 }
 
 /* ── Speech to Text ── */
-async function initSttSettings() {
+async function initSttConfiguración() {
   var provSel = el('set-sttProviderSelect');
-  var modelSelect = el('set-sttModelSelect');
-  var modelInput = el('set-sttModelInput');
-  var modelRow = el('set-sttModelRow');
+  var modelSelect = el('set-sttModeloSelect');
+  var modelInput = el('set-sttModeloInput');
+  var modelRow = el('set-sttModeloRow');
   var langRow = el('set-sttLangRow');
   var langInput = el('set-sttLangInput');
-  var sttMsg = el('set-sttSettingsMsg');
+  var sttMsg = el('set-sttConfiguraciónMsg');
   var sttEnabledToggle = el('set-sttEnabledToggle');
   var sttConfigWrap = el('set-sttConfigWrap');
   // STT was removed from AI Defaults — bail if the UI isn't present.
   if (!provSel) return;
 
   function isEndpoint() { return provSel.value.startsWith('endpoint:'); }
-  function getModel() { return isEndpoint() ? modelInput.value : modelSelect.value; }
+  function getModelo() { return isEndpoint() ? modelInput.value : modelSelect.value; }
 
   function updateVisibility() {
     var prov = provSel.value;
-    var showModel = prov === 'local' || prov.startsWith('endpoint:');
+    var showModelo = prov === 'local' || prov.startsWith('endpoint:');
     var showLang = prov !== 'disabled';
-    modelRow.style.display = showModel ? 'flex' : 'none';
+    modelRow.style.display = showModelo ? 'flex' : 'none';
     langRow.style.display = showLang ? 'flex' : 'none';
     if (isEndpoint()) {
       modelSelect.style.display = 'none'; modelInput.style.display = '';
@@ -1084,7 +1084,7 @@ async function initSttSettings() {
     return provSel.value;
   }
 
-  // Add API endpoints that might support STT
+  // Agregar API endpoints that might support STT
   try {
     var epRes = await fetch('/api/model-endpoints', { credentials: 'same-origin' });
     var endpoints = await epRes.json();
@@ -1112,8 +1112,8 @@ async function initSttSettings() {
       var enabled = sttEnabledToggle ? sttEnabledToggle.checked : false;
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stt_enabled: enabled, stt_provider: provSel.value, stt_model: getModel() || 'base', stt_language: langInput.value.trim() }) });
-      sttMsg.textContent = 'Saved'; sttMsg.style.color = 'var(--fg)'; setTimeout(() => { sttMsg.textContent = ''; }, 2000);
+        body: JSON.stringify({ stt_enabled: enabled, stt_provider: provSel.value, stt_model: getModelo() || 'base', stt_language: langInput.value.trim() }) });
+      sttMsg.textContent = 'Guardard'; sttMsg.style.color = 'var(--fg)'; setTimeout(() => { sttMsg.textContent = ''; }, 2000);
       // Notify voiceRecorder of effective provider and update send button icon
       if (window.voiceRecorderModule) window.voiceRecorderModule._sttProvider = effectiveProvider();
       if (window._updateSendBtnIcon) window._updateSendBtnIcon();
@@ -1138,14 +1138,14 @@ var _searchProviderHints = {
   searxng: 'Private, self-hosted instance. Leave URL empty to use the SEARXNG_INSTANCE env var.',
   duckduckgo: 'No API key needed, but rate-limited — heavy use can return empty results. Configure a fallback below.',
   brave: 'Get your API key from ' + _LINK('https://brave.com/search/api/', 'brave.com/search/api'),
-  google_pse: 'Requires a Google API key and a Programmable Search Engine ID (CX). Create one at ' + _LINK('https://programmablesearchengine.google.com/', 'programmablesearchengine.google.com'),
+  google_pse: 'Requires a Google API key and a Programmable Buscar Engine ID (CX). Crear one at ' + _LINK('https://programmablesearchengine.google.com/', 'programmablesearchengine.google.com'),
   tavily: 'AI-optimized search. 1,000 free credits/month at ' + _LINK('https://tavily.com/', 'tavily.com'),
   serper: 'Google results via API. 2,500 free queries at ' + _LINK('https://serper.dev/', 'serper.dev'),
   disabled: 'Web search and deep research tools will be unavailable.',
 };
 var _searchNeedsKey = { brave: 1, google_pse: 1, tavily: 1, serper: 1 };
 var _searchLabels = {
-  searxng: 'SearXNG', duckduckgo: 'DuckDuckGo', brave: 'Brave Search',
+  searxng: 'SearXNG', duckduckgo: 'DuckDuckGo', brave: 'Brave Buscar',
   google_pse: 'Google PSE', tavily: 'Tavily', serper: 'Serper', disabled: 'Disabled',
 };
 var _searchKeyFields = {
@@ -1153,7 +1153,7 @@ var _searchKeyFields = {
   tavily: 'tavily_api_key', serper: 'serper_api_key',
 };
 
-async function initSearchSettings() {
+async function initBuscarConfiguración() {
   var provSel = el('set-searchProvider');
   var countSel = el('set-searchResultCount');
   var countCustomInput = el('set-searchResultCountCustom');
@@ -1243,7 +1243,7 @@ async function initSearchSettings() {
   }
   refreshStatus();
 
-  async function saveSearch() {
+  async function saveBuscar() {
     try {
       var prov = provSel.value;
       var resultCount;
@@ -1272,17 +1272,17 @@ async function initSearchSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(refreshStatus, 2000);
       if (searchModule && searchModule.refresh) searchModule.refresh();
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
 
-  provSel.addEventListener('change', function() { updateVisibility(); saveSearch(); _syncSearchPicker(); });
-  countSel.addEventListener('change', saveSearch);
-  urlInput.addEventListener('change', saveSearch);
-  keyInput.addEventListener('change', saveSearch);
-  cxInput.addEventListener('change', saveSearch);
+  provSel.addEventListener('change', function() { updateVisibility(); saveBuscar(); _syncBuscarPicker(); });
+  countSel.addEventListener('change', saveBuscar);
+  urlInput.addEventListener('change', saveBuscar);
+  keyInput.addEventListener('change', saveBuscar);
+  cxInput.addEventListener('change', saveBuscar);
 
   // ── Provider picker with logos (mirrors the hidden <select>) ──
   var picker = el('search-provider-picker');
@@ -1292,7 +1292,7 @@ async function initSearchSettings() {
   function _searchProviderLogoSvg(key) {
     return _SEARCH_PROVIDER_LOGOS[key] || '';
   }
-  function _renderSearchPickerMenu() {
+  function _renderBuscarPickerMenu() {
     if (!pickerMenu) return;
     pickerMenu.innerHTML = Array.from(provSel.options).map(function(o) {
       var logo = _searchProviderLogoSvg(o.dataset.searchLogo);
@@ -1303,7 +1303,7 @@ async function initSearchSettings() {
       '</div>';
     }).join('');
   }
-  function _syncSearchPicker() {
+  function _syncBuscarPicker() {
     if (!pickerCurrent) return;
     var opt = provSel.selectedOptions[0] || provSel.options[0];
     var logo = _searchProviderLogoSvg(opt.dataset.searchLogo);
@@ -1311,8 +1311,8 @@ async function initSearchSettings() {
     pickerCurrent.querySelector('.adm-provider-name').textContent = opt.textContent;
   }
   if (picker && pickerBtn && pickerMenu && pickerCurrent) {
-    _renderSearchPickerMenu();
-    _syncSearchPicker();
+    _renderBuscarPickerMenu();
+    _syncBuscarPicker();
     pickerBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       pickerMenu.classList.toggle('hidden');
@@ -1323,7 +1323,7 @@ async function initSearchSettings() {
       provSel.value = item.dataset.value;
       provSel.dispatchEvent(new Event('change', { bubbles: true }));
       pickerMenu.classList.add('hidden');
-      _renderSearchPickerMenu();
+      _renderBuscarPickerMenu();
     });
     document.addEventListener('click', function(e) {
       if (!picker.contains(e.target)) pickerMenu.classList.add('hidden');
@@ -1343,7 +1343,7 @@ async function initSearchSettings() {
       .map(function(o) { return { value: o.value, label: o.textContent, logo: o.dataset.searchLogo }; })
       .filter(function(o) { return !inChain.has(o.value); });
   }
-  var addBtn = el('set-searchAddFallback');
+  var addBtn = el('set-searchAgregarFallback');
   var TRASH_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
   function _renderFallbackChain() {
     if (!fbWrap) return;
@@ -1404,7 +1404,7 @@ async function initSearchSettings() {
 
       fbWrap.appendChild(row);
     });
-    // Add-fallback button: disabled when there are no remaining providers to add.
+    // Agregar-fallback button: disabled when there are no remaining providers to add.
     if (addBtn) {
       var hasMore = _availableFallbackOptions().length > 0;
       addBtn.style.display = hasMore ? '' : 'none';
@@ -1428,13 +1428,13 @@ async function initSearchSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ search_fallback_chain: chain }),
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(refreshStatus, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
     _renderFallbackChain();
   }
   _renderFallbackChain();
-  // Re-render whenever the primary changes (it gets filtered out of "Add").
+  // Re-render whenever the primary changes (it gets filtered out of "Agregar").
   provSel.addEventListener('change', _renderFallbackChain);
 
   // ── Test button ── runs a one-off query against the configured provider.
@@ -1448,7 +1448,7 @@ async function initSearchSettings() {
         return;
       }
       // Persist current form values first so the test uses what's on screen.
-      await saveSearch();
+      await saveBuscar();
       testBtn.disabled = true;
       var origHtml = testBtn.innerHTML;
       var wp = null;
@@ -1505,10 +1505,10 @@ var _SEARCH_PROVIDER_LOGOS = {
   disabled:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
 };
 
-/* ── Deep Research Model (AI tab) ── */
-async function initResearchSettings() {
+/* ── Deep Investigación Modelo (AI tab) ── */
+async function initInvestigaciónConfiguración() {
   var epSel = el('set-researchEndpoint');
-  var modelSel = el('set-researchModel');
+  var modelSel = el('set-researchModelo');
   var tokensInput = el('set-researchMaxTokens');
   var extractTimeoutInput = el('set-researchExtractTimeout');
   var extractConcurrencyInput = el('set-researchExtractConcurrency');
@@ -1517,21 +1517,21 @@ async function initResearchSettings() {
   var endpoints = [];
 
   try {
-    endpoints = await _fetchModelEndpoints();
+    endpoints = await _fetchModeloEndpoints();
     _fillEndpointSelect(epSel, endpoints, epSel.value, true);
   } catch (e) { console.warn('Failed to load endpoints for research', e); }
 
-  function refreshModels(selectedModel) {
+  function refreshModelos(selectedModelo) {
     var epId = epSel.value;
     var ep = endpoints.find(function(e) { return e.id === epId; });
-    _fillModelSelect(modelSel, ep ? ep.models : [], selectedModel, true);
+    _fillModeloSelect(modelSel, ep ? ep.models : [], selectedModelo, true);
   }
 
   try {
     var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     var settings = await res.json();
     if (settings.research_endpoint_id) epSel.value = settings.research_endpoint_id;
-    refreshModels(settings.research_model || '');
+    refreshModelos(settings.research_model || '');
     if (settings.research_max_tokens) tokensInput.value = settings.research_max_tokens;
     if (settings.research_extraction_timeout_seconds) extractTimeoutInput.value = settings.research_extraction_timeout_seconds;
     if (settings.research_extraction_concurrency) extractConcurrencyInput.value = settings.research_extraction_concurrency;
@@ -1572,7 +1572,7 @@ async function initResearchSettings() {
   }
   showStatus();
 
-  async function saveResearch() {
+  async function saveInvestigación() {
     var payload = {
       research_endpoint_id: epSel.value,
       research_model: modelSel.value,
@@ -1595,42 +1595,42 @@ async function initResearchSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(showStatus, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
 
   epSel.addEventListener('change', async function() {
-    refreshModels('');
-    saveResearch();
+    refreshModelos('');
+    saveInvestigación();
   });
-  modelSel.addEventListener('change', saveResearch);
-  tokensInput.addEventListener('change', saveResearch);
-  extractTimeoutInput.addEventListener('change', saveResearch);
-  extractConcurrencyInput.addEventListener('change', saveResearch);
-  runTimeoutInput.addEventListener('change', saveResearch);
+  modelSel.addEventListener('change', saveInvestigación);
+  tokensInput.addEventListener('change', saveInvestigación);
+  extractTimeoutInput.addEventListener('change', saveInvestigación);
+  extractConcurrencyInput.addEventListener('change', saveInvestigación);
+  runTimeoutInput.addEventListener('change', saveInvestigación);
 
   _registerAiEndpointRefresh(function(nextEndpoints) {
     endpoints = nextEndpoints;
     _fillEndpointSelect(epSel, endpoints, epSel.value, true);
-    refreshModels(modelSel.value);
+    refreshModelos(modelSel.value);
   });
 }
 
-/* ── Deep Research Search (Search tab) ── */
-async function initResearchSearchSettings() {
-  var searchSel = el('set-researchSearch');
-  var msg = el('set-researchSearchMsg');
-  var logoEl = el('set-researchSearch-logo');
+/* ── Deep Investigación Buscar (Buscar tab) ── */
+async function initInvestigaciónBuscarConfiguración() {
+  var searchSel = el('set-researchBuscar');
+  var msg = el('set-researchBuscarMsg');
+  var logoEl = el('set-researchBuscar-logo');
 
-  function updateSearchLogo() {
+  function updateBuscarLogo() {
     if (!logoEl) return;
     var opt = searchSel.selectedOptions[0];
     var key = opt && opt.dataset ? opt.dataset.searchLogo : '';
     logoEl.innerHTML = key ? (_SEARCH_PROVIDER_LOGOS[key] || '') : '';
   }
 
-  function updateSearchOptions(settings) {
+  function updateBuscarOptions(settings) {
     var options = searchSel.querySelectorAll('option');
     options.forEach(function(opt) {
       var prov = opt.value;
@@ -1652,26 +1652,26 @@ async function initResearchSearchSettings() {
     var res = await fetch('/api/auth/settings', { credentials: 'same-origin' });
     var settings = await res.json();
     if (settings.research_search_provider) searchSel.value = settings.research_search_provider;
-    updateSearchOptions(settings);
-    updateSearchLogo();
+    updateBuscarOptions(settings);
+    updateBuscarLogo();
   } catch (e) { console.warn('Failed to load research search settings', e); }
 
-  async function saveResearchSearch() {
+  async function saveInvestigaciónBuscar() {
     try {
       await fetch('/api/auth/settings', { method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ research_search_provider: searchSel.value })
       });
-      msg.textContent = 'Saved'; msg.style.color = 'var(--fg)';
+      msg.textContent = 'Guardard'; msg.style.color = 'var(--fg)';
       setTimeout(function() { msg.textContent = ''; }, 2000);
     } catch (e) { msg.textContent = 'Failed to save'; msg.style.color = 'var(--red)'; }
   }
 
-  searchSel.addEventListener('change', function() { updateSearchLogo(); saveResearchSearch(); });
+  searchSel.addEventListener('change', function() { updateBuscarLogo(); saveInvestigaciónBuscar(); });
 }
 
-/* ── Agent Settings (AI tab) ── */
-async function initAgentSettings() {
+/* ── Agent Configuración (AI tab) ── */
+async function initAgentConfiguración() {
   var toolsInput = el('set-agentMaxTools');
   var roundsInput = el('set-agentMaxRounds');
   var supInput = el('set-agentSupervisorLadder');
@@ -1730,7 +1730,7 @@ async function initAgentSettings() {
    ═══════════════════════════════════════════ */
 function initAppearance() {
   syncAppearanceCheckboxes();
-  syncPrivacyCheckboxes();
+  syncPrivacidadCheckboxes();
 
   modalEl.querySelectorAll('[data-ui-key]').forEach(function(chk) {
     chk.addEventListener('change', async function() {
@@ -1739,30 +1739,30 @@ function initAppearance() {
       if (window.UI_VIS_ADMIN_ONLY && window.UI_VIS_ADMIN_ONLY.has(key) && !chk.checked && !window._isAdmin) {
         chk.checked = true;
         if (uiModule && uiModule.showToast) {
-          uiModule.showToast('Only admins can hide Settings.');
+          uiModule.showToast('Only admins can hide Configuración.');
         }
         return;
       }
 
-      // Hiding the Settings cog removes the only visible way to re-open this
+      // Hiding the Configuración cog removes the only visible way to re-open this
       // panel. Warn the user and remind them about the `/settings` slash
       // command so they don't lock themselves out.
       if (key === 'sidebar-settings-btn' && !chk.checked) {
         var ok = true;
         try {
-          ok = await (uiModule && uiModule.styledConfirm
-            ? uiModule.styledConfirm(
-                'Hide the Settings cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.',
-                { confirmText: 'Hide', cancelText: 'Cancel' }
+          ok = await (uiModule && uiModule.styledConfirmar
+            ? uiModule.styledConfirmar(
+                'Hide the Configuración cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.',
+                { confirmText: 'Hide', cancelText: 'Cancelar' }
               )
-            : Promise.resolve(window.confirm('Hide the Settings cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.')));
+            : Promise.resolve(window.confirm('Hide the Configuración cog?\n\nYou can re-open this panel any time by typing /settings in the chat input.')));
         } catch (_) { ok = false; }
         if (!ok) {
           chk.checked = true;
           return;
         }
         if (uiModule && uiModule.showToast) {
-          uiModule.showToast('Settings cog hidden — type /settings to bring it back.', 5000);
+          uiModule.showToast('Configuración cog hidden — type /settings to bring it back.', 5000);
         }
       }
 
@@ -1798,7 +1798,7 @@ function initAppearance() {
       keys.forEach(function(k) { delete s[k]; });
       if (window.saveUIVis) window.saveUIVis(s);
       syncAppearanceCheckboxes();
-      syncPrivacyCheckboxes();
+      syncPrivacidadCheckboxes();
       if (window.applyUIVis) window.applyUIVis(s);
     });
   });
@@ -1813,7 +1813,7 @@ function syncAppearanceCheckboxes() {
   });
 }
 
-function syncPrivacyCheckboxes() {
+function syncPrivacidadCheckboxes() {
   modalEl.querySelectorAll('[data-privacy-key="sensitive-blur"]').forEach(function(chk) {
     chk.checked = localStorage.getItem('odysseus-sensitive-blur') === 'on';
   });
@@ -1834,7 +1834,7 @@ const SHORTCUT_DEFAULTS = {
   incognito:      'ctrl+alt+i',
   settings:       'ctrl+,',
   focus_input:    'ctrl+/',
-  // Open-tool shortcuts. Calendar is bound by default; the rest are
+  // Open-tool shortcuts. Calendario is bound by default; the rest are
   // unbound (empty) so the user can assign their own in the panel.
   open_calendar:  'ctrl+alt+c',
   open_compare:   '',
@@ -1872,26 +1872,26 @@ const SHORTCUT_ICONS = {
 };
 
 const SHORTCUT_LABELS = {
-  search:         'Search conversations',
+  search:         'Buscar conversaciones',
   toggle_sidebar: 'Toggle sidebar',
   new_session:    'New session',
   fav_session:    'Favorite session',
-  delete_session: 'Delete session',
-  cancel:         'Cancel / close',
+  delete_session: 'Eliminar session',
+  cancel:         'Cancelar / close',
   tts:            'Play/stop TTS',
   incognito:      'Toggle incognito',
   settings:       'Toggle Window',
   focus_input:    'Focus chat input',
-  open_calendar:  'Open Calendar',
+  open_calendar:  'Open Calendario',
   open_compare:   'Open Compare',
-  open_cookbook:  'Open Cookbook',
-  open_research:  'Open Deep Research',
-  open_gallery:   'Open Gallery',
+  open_cookbook:  'Open Recetas',
+  open_research:  'Open Deep Investigación',
+  open_gallery:   'Open Galería',
   open_library:   'Open Library',
-  open_memory:    'Open Memory',
-  open_notes:     'Open Notes',
-  open_tasks:     'Open Tasks',
-  open_theme:     'Open Theme',
+  open_memory:    'Open Memoria',
+  open_notes:     'Open Notas',
+  open_tasks:     'Open Tareas',
+  open_theme:     'Open Tema',
 };
 
 const SHORTCUT_CATEGORIES = [
@@ -1987,7 +1987,7 @@ async function initShortcuts() {
           <div class="shortcut-controls">
             <span class="shortcut-hint" hidden></span>
             <button class="shortcut-key${combo ? '' : ' shortcut-key-unset'}" data-action="${action}" title="Click to rebind">${keyContent}</button>
-            <button class="shortcut-action-btn ${isCustom ? 'is-reset' : ''}" data-action="${action}" title="${isCustom ? 'Reset to default' : 'Confirm'}" style="${isCustom ? '' : 'visibility:hidden'}">
+            <button class="shortcut-action-btn ${isCustom ? 'is-reset' : ''}" data-action="${action}" title="${isCustom ? 'Reset to default' : 'Confirmar'}" style="${isCustom ? '' : 'visibility:hidden'}">
               ${isCustom
                 ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
                 : '\u2713'}
@@ -2033,7 +2033,7 @@ async function initShortcuts() {
     actionBtn.textContent = '\u2713';
     actionBtn.classList.remove('is-reset');
     actionBtn.style.visibility = 'visible';
-    actionBtn.title = 'Confirm';
+    actionBtn.title = 'Confirmar';
     // Hint: tell the user how to commit / cancel the rebind.
     if (hintEl) {
       hintEl.hidden = false;
@@ -2106,7 +2106,7 @@ async function initShortcuts() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keybinds }),
       });
-      // Update global keybinds so they take effect immediately
+      // Actualizar global keybinds so they take effect immediately
       window._odysseusKeybinds = keybinds;
       if (uiModule && uiModule.showToast) uiModule.showToast('Shortcut saved');
     } catch (e) {
@@ -2145,7 +2145,7 @@ function initAccount() {
       }
     }).catch(() => {});
 
-  // Update password placeholder and policy from server
+  // Actualizar password placeholder and policy from server
   fetch('/api/auth/policy', { credentials: 'same-origin' })
     .then(r => r.ok ? r.json() : null)
     .then(policy => {
@@ -2166,7 +2166,7 @@ function initAccount() {
       msgEl.style.color = '';
       if (!cur || !nw) { msgEl.textContent = 'Fill in all fields'; msgEl.style.color = 'var(--red)'; return; }
       if (nw.length < _authPolicy.password_min_length) { msgEl.textContent = `Min ${_authPolicy.password_min_length} characters`; msgEl.style.color = 'var(--red)'; return; }
-      if (nw !== conf) { msgEl.textContent = 'Passwords don\'t match'; msgEl.style.color = 'var(--red)'; return; }
+      if (nw !== conf) { msgEl.textContent = 'Contraseñas don\'t match'; msgEl.style.color = 'var(--red)'; return; }
       saveBtn.disabled = true;
       try {
         const res = await fetch('/api/auth/change-password', {
@@ -2176,7 +2176,7 @@ function initAccount() {
         });
         if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed'); }
         msgEl.style.color = 'var(--green)';
-        msgEl.textContent = 'Password updated';
+        msgEl.textContent = 'Contraseña updated';
         el('settings-pw-current').value = '';
         el('settings-pw-new').value = '';
         el('settings-pw-confirm').value = '';
@@ -2225,7 +2225,7 @@ function initAccount() {
         } else {
           // 2FA is OFF — show setup button
           tfaContent.innerHTML = `
-            <div style="font-size:12px;opacity:0.6;margin-bottom:8px;">Add an extra layer of security with an authenticator app (Aegis, Google Authenticator, etc.)</div>
+            <div style="font-size:12px;opacity:0.6;margin-bottom:8px;">Agregar an extra layer of security with an authenticator app (Aegis, Google Authenticator, etc.)</div>
             <div class="settings-row" style="justify-content:flex-end;">
               <span id="tfa-msg" style="font-size:11px;margin-right:auto;"></span>
               <button class="admin-btn-add" id="tfa-setup-btn">Set Up 2FA</button>
@@ -2249,7 +2249,7 @@ function initAccount() {
                 <input id="tfa-verify-code" type="text" placeholder="Enter 6-digit code to verify" autocomplete="one-time-code" inputmode="numeric" maxlength="8" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);font-family:inherit;font-size:13px;box-sizing:border-box;text-align:center;letter-spacing:3px;margin-bottom:6px;">
                 <div class="settings-row" style="justify-content:flex-end;">
                   <span id="tfa-msg" style="font-size:11px;margin-right:auto;"></span>
-                  <button class="admin-btn-add" id="tfa-cancel-btn" style="opacity:0.5;">Cancel</button>
+                  <button class="admin-btn-add" id="tfa-cancel-btn" style="opacity:0.5;">Cancelar</button>
                   <button class="admin-btn-add" id="tfa-verify-btn">Verify & Enable</button>
                 </div>`;
               el('tfa-verify-code').focus();
@@ -2270,7 +2270,7 @@ function initAccount() {
                   const codes = result.backup_codes || [];
                   tfaContent.innerHTML = `
                     <div style="color:var(--color-save-green, #4caf50);font-size:13px;font-weight:600;margin-bottom:8px;">&#x2713; 2FA Enabled!</div>
-                    <div style="font-size:12px;opacity:0.7;margin-bottom:8px;">Save these backup codes somewhere safe. Each can be used once if you lose your authenticator:</div>
+                    <div style="font-size:12px;opacity:0.7;margin-bottom:8px;">Guardar these backup codes somewhere safe. Each can be used once if you lose your authenticator:</div>
                     <div style="font-family:monospace;font-size:12px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;columns:2;column-gap:16px;margin-bottom:8px;">${codes.map(c => '<div style="margin-bottom:2px;">' + c + '</div>').join('')}</div>
                     <button class="admin-btn-add" id="tfa-done-btn">Done</button>`;
                   el('tfa-done-btn').addEventListener('click', () => render2FA());
@@ -2286,7 +2286,7 @@ function initAccount() {
     render2FA();
   }
 
-  // Logout
+  // Salir
   const logoutBtn = el('settings-logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('mouseenter', () => { logoutBtn.style.opacity = '1'; logoutBtn.style.borderColor = 'var(--red)'; logoutBtn.style.color = 'var(--red)'; });
@@ -2319,28 +2319,28 @@ function initAll() {
   modalEl = el('settings-modal');
   initTabs();
   initDrag();
-  initClose();
+  initCerrar();
   initOpenPromptModalLink();
   initOpacityToggle();
   initialized = true;
   initDefaultChat();
-  initTeacherModel();
-  initUtilityModel();
-  initImageSettings();
-  initVisionSettings();
-  initTtsSettings();
-  initSttSettings();
-  initSearchSettings();
-  initResearchSettings();
-  initResearchSearchSettings();
-  initAgentSettings();
+  initTeacherModelo();
+  initUtilityModelo();
+  initImageConfiguración();
+  initVisionConfiguración();
+  initTtsConfiguración();
+  initSttConfiguración();
+  initBuscarConfiguración();
+  initInvestigaciónConfiguración();
+  initInvestigaciónBuscarConfiguración();
+  initAgentConfiguración();
   initAppearance();
   initShortcuts();
   initAccount();
   initIntegrations();
-  initEmailSettings();
-  initEmailAccountsSettings();
-  initReminderSettings();
+  initCorreoConfiguración();
+  initCorreoAccountsConfiguración();
+  initReminderConfiguración();
   initUnifiedIntegrations();
 }
 
@@ -2350,7 +2350,7 @@ function notifyIntegrationsChanged() {
   } catch (_) {}
 }
 
-async function initReminderSettings() {
+async function initReminderConfiguración() {
   const root = el('settings-modal');
   if (!root || !root.querySelector('[data-settings-panel="reminders"]')) return;
 
@@ -2375,12 +2375,12 @@ async function initReminderSettings() {
             body: JSON.stringify({ app_public_url: val }),
           });
           if (pubUrlMsg) {
-            pubUrlMsg.textContent = val ? 'Saved' : 'Cleared (deep-links disabled)';
+            pubUrlMsg.textContent = val ? 'Guardard' : 'Cleared (deep-links disabled)';
             pubUrlMsg.style.color = 'var(--green,#50fa7b)';
             setTimeout(() => { pubUrlMsg.textContent = ''; }, 2000);
           }
         } catch (_) {
-          if (pubUrlMsg) { pubUrlMsg.textContent = 'Save failed'; pubUrlMsg.style.color = 'var(--red)'; }
+          if (pubUrlMsg) { pubUrlMsg.textContent = 'Guardar failed'; pubUrlMsg.style.color = 'var(--red)'; }
         }
       }, 600);
     });
@@ -2423,7 +2423,7 @@ async function initReminderSettings() {
 
   if (!smtpConfigured && emailOpt) {
     emailOpt.disabled = true;
-    emailOpt.textContent = 'Email (add an account in Integrations)';
+    emailOpt.textContent = 'Correo (add an account in Integrations)';
   }
 
   // Detect whether ntfy integration exists — try admin endpoint, fall back to
@@ -2480,7 +2480,7 @@ async function initReminderSettings() {
   const webhookTemplateRow = el('set-reminder-webhook-template-row');
   const webhookTemplateIn = el('set-reminder-webhook-template');
 
-  function populateReminderEmailAccounts(selectedId = '') {
+  function populateReminderCorreoAccounts(selectedId = '') {
     if (!emailAcctSel) return;
     emailAcctSel.innerHTML = emailAccounts.map(a =>
       `<option value="${a.id}">${esc(a.name || a.from_address || a.imap_user || 'Unnamed')}${a.is_default ? ' (default)' : ''}</option>`
@@ -2500,7 +2500,7 @@ async function initReminderSettings() {
   function applyReminderChannelAvailability() {
     if (emailOpt) {
       emailOpt.disabled = !smtpConfigured;
-      emailOpt.textContent = smtpConfigured ? 'Email' : 'Email (add an account in Integrations)';
+      emailOpt.textContent = smtpConfigured ? 'Correo' : 'Correo (add an account in Integrations)';
     }
     if (ntfyOpt) {
       ntfyOpt.disabled = !ntfyConfigured;
@@ -2514,7 +2514,7 @@ async function initReminderSettings() {
 
   async function refreshReminderChannelAvailability() {
     const currentChannel = channelSel.value || 'browser';
-    const currentEmailAccount = emailAcctSel?.value || '';
+    const currentCorreoAccount = emailAcctSel?.value || '';
     const currentWebhookIntg = webhookIntgSel?.value || '';
     try {
       const res = await fetch('/api/email/accounts', { credentials: 'same-origin' });
@@ -2546,7 +2546,7 @@ async function initReminderSettings() {
     }
 
     applyReminderChannelAvailability();
-    populateReminderEmailAccounts(currentEmailAccount);
+    populateReminderCorreoAccounts(currentCorreoAccount);
     populateWebhookIntegrations(currentWebhookIntg);
     if (currentChannel === 'email' && !smtpConfigured) channelSel.value = 'browser';
     else if (currentChannel === 'ntfy' && !ntfyConfigured) channelSel.value = 'browser';
@@ -2557,13 +2557,13 @@ async function initReminderSettings() {
   }
 
   // Populate the "Send from" picker with all configured email accounts.
-  populateReminderEmailAccounts();
+  populateReminderCorreoAccounts();
 
   function syncChannelRows() {
-    const isEmail = channelSel.value === 'email';
+    const isCorreo = channelSel.value === 'email';
     const isWebhook = channelSel.value === 'webhook';
-    if (emailFromRow) emailFromRow.style.display = (isEmail && emailAccounts.length > 1) ? 'flex' : 'none';
-    if (emailToRow) emailToRow.style.display = isEmail ? 'flex' : 'none';
+    if (emailFromRow) emailFromRow.style.display = (isCorreo && emailAccounts.length > 1) ? 'flex' : 'none';
+    if (emailToRow) emailToRow.style.display = isCorreo ? 'flex' : 'none';
     if (ntfyTopicRow) ntfyTopicRow.style.display = channelSel.value === 'ntfy' ? 'flex' : 'none';
     if (webhookIntgRow) webhookIntgRow.style.display = isWebhook ? 'flex' : 'none';
     if (webhookTemplateRow) webhookTemplateRow.style.display = isWebhook ? 'flex' : 'none';
@@ -2650,12 +2650,12 @@ async function initReminderSettings() {
         if (tpl) { webhookTemplateIn.value = tpl; save({ reminder_webhook_payload_template: tpl }); }
       }
     }
-    // Restore the previously-picked email account (if any), otherwise
+    // Restaurar the previously-picked email account (if any), otherwise
     // default to the account flagged is_default in the integrations
     // list. Falls through to the first option if neither exists.
     if (emailAcctSel) {
       const savedId = s.reminder_email_account_id;
-      populateReminderEmailAccounts(savedId || '');
+      populateReminderCorreoAccounts(savedId || '');
       if (emailAcctSel.value && emailAcctSel.value !== (savedId || '')) {
         save({ reminder_email_account_id: emailAcctSel.value || null });
       }
@@ -2679,7 +2679,7 @@ async function initReminderSettings() {
     if (hint) hint.textContent = CHANNEL_HINTS[channelSel.value] || '';
     syncChannelRows();
     save({ reminder_channel: channelSel.value });
-    // Email reminder bell visibility tracks this — broadcast so the
+    // Correo reminder bell visibility tracks this — broadcast so the
     // email library can re-evaluate without waiting for a re-open.
     try { window.dispatchEvent(new CustomEvent('odysseus-reminder-channel-changed', { detail: { channel: channelSel.value } })); } catch (_) {}
   });
@@ -2766,7 +2766,7 @@ async function initReminderSettings() {
             channel: channelSel.value,
             // Mirror the in-UI AI Synthesis toggle + persona so the test never
             // races a pending save and lets the user preview changes before
-            // hitting Save.
+            // hitting Guardar.
             llm_synthesis: !!(llmToggle && llmToggle.checked),
             llm_persona: (personaSel && personaSel.value) || '',
             ...(channelSel.value === 'webhook' ? {
@@ -2778,7 +2778,7 @@ async function initReminderSettings() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Server error');
         if (channelSel.value === 'email' && !data.email_sent) {
-          throw new Error(data.email_error || 'Email reminder was not sent');
+          throw new Error(data.email_error || 'Correo reminder was not sent');
         }
         if (channelSel.value === 'ntfy' && !data.ntfy_sent) {
           throw new Error(data.ntfy_error || 'ntfy reminder was not sent');
@@ -2813,7 +2813,7 @@ async function initReminderSettings() {
   }
 }
 
-async function initEmailAccountsSettings() {
+async function initCorreoAccountsConfiguración() {
   const root = el('settings-modal');
   if (!root || !root.querySelector('[data-settings-panel="email"]')) return;
   const manageBtn = el('set-email-open-integrations');
@@ -2827,8 +2827,8 @@ async function initEmailAccountsSettings() {
     tasksBtn.addEventListener('click', async () => {
       try {
         const mod = await import('./tasks.js');
-        const openTasks = mod.openTasks || (mod.default && mod.default.openTasks);
-        if (typeof openTasks === 'function') openTasks(null, { filter: 'Email' });
+        const openTareas = mod.openTareas || (mod.default && mod.default.openTareas);
+        if (typeof openTareas === 'function') openTareas(null, { filter: 'Correo' });
         else document.getElementById('tool-tasks-btn')?.click();
       } catch (_) {
         document.getElementById('tool-tasks-btn')?.click();
@@ -2860,8 +2860,8 @@ async function initEmailAccountsSettings() {
         <div style="font-size:11px;opacity:0.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.imap_user || a.from_address || '')} — ${esc(imap)}</div>
       </div>
       ${a.is_default ? '' : `<button class="admin-btn-sm email-acc-default-btn" style="font-size:10px">Make Default</button>`}
-      <button class="admin-btn-sm email-acc-edit-btn" style="font-size:10px">Edit</button>
-      <button class="admin-btn-sm email-acc-del-btn" style="font-size:10px;opacity:0.6">Delete</button>
+      <button class="admin-btn-sm email-acc-edit-btn" style="font-size:10px">Editar</button>
+      <button class="admin-btn-sm email-acc-del-btn" style="font-size:10px;opacity:0.6">Eliminar</button>
     </div>`;
   }
 
@@ -2885,7 +2885,7 @@ async function initEmailAccountsSettings() {
       });
       row.querySelector('.email-acc-del-btn')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!await window.styledConfirm(`Delete account "${accs.find(a => a.id === id)?.name}"?`, { confirmText: 'Delete', danger: true })) return;
+        if (!await window.styledConfirmar(`Eliminar account "${accs.find(a => a.id === id)?.name}"?`, { confirmText: 'Eliminar', danger: true })) return;
         await fetch(`/api/email/accounts/${id}`, { method: 'DELETE', credentials: 'same-origin' });
         renderList();
       });
@@ -2894,7 +2894,7 @@ async function initEmailAccountsSettings() {
 
   function showForm(existing) {
     const a = existing || {};
-    const isEdit = !!existing;
+    const isEditar = !!existing;
     formEl.style.display = '';
     // Small `?` indicator next to each label. Hover/focus to read the
     // hint via the native `title` tooltip. tabindex makes it
@@ -2922,12 +2922,12 @@ async function initEmailAccountsSettings() {
       .join('');
     const _smtpSecurity = (acct) => acct?.smtp_security || ((parseInt(acct?.smtp_port || 465) === 587) ? 'starttls' : 'ssl');
     formEl.innerHTML = `
-      <h3 style="font-size:12px;margin:0 0 8px">${isEdit ? 'Edit Account' : 'New Account'}</h3>
+      <h3 style="font-size:12px;margin:0 0 8px">${isEditar ? 'Editar Account' : 'New Account'}</h3>
       <div class="settings-col">
         <div class="settings-row"><label class="settings-label">Provider${_hint('Pick a known provider to auto-fill the IMAP and SMTP host/port. Choose Custom to type your own.')}</label><select id="eaf-provider" class="settings-select"><option value="">Custom…</option>${_providerOptions}</select></div>
         <div id="eaf-provider-note" style="display:none;font-size:11px;line-height:1.5;padding:8px 10px;margin:2px 0 4px;border:1px solid color-mix(in srgb, var(--fg) 15%, transparent);border-left:3px solid var(--accent, var(--red));border-radius:4px;background:color-mix(in srgb, var(--fg) 4%, transparent);"></div>
         <div class="settings-row"><label class="settings-label">Name${_hint('Optional label for this account (e.g. “Work” or “Personal”). Leave blank to use the email address.')}</label><input id="eaf-name" class="settings-input" placeholder="(optional — leave blank to use email)" value="${esc(a.name || '')}"></div>
-        <div class="settings-row"><label class="settings-label">Email${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="eaf-from" class="settings-input" placeholder="you@example.com" value="${esc(a.from_address || '')}"></div>
+        <div class="settings-row"><label class="settings-label">Correo${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="eaf-from" class="settings-input" placeholder="you@example.com" value="${esc(a.from_address || '')}"></div>
         <div class="settings-row"><label class="settings-label">Display Name${_hint('Your name as it appears in the From: field of emails you send, e.g. Jane Smith. Auto-filled from Google during OAuth.')}</label><input id="eaf-display-name" class="settings-input" placeholder="Your Name" value="${esc(a.display_name || '')}"></div>
         <div id="eaf-oauth-section" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--accent,#50fa7b) 6%,transparent)">
           <div style="font-size:11px;font-weight:600;margin-bottom:6px">Google OAuth2 — required for Workspace / .edu accounts</div>
@@ -2937,25 +2937,25 @@ async function initEmailAccountsSettings() {
         <div style="font-size:11px;font-weight:600;opacity:0.6;margin:6px 0 2px">IMAP (Receiving)</div>
         <div class="settings-row"><label class="settings-label">Host${_hint('Your IMAP server, e.g. imap.gmail.com, imap.migadu.com, a LAN host, or a Tailscale IP for Dovecot.')}</label><input id="eaf-imap-host" class="settings-input" value="${esc(a.imap_host || '')}"></div>
         <div class="settings-row"><label class="settings-label">Port${_hint('993 for IMAPS (most providers), 143 for plain or STARTTLS. Local servers often use a custom port like 31143.')}</label><input id="eaf-imap-port" class="settings-input" type="number" value="${esc(a.imap_port || 993)}" style="max-width:100px"></div>
-        <div class="settings-row"><label class="settings-label">Username${_hint('Usually your full email address.')}</label><input id="eaf-imap-user" class="settings-input" value="${esc(a.imap_user || '')}"></div>
-        <div class="eaf-password-section"><div class="settings-row"><label class="settings-label">Password${_hint('Your IMAP login password. Use an app-specific password if your provider requires 2FA. Outlook / Office 365 generally requires OAuth and will not work with a normal password here.')}</label><input id="eaf-imap-pass" class="settings-input" type="password" placeholder="${isEdit && a.has_imap_password ? '(unchanged)' : ''}"></div></div>
+        <div class="settings-row"><label class="settings-label">Usuario${_hint('Usually your full email address.')}</label><input id="eaf-imap-user" class="settings-input" value="${esc(a.imap_user || '')}"></div>
+        <div class="eaf-password-section"><div class="settings-row"><label class="settings-label">Contraseña${_hint('Your IMAP login password. Use an app-specific password if your provider requires 2FA. Outlook / Office 365 generally requires OAuth and will not work with a normal password here.')}</label><input id="eaf-imap-pass" class="settings-input" type="password" placeholder="${isEditar && a.has_imap_password ? '(unchanged)' : ''}"></div></div>
         <div class="settings-row"><label class="settings-label">STARTTLS${_hint('Turn ON for port 143/587 to upgrade plain to TLS. Turn OFF for port 993 (IMAPS — already encrypted) or a local server with no TLS configured.')}</label><label class="admin-switch"><input type="checkbox" id="eaf-imap-starttls" ${a.imap_starttls !== false ? 'checked' : ''}><span class="admin-slider"></span></label></div>
         <div style="font-size:11px;font-weight:600;opacity:0.6;margin:8px 0 2px">SMTP (Sending) <span style="font-weight:normal;opacity:0.7">— optional, leave blank for read-only</span></div>
         <div class="settings-row"><label class="settings-label">Host${_hint('Your outgoing-mail server, e.g. smtp.gmail.com, smtp.migadu.com. Leave blank to make this account read-only.')}</label><input id="eaf-smtp-host" class="settings-input" value="${esc(a.smtp_host || '')}"></div>
         <div class="settings-row"><label class="settings-label">Port${_hint('465 for SSL/SMTPS, 587 for STARTTLS. 25 is usually blocked by ISPs.')}</label><input id="eaf-smtp-port" class="settings-input" type="number" value="${esc(a.smtp_port || 465)}" style="max-width:100px"></div>
         <div class="settings-row"><label class="settings-label">Security${_hint('SSL for port 465, STARTTLS for port 587, or None for local SMTP bridges such as Proton Mail Bridge.')}</label><select id="eaf-smtp-security" class="settings-select"><option value="ssl">SSL</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div>
-        <div class="settings-row"><label class="settings-label">Same as IMAP${_hint('Use the IMAP username and password for SMTP too (this is right for almost every provider). Turn off to enter separate SMTP credentials.')}</label><label class="admin-switch"><input type="checkbox" id="eaf-smtp-same" ${(!isEdit || (a.smtp_user && a.imap_user && a.smtp_user === a.imap_user)) ? 'checked' : ''}><span class="admin-slider"></span></label></div>
-        <div class="settings-row eaf-smtp-creds"><label class="settings-label">Username${_hint('Usually the same as your IMAP username (your email address).')}</label><input id="eaf-smtp-user" class="settings-input" value="${esc(a.smtp_user || '')}"></div>
-        <div class="settings-row eaf-smtp-creds"><label class="settings-label">Password${_hint('Your SMTP password — often the same as your IMAP password. Outlook / Office 365 generally requires OAuth and will not work with a normal password here.')}</label><input id="eaf-smtp-pass" class="settings-input" type="password" placeholder="${isEdit && a.has_smtp_password ? '(unchanged)' : ''}"></div>
+        <div class="settings-row"><label class="settings-label">Same as IMAP${_hint('Use the IMAP username and password for SMTP too (this is right for almost every provider). Turn off to enter separate SMTP credentials.')}</label><label class="admin-switch"><input type="checkbox" id="eaf-smtp-same" ${(!isEditar || (a.smtp_user && a.imap_user && a.smtp_user === a.imap_user)) ? 'checked' : ''}><span class="admin-slider"></span></label></div>
+        <div class="settings-row eaf-smtp-creds"><label class="settings-label">Usuario${_hint('Usually the same as your IMAP username (your email address).')}</label><input id="eaf-smtp-user" class="settings-input" value="${esc(a.smtp_user || '')}"></div>
+        <div class="settings-row eaf-smtp-creds"><label class="settings-label">Contraseña${_hint('Your SMTP password — often the same as your IMAP password. Outlook / Office 365 generally requires OAuth and will not work with a normal password here.')}</label><input id="eaf-smtp-pass" class="settings-input" type="password" placeholder="${isEditar && a.has_smtp_password ? '(unchanged)' : ''}"></div>
         <div class="settings-row" style="margin-top:10px;align-items:center;">
           <button class="admin-btn-add" id="eaf-save" style="background:var(--red);border-color:var(--red);color:#fff;display:inline-flex;align-items:center;gap:5px;font-weight:600;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            ${isEdit ? 'Save' : 'Create'}
+            ${isEditar ? 'Guardar' : 'Crear'}
           </button>
           <span id="eaf-msg" style="font-size:11px;flex:1;margin-left:8px;"></span>
           <button class="admin-btn-add" id="eaf-cancel" style="opacity:0.7;display:inline-flex;align-items:center;gap:5px;position:relative;top:1px;margin-left:auto;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            Cancel
+            Cancelar
           </button>
         </div>
       </div>
@@ -2971,7 +2971,7 @@ async function initEmailAccountsSettings() {
       });
     }
 
-    const eafProviderNotes = {
+    const eafProviderNotas = {
       outlook: {
         title: 'Outlook / Office 365 needs OAuth',
         body: 'Microsoft disables normal password login for IMAP/SMTP in most Outlook and Microsoft 365 accounts. MAX does not support Microsoft OAuth/Graph mail yet, so this preset is only a placeholder for future support.',
@@ -2979,7 +2979,7 @@ async function initEmailAccountsSettings() {
     };
     const eafNoteEl = el('eaf-provider-note');
     const _renderEafProviderNote = (key) => {
-      const n = eafProviderNotes[key];
+      const n = eafProviderNotas[key];
       if (!eafNoteEl || !n) {
         if (eafNoteEl) {
           eafNoteEl.style.display = 'none';
@@ -3022,13 +3022,13 @@ async function initEmailAccountsSettings() {
         smtp_port: parseInt(el('eaf-smtp-port').value) || 587,
         smtp_user: el('eaf-imap-user').value.trim(),
       };
-      if (!body.name) { el('eaf-msg').textContent = 'Enter a Name or Email first'; el('eaf-msg').style.color = 'var(--red)'; return; }
-      const url = isEdit ? `/api/email/accounts/${a.id}` : '/api/email/accounts';
-      const method = isEdit ? 'PUT' : 'POST';
+      if (!body.name) { el('eaf-msg').textContent = 'Enter a Name or Correo first'; el('eaf-msg').style.color = 'var(--red)'; return; }
+      const url = isEditar ? `/api/email/accounts/${a.id}` : '/api/email/accounts';
+      const method = isEditar ? 'PUT' : 'POST';
       const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (!d.ok) { el('eaf-msg').textContent = d.error || 'Save failed'; el('eaf-msg').style.color = 'var(--red)'; return; }
-      const accId = isEdit ? a.id : d.id;
+      if (!d.ok) { el('eaf-msg').textContent = d.error || 'Guardar failed'; el('eaf-msg').style.color = 'var(--red)'; return; }
+      const accId = isEditar ? a.id : d.id;
       window.location.href = `/api/email/oauth/google/authorize?account_id=${encodeURIComponent(accId)}`;
     });
     el('eaf-smtp-security').value = _smtpSecurity(a);
@@ -3072,11 +3072,11 @@ async function initEmailAccountsSettings() {
       // Name is optional — fall back to the From address so the list view
       // still has a label to render. Only refuse if both are blank.
       if (!body.name) body.name = body.from_address;
-      if (!body.name) { el('eaf-msg').textContent = 'Need at least a Name or Email'; el('eaf-msg').style.color = 'var(--red)'; return; }
+      if (!body.name) { el('eaf-msg').textContent = 'Need at least a Name or Correo'; el('eaf-msg').style.color = 'var(--red)'; return; }
 
       try {
-        const url = isEdit ? `/api/email/accounts/${a.id}` : '/api/email/accounts';
-        const method = isEdit ? 'PUT' : 'POST';
+        const url = isEditar ? `/api/email/accounts/${a.id}` : '/api/email/accounts';
+        const method = isEditar ? 'PUT' : 'POST';
         const r = await fetch(url, {
           method, credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -3084,11 +3084,11 @@ async function initEmailAccountsSettings() {
         });
         const d = await r.json();
         if (d.ok || d.id) {
-          el('eaf-msg').textContent = 'Saved';
+          el('eaf-msg').textContent = 'Guardard';
           el('eaf-msg').style.color = 'var(--green,#50fa7b)';
           setTimeout(() => { formEl.style.display = 'none'; renderList(); }, 400);
         } else {
-          el('eaf-msg').textContent = d.error || 'Save failed';
+          el('eaf-msg').textContent = d.error || 'Guardar failed';
           el('eaf-msg').style.color = 'var(--red)';
         }
       } catch (e) {
@@ -3102,7 +3102,7 @@ async function initEmailAccountsSettings() {
   await renderList();
 }
 
-async function initEmailSettings() {
+async function initCorreoConfiguración() {
   const root = el('settings-modal');
   if (!root || !root.querySelector('[data-settings-panel="email"]')) return;
 
@@ -3152,7 +3152,7 @@ async function initEmailSettings() {
     if (el('set-carddav-pass')) el('set-carddav-pass').value = '';
   } catch (_) {}
 
-  // Save email config
+  // Guardar email config
   el('set-email-save')?.addEventListener('click', async () => {
     const msg = el('set-email-msg');
     if (msg) msg.textContent = 'Saving...';
@@ -3176,14 +3176,14 @@ async function initEmailSettings() {
         body: JSON.stringify(data),
       });
       const result = await res.json();
-      if (msg) msg.textContent = result.success ? '✓ Saved' : (result.error || 'Failed');
+      if (msg) msg.textContent = result.success ? '✓ Guardard' : (result.error || 'Failed');
       setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
     } catch (e) {
       if (msg) msg.textContent = 'Failed';
     }
   });
 
-  // Save CardDAV config
+  // Guardar CardDAV config
   el('set-carddav-save')?.addEventListener('click', async () => {
     const msg = el('set-carddav-msg');
     if (msg) msg.textContent = 'Saving...';
@@ -3200,7 +3200,7 @@ async function initEmailSettings() {
         body: JSON.stringify(data),
       });
       const result = await res.json();
-      if (msg) msg.textContent = result.success ? '✓ Saved' : (result.error || 'Failed');
+      if (msg) msg.textContent = result.success ? '✓ Guardard' : (result.error || 'Failed');
       setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
     } catch (e) {
       if (msg) msg.textContent = 'Failed';
@@ -3213,7 +3213,7 @@ async function initEmailSettings() {
     const msg = el('set-email-style-msg');
     btn.disabled = true;
     // Render whirlpool + label inside the status area (same pattern as
-    // the "Find" / network-discover button in Add Models).
+    // the "Find" / network-discover button in Agregar Modelos).
     let wp = null;
     if (msg) {
       msg.className = '';
@@ -3257,7 +3257,7 @@ async function initEmailSettings() {
     }
   });
 
-  // Save writing style manually
+  // Guardar writing style manually
   el('set-email-style-save')?.addEventListener('click', async () => {
     const msg = el('set-email-style-msg');
     if (msg) msg.textContent = 'Saving...';
@@ -3272,7 +3272,7 @@ async function initEmailSettings() {
       if (result.success) {
         try { localStorage.setItem(styleKey, style); } catch (_) {}
       }
-      if (msg) msg.textContent = result.success ? '✓ Saved' : 'Failed';
+      if (msg) msg.textContent = result.success ? '✓ Guardard' : 'Failed';
       setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
     } catch (e) {
       if (msg) msg.textContent = 'Failed';
@@ -3362,22 +3362,22 @@ async function initIntegrations() {
             <div style="font-size:11px;opacity:0.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(i.base_url || '')}</div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0;">
-            <button class="admin-btn-sm intg-edit-btn" data-id="${i.id}" style="font-size:11px;">Edit</button>
+            <button class="admin-btn-sm intg-edit-btn" data-id="${i.id}" style="font-size:11px;">Editar</button>
             <button class="admin-btn-sm intg-del-btn" data-id="${i.id}" style="font-size:11px;opacity:0.6;">Del</button>
           </div>
         </div>
       `).join('');
-      listEl.querySelectorAll('.intg-edit-btn').forEach(b => b.addEventListener('click', () => startEdit(b.dataset.id)));
-      listEl.querySelectorAll('.intg-del-btn').forEach(b => b.addEventListener('click', () => doDelete(b.dataset.id)));
+      listEl.querySelectorAll('.intg-edit-btn').forEach(b => b.addEventListener('click', () => startEditar(b.dataset.id)));
+      listEl.querySelectorAll('.intg-del-btn').forEach(b => b.addEventListener('click', () => doEliminar(b.dataset.id)));
     } catch (e) { listEl.innerHTML = '<div style="padding:12px;color:var(--red);font-size:12px;">Failed to load</div>'; }
   }
 
   function _esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   // Start editing
-  async function startEdit(id) {
+  async function startEditar(id) {
     editingId = id;
-    formTitle.textContent = 'Edit Integration';
+    formTitle.textContent = 'Editar Integration';
     // Fetch full data (with unmasked key from a dedicated edit fetch — we'll just load what we have)
     try {
       const res = await fetch('/api/auth/integrations', { credentials: 'same-origin' });
@@ -3400,7 +3400,7 @@ async function initIntegrations() {
   // Show add form
   addBtn.addEventListener('click', () => {
     editingId = null;
-    formTitle.textContent = 'Add Integration';
+    formTitle.textContent = 'Agregar Integration';
     presetSel.value = '';
     nameIn.value = '';
     urlIn.value = '';
@@ -3419,7 +3419,7 @@ async function initIntegrations() {
     statusEl.textContent = '';
   });
 
-  // Save
+  // Guardar
   saveBtn.addEventListener('click', async () => {
     const payload = {
       name: nameIn.value.trim(),
@@ -3438,14 +3438,14 @@ async function initIntegrations() {
       const method = editingId ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'same-origin' });
       if (res.ok) {
-        statusEl.textContent = 'Saved';
+        statusEl.textContent = 'Guardard';
         statusEl.style.color = 'var(--green, #98c379)';
         formCard.style.display = 'none';
         await renderList();
         notifyIntegrationsChanged();
       } else {
         const err = await res.json().catch(() => ({}));
-        statusEl.textContent = err.detail || 'Save failed';
+        statusEl.textContent = err.detail || 'Guardar failed';
         statusEl.style.color = 'var(--red)';
       }
     } catch (e) {
@@ -3456,7 +3456,7 @@ async function initIntegrations() {
 
   // Test
   testBtn.addEventListener('click', async () => {
-    if (!editingId) { statusEl.textContent = 'Save first, then test'; statusEl.style.color = 'var(--fg)'; return; }
+    if (!editingId) { statusEl.textContent = 'Guardar first, then test'; statusEl.style.color = 'var(--fg)'; return; }
     statusEl.textContent = 'Testing...';
     statusEl.style.color = 'var(--fg)';
     try {
@@ -3470,9 +3470,9 @@ async function initIntegrations() {
     }
   });
 
-  // Delete
-  async function doDelete(id) {
-    if (!await window.styledConfirm('Delete this integration?', { confirmText: 'Delete', danger: true })) return;
+  // Eliminar
+  async function doEliminar(id) {
+    if (!await window.styledConfirmar('Eliminar this integration?', { confirmText: 'Eliminar', danger: true })) return;
     try {
       await fetch(`/api/auth/integrations/${id}`, { method: 'DELETE', credentials: 'same-origin' });
       if (editingId === id) { formCard.style.display = 'none'; editingId = null; }
@@ -3492,24 +3492,24 @@ const INTG_TYPES = {
   caldav:  { label: 'CalDAV',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
   contacts: { label: 'Contacts', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
   carddav: { label: 'CardDAV', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
-  email:   { label: 'Email',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>' },
+  email:   { label: 'Correo',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>' },
   mcp:     { label: 'MCP',     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' },
-  codex:   { label: 'Codex',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 10.696.453a6.023 6.023 0 0 0-5.75 4.172 6.061 6.061 0 0 0-3.946 2.945 6.024 6.024 0 0 0 .742 7.099 5.98 5.98 0 0 0 .516 4.911 6.046 6.046 0 0 0 6.51 2.9A5.996 5.996 0 0 0 13.26 23.547a6.023 6.023 0 0 0 5.75-4.172 6.061 6.061 0 0 0 3.946-2.945 6.024 6.024 0 0 0-.674-6.609zM13.26 21.047a4.508 4.508 0 0 1-2.886-1.041l.143-.082 4.793-2.769a.777.777 0 0 0 .391-.676V10.34l2.026 1.17a.072.072 0 0 1 .039.061v5.596a4.532 4.532 0 0 1-4.506 4.48zM3.968 17.64a4.473 4.473 0 0 1-.537-3.018l.143.086 4.793 2.769a.79.79 0 0 0 .782 0l5.852-3.379v2.34a.072.072 0 0 1-.029.062l-4.845 2.796a4.532 4.532 0 0 1-6.159-1.656zM2.804 7.922a4.49 4.49 0 0 1 2.348-1.973V11.6a.778.778 0 0 0 .391.676l5.852 3.378-2.026 1.17a.072.072 0 0 1-.068 0L4.456 14.03a4.532 4.532 0 0 1-1.652-6.108zm16.423 3.823L13.375 8.367l2.026-1.17a.072.072 0 0 1 .068 0l4.845 2.796a4.525 4.525 0 0 1-.7 8.08V12.42a.778.778 0 0 0-.387-.676zm2.015-3.025l-.143-.086-4.793-2.769a.79.79 0 0 0-.782 0L9.672 9.243V6.903a.072.072 0 0 1 .029-.062l4.845-2.796a4.525 4.525 0 0 1 6.696 4.675zM8.598 12.66L6.57 11.49a.072.072 0 0 1-.039-.061V5.833a4.525 4.525 0 0 1 7.413-3.48l-.143.082-4.793 2.769a.777.777 0 0 0-.391.676l-.019 6.78zm1.1-2.379l2.607-1.505 2.607 1.505v3.01l-2.607 1.505-2.607-1.505z"/></svg>' },
+  codex:   { label: 'Códex',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 10.696.453a6.023 6.023 0 0 0-5.75 4.172 6.061 6.061 0 0 0-3.946 2.945 6.024 6.024 0 0 0 .742 7.099 5.98 5.98 0 0 0 .516 4.911 6.046 6.046 0 0 0 6.51 2.9A5.996 5.996 0 0 0 13.26 23.547a6.023 6.023 0 0 0 5.75-4.172 6.061 6.061 0 0 0 3.946-2.945 6.024 6.024 0 0 0-.674-6.609zM13.26 21.047a4.508 4.508 0 0 1-2.886-1.041l.143-.082 4.793-2.769a.777.777 0 0 0 .391-.676V10.34l2.026 1.17a.072.072 0 0 1 .039.061v5.596a4.532 4.532 0 0 1-4.506 4.48zM3.968 17.64a4.473 4.473 0 0 1-.537-3.018l.143.086 4.793 2.769a.79.79 0 0 0 .782 0l5.852-3.379v2.34a.072.072 0 0 1-.029.062l-4.845 2.796a4.532 4.532 0 0 1-6.159-1.656zM2.804 7.922a4.49 4.49 0 0 1 2.348-1.973V11.6a.778.778 0 0 0 .391.676l5.852 3.378-2.026 1.17a.072.072 0 0 1-.068 0L4.456 14.03a4.532 4.532 0 0 1-1.652-6.108zm16.423 3.823L13.375 8.367l2.026-1.17a.072.072 0 0 1 .068 0l4.845 2.796a4.525 4.525 0 0 1-.7 8.08V12.42a.778.778 0 0 0-.387-.676zm2.015-3.025l-.143-.086-4.793-2.769a.79.79 0 0 0-.782 0L9.672 9.243V6.903a.072.072 0 0 1 .029-.062l4.845-2.796a4.525 4.525 0 0 1 6.696 4.675zM8.598 12.66L6.57 11.49a.072.072 0 0 1-.039-.061V5.833a4.525 4.525 0 0 1 7.413-3.48l-.143.082-4.793 2.769a.777.777 0 0 0-.391.676l-.019 6.78zm1.1-2.379l2.607-1.505 2.607 1.505v3.01l-2.607 1.505-2.607-1.505z"/></svg>' },
   claude:  { label: 'Claude',  icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>' },
   vault:   { label: 'Vault',   icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' },
 };
 
-// Config shared by the Codex Agent and Claude Agent forms. Both use the same
+// Config shared by the Códex Agent and Claude Agent forms. Both use the same
 // scope-gated /api/codex/* backend; this just parameterizes the UI label,
 // default token name, and the per-agent install commands.
 const AGENT_CONFIGS = {
   codex: {
-    label: 'Codex Agent',
-    word: 'Codex',
+    label: 'Códex Agent',
+    word: 'Códex',
     namePrefix: 'codex agent',
-    defaultName: 'Codex Agent',
+    defaultName: 'Códex Agent',
     pluginPath: '/api/codex/plugin.zip',
-    setupDescription: 'Downloads a plugin bundle and registers it.',
+    setupDescription: 'Descargars a plugin bundle and registers it.',
     buildSetup: (origin, token) => `export ODYSSEUS_URL=${origin}
 export ODYSSEUS_API_TOKEN='${token}'
 mkdir -p ~/plugins
@@ -3547,7 +3547,7 @@ python3 ~/plugins/odysseus/scripts/odysseus_api.py capabilities`,
     namePrefix: 'claude agent',
     defaultName: 'Claude Agent',
     pluginPath: '/api/claude/plugin.zip',
-    setupDescription: 'Downloads a plugin bundle and registers it.',
+    setupDescription: 'Descargars a plugin bundle and registers it.',
     buildSetup: (origin, token) => `export ODYSSEUS_URL=${origin}
 export ODYSSEUS_API_TOKEN='${token}'
 mkdir -p ~/.claude
@@ -3569,22 +3569,22 @@ async function initUnifiedIntegrations() {
   if (!listEl) return;
   let integrationNotice = '';
 
-  // Hide the "+ Add Integration" button whenever the per-type create form
+  // Hide the "+ Agregar Integration" button whenever the per-type create form
   // is open so it doesn't compete visually with the in-progress form.
   // Many call sites toggle formEl.style.display directly; observe instead
   // of patching every one of them.
   if (formEl && addBtn && addBtn.parentElement && !formEl._addBtnObserved) {
     formEl._addBtnObserved = true;
     const addBtnWrap = addBtn.parentElement;
-    const _syncAddBtnWrap = () => {
+    const _syncAgregarBtnWrap = () => {
       const formOpen = formEl.style.display && formEl.style.display !== 'none';
       addBtnWrap.style.display = formOpen ? 'none' : '';
     };
-    new MutationObserver(_syncAddBtnWrap).observe(formEl, { attributes: true, attributeFilter: ['style'] });
-    _syncAddBtnWrap();
+    new MutationObserver(_syncAgregarBtnWrap).observe(formEl, { attributes: true, attributeFilter: ['style'] });
+    _syncAgregarBtnWrap();
   }
 
-  function _openEmailSettings() {
+  function _openCorreoConfiguración() {
     open('email');
   }
 
@@ -3607,7 +3607,7 @@ async function initUnifiedIntegrations() {
     }
     // CalDAV — one card per account
     for (const acc of (calRes.accounts || [])) {
-      items.push({ type: 'caldav', id: acc.id, name: acc.label || 'Calendar (CalDAV)', detail: acc.url, enabled: true, data: acc });
+      items.push({ type: 'caldav', id: acc.id, name: acc.label || 'Calendario (CalDAV)', detail: acc.url, enabled: true, data: acc });
     }
     // Contacts import first, then the optional CardDAV sync account.
     const contactCount = Number(contactsRes.count || (contactsRes.contacts || []).length || 0);
@@ -3631,7 +3631,7 @@ async function initUnifiedIntegrations() {
         data: cardRes,
       });
     }
-    // Email — one entry per EmailAccount row
+    // Correo — one entry per CorreoAccount row
     for (const acc of (emailAccountsRes.accounts || [])) {
       const label = acc.name + (acc.is_default ? ' (default)' : '');
       const detail = [acc.from_address || acc.imap_user, acc.imap_host].filter(Boolean).join(' — ');
@@ -3650,12 +3650,12 @@ async function initUnifiedIntegrations() {
       if (lowerName.startsWith('claude agent')) agentType = 'claude';
       else if (lowerName.startsWith('codex agent')) agentType = 'codex';
       else if (scopes.some(s => String(s || '').startsWith('todos:') || String(s || '').startsWith('email:') || String(s || '').startsWith('documents:'))) {
-        // Legacy / un-prefixed scoped tokens fall back to Codex for backwards compat.
+        // Legacy / un-prefixed scoped tokens fall back to Códex for backwards compat.
         agentType = 'codex';
       }
       if (!agentType) continue;
       const detail = `${tok.token_prefix || 'token'}... - ${scopes.join(', ') || 'chat'}`;
-      items.push({ type: agentType, id: tok.id, name: tok.name || (agentType === 'claude' ? 'Claude Agent' : 'Codex Agent'), detail, enabled: true, data: tok });
+      items.push({ type: agentType, id: tok.id, name: tok.name || (agentType === 'claude' ? 'Claude Agent' : 'Códex Agent'), detail, enabled: true, data: tok });
     }
     // Vaultwarden removed as an integration option.
     return items;
@@ -3687,7 +3687,7 @@ async function initUnifiedIntegrations() {
     const noticeHtml = integrationNotice ? `
       <div class="intg-followup-note" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:8px;border:1px solid color-mix(in srgb, var(--accent, var(--red)) 35%, transparent);border-left:3px solid var(--accent, var(--red));border-radius:5px;background:color-mix(in srgb, var(--accent, var(--red)) 8%, transparent);font-size:11px;">
         <span style="flex:1;line-height:1.35">${integrationNotice}</span>
-        <button type="button" class="admin-btn-sm intg-open-email-settings" style="white-space:nowrap;">Email settings</button>
+        <button type="button" class="admin-btn-sm intg-open-email-settings" style="white-space:nowrap;">Correo settings</button>
       </div>` : '';
     if (items.length === 0) {
       listEl.innerHTML = noticeHtml + '<div style="padding:12px;opacity:0.5;font-size:12px;text-align:center">No integrations configured</div>';
@@ -3696,7 +3696,7 @@ async function initUnifiedIntegrations() {
     }
     listEl.querySelector('.intg-open-email-settings')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      _openEmailSettings();
+      _openCorreoConfiguración();
     });
     // Wire edit clicks
     listEl.querySelectorAll('.intg-card').forEach(card => {
@@ -3717,7 +3717,7 @@ async function initUnifiedIntegrations() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const intgName = btn.dataset.intgName || 'this integration';
-        if (!await window.styledConfirm(`Remove "${intgName}"?`, { confirmText: 'Remove', danger: true })) return;
+        if (!await window.styledConfirmar(`Remove "${intgName}"?`, { confirmText: 'Remove', danger: true })) return;
         const type = btn.dataset.intgType;
         const id = btn.dataset.intgId;
         try {
@@ -3746,7 +3746,7 @@ async function initUnifiedIntegrations() {
     if (type === 'api') showApiForm(editId);
     else if (type === 'caldav') showCalDavForm(editId);
     else if (type === 'contacts' || type === 'carddav') showCardDavForm();
-    else if (type === 'email') showEmailForm(editId);
+    else if (type === 'email') showCorreoForm(editId);
     else if (type === 'mcp') showMcpForm(editId);
     else if (type === 'codex') showAgentForm('codex', editId);
     else if (type === 'claude') showAgentForm('claude', editId);
@@ -3823,8 +3823,8 @@ async function initUnifiedIntegrations() {
           <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;">
             <span id="uf-api-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
             <button class="admin-btn-add" id="uf-api-test" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Test</button>
-            <button class="admin-btn-add" id="uf-api-save" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Save</button>
-            <button class="admin-btn-add" id="uf-api-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancel</button>
+            <button class="admin-btn-add" id="uf-api-save" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Guardar</button>
+            <button class="admin-btn-add" id="uf-api-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancelar</button>
           </div>
         </div>
       </div>`;
@@ -3932,15 +3932,15 @@ async function initUnifiedIntegrations() {
         // immediately without needing a form reopen. The POST response
         // shape is {ok, integration: {id, ...}} — saved.id at the top
         // level would silently miss, leaving Test perpetually stuck on
-        // "Save first" until the form was reopened.
+        // "Guardar first" until the form was reopened.
         if (!_editId && saved) _editId = saved.integration?.id || saved.id;
-        el('uf-api-msg').textContent = 'Saved'; el('uf-api-msg').style.color = 'var(--green,#50fa7b)';
+        el('uf-api-msg').textContent = 'Guardard'; el('uf-api-msg').style.color = 'var(--green,#50fa7b)';
         await renderList();
         notifyIntegrationsChanged();
       } catch (_) { el('uf-api-msg').textContent = 'Failed'; el('uf-api-msg').style.color = 'var(--red)'; }
     });
     el('uf-api-test').addEventListener('click', async () => {
-      if (!_editId) { el('uf-api-msg').textContent = 'Save first'; return; }
+      if (!_editId) { el('uf-api-msg').textContent = 'Guardar first'; return; }
       try {
         const r = await fetch(`/api/auth/integrations/${_editId}/test`, { method: 'POST', credentials: 'same-origin' });
         const d = await r.json();
@@ -3961,17 +3961,17 @@ async function initUnifiedIntegrations() {
     const isNew = !editId || editId === 'new';
     formEl.innerHTML = `
       <div class="admin-card" style="margin-top:8px">
-        <h2 style="font-size:13px;display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent, var(--red));flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${isNew ? 'Add CalDAV Calendar' : 'Edit CalDAV Calendar'}</h2>
+        <h2 style="font-size:13px;display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent, var(--red));flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${isNew ? 'Agregar CalDAV Calendario' : 'Editar CalDAV Calendario'}</h2>
         <div class="settings-col">
           <div class="settings-row"><label class="settings-label">Label</label><input id="uf-caldav-label" class="settings-input" placeholder="e.g. Work, Personal"></div>
           <div class="settings-row"><label class="settings-label">Server URL</label><input id="uf-caldav-url" class="settings-input" placeholder="https://www.google.com/calendar/dav/you@gmail.com/user/"></div>
-          <div class="settings-row"><label class="settings-label">Username</label><input id="uf-caldav-user" class="settings-input" placeholder="you@example.com"></div>
-          <div class="settings-row"><label class="settings-label">Password</label><input id="uf-caldav-pass" class="settings-input" type="password" placeholder="${isNew ? '' : 'Leave blank to keep existing'}"></div>
+          <div class="settings-row"><label class="settings-label">Usuario</label><input id="uf-caldav-user" class="settings-input" placeholder="you@example.com"></div>
+          <div class="settings-row"><label class="settings-label">Contraseña</label><input id="uf-caldav-pass" class="settings-input" type="password" placeholder="${isNew ? '' : 'Leave blank to keep existing'}"></div>
           <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;">
             <span id="uf-caldav-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
             <button class="admin-btn-add" id="uf-caldav-test" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Test</button>
-            <button class="admin-btn-add" id="uf-caldav-save" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Save</button>
-            <button class="admin-btn-add" id="uf-caldav-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancel</button>
+            <button class="admin-btn-add" id="uf-caldav-save" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Guardar</button>
+            <button class="admin-btn-add" id="uf-caldav-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancelar</button>
           </div>
         </div>
       </div>`;
@@ -4047,15 +4047,15 @@ async function initUnifiedIntegrations() {
         }
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
-          _setCalDavMsg(err.detail || 'Save failed', false);
+          _setCalDavMsg(err.detail || 'Guardar failed', false);
           return;
         }
-        _setCalDavMsg('Saved', true);
+        _setCalDavMsg('Guardard', true);
         formEl.style.display = 'none';
         await renderList();
         notifyIntegrationsChanged();
       } catch (_) {
-        _setCalDavMsg('Save failed', false);
+        _setCalDavMsg('Guardar failed', false);
       }
     });
 
@@ -4074,17 +4074,17 @@ async function initUnifiedIntegrations() {
         <h2 style="font-size:13px;display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent, var(--red));flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Contacts (CardDAV)</h2>
         <div class="settings-col">
           <div class="settings-row"><label class="settings-label">URL</label><input id="uf-carddav-url" class="settings-input" placeholder="http://localhost:5232/user/contacts/"></div>
-          <div class="settings-row"><label class="settings-label">Username</label><input id="uf-carddav-user" class="settings-input"></div>
-          <div class="settings-row"><label class="settings-label">Password</label><input id="uf-carddav-pass" class="settings-input" type="password"></div>
+          <div class="settings-row"><label class="settings-label">Usuario</label><input id="uf-carddav-user" class="settings-input"></div>
+          <div class="settings-row"><label class="settings-label">Contraseña</label><input id="uf-carddav-pass" class="settings-input" type="password"></div>
           <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;">
             <span id="uf-carddav-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
             <button class="admin-btn-add" id="uf-carddav-save" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Save
+              Guardar
             </button>
             <button class="admin-btn-add" id="uf-carddav-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Cancel
+              Cancelar
             </button>
           </div>
         </div>
@@ -4095,17 +4095,17 @@ async function initUnifiedIntegrations() {
           <button class="admin-btn-sm" id="cm-import-btn" style="margin-left:auto;">Import</button>
           <button class="admin-btn-sm" id="cm-export-vcf-btn">Export .vcf</button>
           <button class="admin-btn-sm" id="cm-export-csv-btn">Export .csv</button>
-          <button class="admin-btn-sm" id="cm-add-toggle">+ Add</button>
+          <button class="admin-btn-sm" id="cm-add-toggle">+ Agregar</button>
           <input type="file" id="cm-import-file" accept=".vcf,.csv,text/vcard,text/csv" multiple style="display:none">
         </div>
         <div id="cm-add-row" class="contacts-add-row" style="display:none;flex-direction:column;gap:4px;">
           <input id="cm-add-name" class="settings-input" placeholder="Name">
           <input id="cm-add-email" class="settings-input" placeholder="email@example.com">
           <input id="cm-add-phone" class="settings-input" placeholder="Phone (optional)">
-          <input id="cm-add-address" class="settings-input" placeholder="Address (optional)">
-          <div style="display:flex;gap:6px;justify-content:flex-end;"><button class="admin-btn-sm" id="cm-add-save">Save</button></div>
+          <input id="cm-add-address" class="settings-input" placeholder="Agregarress (optional)">
+          <div style="display:flex;gap:6px;justify-content:flex-end;"><button class="admin-btn-sm" id="cm-add-save">Guardar</button></div>
         </div>
-        <input type="text" id="cm-search" class="settings-input" placeholder="Search contacts (name, email, phone, address)" style="margin-top:6px;">
+        <input type="text" id="cm-search" class="settings-input" placeholder="Buscar contacts (name, email, phone, address)" style="margin-top:6px;">
         <div id="cm-list" class="contacts-list"><div style="opacity:0.4;font-size:11px;padding:8px 2px;">Loading…</div></div>
       </div>`;
     try {
@@ -4123,7 +4123,7 @@ async function initUnifiedIntegrations() {
       if (el('uf-carddav-pass').value) body.carddav_password = el('uf-carddav-pass').value;
       try {
         await fetch('/api/contacts/config', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        el('uf-carddav-msg').textContent = 'Saved';
+        el('uf-carddav-msg').textContent = 'Guardard';
         el('uf-carddav-msg').style.color = 'var(--green, #50fa7b)';
         // Refresh both the sub-panel (contacts manager) AND the
         // outer integrations list so the CardDAV row appears
@@ -4136,7 +4136,7 @@ async function initUnifiedIntegrations() {
         el('uf-carddav-msg').style.color = 'var(--red)';
       }
     });
-    // Add-row toggle + save
+    // Agregar-row toggle + save
     el('cm-add-toggle')?.addEventListener('click', () => {
       const row = el('cm-add-row');
       const open = row.style.display !== 'none';
@@ -4285,21 +4285,21 @@ async function initUnifiedIntegrations() {
               <div class="contact-name" style="font-size:12px;font-weight:600;">${esc(c.name || '(no name)')}</div>
               <div class="contact-sub" style="font-size:10px;opacity:0.55;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(sub)}</div>
             </div>
-            <button class="admin-btn-sm contact-edit" title="Edit" style="display:inline-flex;align-items:center;gap:4px;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 35%, var(--border));">
+            <button class="admin-btn-sm contact-edit" title="Editar" style="display:inline-flex;align-items:center;gap:4px;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 35%, var(--border));">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit
+              Editar
             </button>
-            <button class="admin-btn-sm contact-del" title="Delete" style="opacity:0.85;display:inline-flex;align-items:center;gap:4px;">
+            <button class="admin-btn-sm contact-del" title="Eliminar" style="opacity:0.85;display:inline-flex;align-items:center;gap:4px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Delete
+              Eliminar
             </button>
           </div>
           <div class="contact-row-edit" style="display:none;flex-direction:column;gap:4px;">
             <input class="settings-input contact-edit-name" value="${esc(c.name || '')}" placeholder="Name">
             <input class="settings-input contact-edit-emails" value="${esc(emails)}" placeholder="email1, email2">
             <input class="settings-input contact-edit-phones" value="${esc(phones)}" placeholder="phone1, phone2">
-            <input class="settings-input contact-edit-address" value="${esc(address)}" placeholder="Address">
-            <div style="display:flex;gap:6px;"><button class="admin-btn-sm contact-save">Save</button><button class="admin-btn-sm contact-cancel" style="opacity:0.7;">Cancel</button></div>
+            <input class="settings-input contact-edit-address" value="${esc(address)}" placeholder="Agregarress">
+            <div style="display:flex;gap:6px;"><button class="admin-btn-sm contact-save">Guardar</button><button class="admin-btn-sm contact-cancel" style="opacity:0.7;">Cancelar</button></div>
           </div>
         </div>`;
       }).join('');
@@ -4342,9 +4342,9 @@ async function initUnifiedIntegrations() {
         await _renderContactsManager();
       });
       row.querySelector('.contact-del')?.addEventListener('click', async () => {
-        const ok = uiModule.styledConfirm
-          ? await uiModule.styledConfirm('Delete this contact?', { confirmText: 'Delete', danger: true })
-          : window.confirm('Delete this contact?');
+        const ok = uiModule.styledConfirmar
+          ? await uiModule.styledConfirmar('Eliminar this contact?', { confirmText: 'Eliminar', danger: true })
+          : window.confirm('Eliminar this contact?');
         if (!ok) return;
         try {
           await fetch('/api/contacts/' + encodeURIComponent(uid), { method: 'DELETE', credentials: 'same-origin' });
@@ -4354,21 +4354,21 @@ async function initUnifiedIntegrations() {
     });
   }
 
-  // ── Email form (multi-account) ──
+  // ── Correo form (multi-account) ──
   // When editId is a real account id, edit that row. When editId is falsy or 'new',
   // create a fresh account. Posts to /api/email/accounts, never to the legacy
   // /api/email/config which would overwrite the default.
-  async function showEmailForm(editId) {
-    const isEdit = editId && editId !== 'new' && editId !== '__email__';
+  async function showCorreoForm(editId) {
+    const isEditar = editId && editId !== 'new' && editId !== '__email__';
     let existing = null;
-    if (isEdit) {
+    if (isEditar) {
       try {
         const r = await fetch('/api/email/accounts', { credentials: 'same-origin' });
         const d = await r.json();
         existing = (d.accounts || []).find(a => a.id === editId) || null;
       } catch (_) {}
     }
-    const placeholderPass = (isEdit && existing) ? '(leave blank to keep current)' : '';
+    const placeholderPass = (isEditar && existing) ? '(leave blank to keep current)' : '';
     // Small `?` indicator next to each label (native title tooltip).
     const _hint = (tip) =>
       `<span class="uf-hint" title="${esc(tip)}" aria-label="${esc(tip)}" tabindex="0" `
@@ -4411,7 +4411,7 @@ async function initUnifiedIntegrations() {
     const _smtpSecurity = (acct) => acct?.smtp_security || ((parseInt(acct?.smtp_port || 465) === 587) ? 'starttls' : 'ssl');
     formEl.innerHTML = `
       <div class="admin-card" style="margin-top:8px">
-        <h2 style="font-size:13px">${isEdit ? 'Edit' : 'Add'} Email Account</h2>
+        <h2 style="font-size:13px">${isEditar ? 'Editar' : 'Agregar'} Correo Account</h2>
         <div class="settings-col">
           <div class="settings-row"><label class="settings-label">Provider${_hint('Pick a known provider to auto-fill the IMAP and SMTP host/port. Choose Custom to type your own.')}</label>
             <div class="ufp-wrap" style="position:relative;flex:1;min-width:0;">
@@ -4426,7 +4426,7 @@ async function initUnifiedIntegrations() {
           </div>
           <div id="uf-email-provider-note" style="display:none;font-size:11px;line-height:1.5;padding:8px 10px;margin:2px 0 4px;border:1px solid color-mix(in srgb, var(--fg) 15%, transparent);border-left:3px solid var(--accent, var(--red));border-radius:4px;background:color-mix(in srgb, var(--fg) 4%, transparent);"></div>
           <div class="settings-row"><label class="settings-label">Name${_hint('Optional label for this account (e.g. “Work” or “Personal”). Leave blank to use the email address.')}</label><input id="uf-email-name" class="settings-input" placeholder="(optional — leave blank to use email)"></div>
-          <div class="settings-row"><label class="settings-label">Email${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="uf-email-from" class="settings-input" placeholder="you@example.com"></div>
+          <div class="settings-row"><label class="settings-label">Correo${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="uf-email-from" class="settings-input" placeholder="you@example.com"></div>
           <div class="settings-row"><label class="settings-label">Display Name${_hint('Your name as it appears in the From: field of emails you send, e.g. Jane Smith. Auto-filled from Google during OAuth.')}</label><input id="uf-display-name" class="settings-input" placeholder="Your Name"></div>
           <div id="uf-oauth-section" style="display:none;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--accent,#50fa7b) 6%,transparent)">
             <div style="font-size:11px;font-weight:600;margin-bottom:6px">Google OAuth2 — required for Workspace / .edu accounts</div>
@@ -4436,16 +4436,16 @@ async function initUnifiedIntegrations() {
           <div style="font-size:11px;font-weight:600;opacity:0.6;margin:4px 0 2px;display:flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent, var(--red));flex-shrink:0;" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>IMAP (Receiving)</div>
           <div class="settings-row"><label class="settings-label">Host${_hint('Your IMAP server, e.g. imap.gmail.com, imap.migadu.com, a LAN host, or a Tailscale IP for Dovecot.')}</label><input id="uf-imap-host" class="settings-input" placeholder="imap.example.com"></div>
           <div class="settings-row"><label class="settings-label">Port${_hint('993 for IMAPS (most providers), 143 for plain or STARTTLS. Local servers often use a custom port like 31143.')}</label><input id="uf-imap-port" class="settings-input" type="number" placeholder="993" style="max-width:100px"></div>
-          <div class="settings-row"><label class="settings-label">Username${_hint('Yes — your full email address goes here too (e.g. you@gmail.com). Same as the Email field above for almost every provider.')}</label><input id="uf-imap-user" class="settings-input" placeholder="you@example.com"></div>
-          <div class="uf-password-section"><div class="settings-row"><label class="settings-label">Password${_hint('For Gmail, iCloud, and Yahoo: paste your App Password (NOT your normal account password). For Migadu and Fastmail, your mailbox password usually works. Outlook / Office 365 generally requires OAuth and will not work with this password form.')}</label><input id="uf-imap-pass" class="settings-input" type="password" placeholder="${placeholderPass}"></div></div>
+          <div class="settings-row"><label class="settings-label">Usuario${_hint('Sí — your full email address goes here too (e.g. you@gmail.com). Same as the Correo field above for almost every provider.')}</label><input id="uf-imap-user" class="settings-input" placeholder="you@example.com"></div>
+          <div class="uf-password-section"><div class="settings-row"><label class="settings-label">Contraseña${_hint('For Gmail, iCloud, and Yahoo: paste your App Contraseña (NOT your normal account password). For Migadu and Fastmail, your mailbox password usually works. Outlook / Office 365 generally requires OAuth and will not work with this password form.')}</label><input id="uf-imap-pass" class="settings-input" type="password" placeholder="${placeholderPass}"></div></div>
           <div class="settings-row"><label class="settings-label">STARTTLS${_hint('Turn ON for port 143/587 to upgrade plain to TLS. Turn OFF for port 993 (IMAPS — already encrypted) or a local server with no TLS configured.')}</label><label class="admin-switch" style="margin-left:0"><input type="checkbox" id="uf-imap-starttls" checked><span class="admin-slider"></span></label></div>
           <div style="font-size:11px;font-weight:600;opacity:0.6;margin:8px 0 2px;display:flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent, var(--red));flex-shrink:0;" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>SMTP (Sending) <span style="font-weight:normal;opacity:0.7">— optional, leave blank for read-only</span></div>
           <div class="settings-row"><label class="settings-label">Host${_hint('Your outgoing-mail server, e.g. smtp.gmail.com. Leave blank to make this account read-only.')}</label><input id="uf-smtp-host" class="settings-input" placeholder="smtp.example.com"></div>
           <div class="settings-row"><label class="settings-label">Port${_hint('465 for SSL/SMTPS, 587 for STARTTLS. 25 is usually blocked by ISPs.')}</label><input id="uf-smtp-port" class="settings-input" type="number" placeholder="465" style="max-width:100px"></div>
           <div class="settings-row"><label class="settings-label">Security${_hint('SSL for port 465, STARTTLS for port 587, or None for local SMTP bridges such as Proton Mail Bridge.')}</label><select id="uf-smtp-security" class="settings-select"><option value="ssl">SSL</option><option value="starttls">STARTTLS</option><option value="none">None</option></select></div>
           <div class="settings-row"><label class="settings-label">Same as IMAP${_hint('Use the IMAP username and password for SMTP too (right for almost every provider). Turn off to enter separate SMTP credentials.')}</label><label class="admin-switch" style="margin-left:0"><input type="checkbox" id="uf-smtp-same" checked><span class="admin-slider"></span></label></div>
-          <div class="settings-row uf-smtp-creds"><label class="settings-label">Username${_hint('Usually the same as your IMAP username (your email address).')}</label><input id="uf-smtp-user" class="settings-input"></div>
-          <div class="settings-row uf-smtp-creds"><label class="settings-label">Password${_hint('Your SMTP password — often the same as your IMAP password. Outlook / Office 365 generally requires OAuth and will not work with this password form.')}</label><input id="uf-smtp-pass" class="settings-input" type="password" placeholder="${placeholderPass}"></div>
+          <div class="settings-row uf-smtp-creds"><label class="settings-label">Usuario${_hint('Usually the same as your IMAP username (your email address).')}</label><input id="uf-smtp-user" class="settings-input"></div>
+          <div class="settings-row uf-smtp-creds"><label class="settings-label">Contraseña${_hint('Your SMTP password — often the same as your IMAP password. Outlook / Office 365 generally requires OAuth and will not work with this password form.')}</label><input id="uf-smtp-pass" class="settings-input" type="password" placeholder="${placeholderPass}"></div>
           <div class="settings-row" style="margin-top:4px"><label class="settings-label">Default${_hint('Use this account whenever no specific account is chosen.')}</label><label class="admin-switch" style="margin-left:0"><input type="checkbox" id="uf-email-default"><span class="admin-slider"></span></label><span style="font-size:10px;opacity:0.5;margin-left:6px">Used when nothing else is selected</span></div>
           <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;">
             <span id="uf-email-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
@@ -4459,11 +4459,11 @@ async function initUnifiedIntegrations() {
               <span class="uf-email-save-ico" style="display:inline-flex;width:11px;height:11px;align-items:center;justify-content:center;">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
               </span>
-              <span class="uf-email-save-label">${isEdit ? 'Save' : 'Create'}</span>
+              <span class="uf-email-save-label">${isEditar ? 'Guardar' : 'Crear'}</span>
             </button>
             <button class="admin-btn-add" id="uf-email-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Cancel
+              Cancelar
             </button>
           </div>
         </div>
@@ -4476,18 +4476,18 @@ async function initUnifiedIntegrations() {
     // mobile / cross-device flows.
     const PROVIDER_NOTES = {
       gmail: {
-        title: 'Gmail needs an App Password',
-        body: 'Your regular Google password won\'t work for IMAP. Generate a 16-character App Password (requires 2-Step Verification enabled) and paste it as the Password.',
+        title: 'Gmail needs an App Contraseña',
+        body: 'Your regular Google password won\'t work for IMAP. Generate a 16-character App Contraseña (requires 2-Step Verification enabled) and paste it as the Contraseña.',
         url: 'https://myaccount.google.com/apppasswords',
       },
       icloud: {
-        title: 'iCloud needs an App-Specific Password',
-        body: 'Sign in to your Apple ID, go to Sign-In and Security → App-Specific Passwords, and generate one (requires 2FA on your Apple ID).',
+        title: 'iCloud needs an App-Specific Contraseña',
+        body: 'Iniciar sesión to your Apple ID, go to Sign-In and Security → App-Specific Contraseñas, and generate one (requires 2FA on your Apple ID).',
         url: 'https://account.apple.com/account/manage',
       },
       yahoo: {
-        title: 'Yahoo needs an App Password',
-        body: 'Generate an App Password from Yahoo Account Security (requires 2-Step Verification enabled) and paste it as the Password.',
+        title: 'Yahoo needs an App Contraseña',
+        body: 'Generate an App Contraseña from Yahoo Account Security (requires 2-Step Verification enabled) and paste it as the Contraseña.',
         url: 'https://login.yahoo.com/account/security/app-passwords',
       },
       outlook: {
@@ -4522,8 +4522,8 @@ async function initUnifiedIntegrations() {
       ta.remove();
       return ok;
     };
-    if (noteEl && !noteEl._ufProviderCopyWired) {
-      noteEl._ufProviderCopyWired = true;
+    if (noteEl && !noteEl._ufProviderCopiarWired) {
+      noteEl._ufProviderCopiarWired = true;
       noteEl.addEventListener('click', async (e) => {
         const copyBtn = e.target.closest?.('.uf-prov-copy');
         if (!copyBtn || !noteEl.contains(copyBtn)) return;
@@ -4533,7 +4533,7 @@ async function initUnifiedIntegrations() {
         const orig = copyBtn.innerHTML;
         const ok = await _copyProviderUrl(url);
         if (!ok) {
-          uiModule.showError?.('Copy failed');
+          uiModule.showError?.('Copiar failed');
           return;
         }
         uiModule.showToast?.('Copied');
@@ -4553,11 +4553,11 @@ async function initUnifiedIntegrations() {
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" class="admin-btn-sm" style="background:var(--red);border-color:var(--red);color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:5px;font-weight:600;">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            ${esc(n.linkLabel || 'Generate App Password')}
+            ${esc(n.linkLabel || 'Generate App Contraseña')}
           </a>
           <button type="button" class="admin-btn-sm uf-prov-copy" data-url="${esc(n.url)}" style="opacity:0.7;display:inline-flex;align-items:center;gap:5px;">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy link
+            Copiar link
           </button>
         </div>`;
     };
@@ -4625,7 +4625,7 @@ async function initUnifiedIntegrations() {
     })();
 
     // Provider preset → autofill IMAP + SMTP host/port + STARTTLS, set the
-    // helper note, and update the Email/Username placeholders to a
+    // helper note, and update the Correo/Usuario placeholders to a
     // provider-specific example so users see the right format at a glance.
     el('uf-email-provider').addEventListener('change', (e) => {
       const key = e.target.value;
@@ -4653,13 +4653,13 @@ async function initUnifiedIntegrations() {
     el('uf-oauth-btn').addEventListener('click', async () => {
       const body = _collectBody();
       if (!body.name) body.name = body.from_address;
-      if (!body.name) { el('uf-email-msg').textContent = 'Enter a Name or Email first'; el('uf-email-msg').style.color = 'var(--red)'; return; }
-      const url = isEdit ? `/api/email/accounts/${editId}` : '/api/email/accounts';
-      const method = isEdit ? 'PUT' : 'POST';
+      if (!body.name) { el('uf-email-msg').textContent = 'Enter a Name or Correo first'; el('uf-email-msg').style.color = 'var(--red)'; return; }
+      const url = isEditar ? `/api/email/accounts/${editId}` : '/api/email/accounts';
+      const method = isEditar ? 'PUT' : 'POST';
       const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (!(d.ok || d.id)) { el('uf-email-msg').textContent = d.error || 'Save failed'; el('uf-email-msg').style.color = 'var(--red)'; return; }
-      const accId = isEdit ? editId : d.id;
+      if (!(d.ok || d.id)) { el('uf-email-msg').textContent = d.error || 'Guardar failed'; el('uf-email-msg').style.color = 'var(--red)'; return; }
+      const accId = isEditar ? editId : d.id;
       window.location.href = `/api/email/oauth/google/authorize?account_id=${encodeURIComponent(accId)}`;
     });
 
@@ -4719,7 +4719,7 @@ async function initUnifiedIntegrations() {
     });
 
     // Collect the current form values + apply the "Same as IMAP" mirror —
-    // shared by both Save and Test so they agree on what's being sent.
+    // shared by both Guardar and Test so they agree on what's being sent.
     const _collectBody = () => {
       const body = {
         name: el('uf-email-name').value.trim(),
@@ -4751,10 +4751,10 @@ async function initUnifiedIntegrations() {
 
     el('uf-email-test').addEventListener('click', async () => {
       const body = _collectBody();
-      // Edit-mode + blank password = use the saved row's stored creds
+      // Editar-mode + blank password = use the saved row's stored creds
       // via the account_id shortcut. Other overrides in the body still
       // win (server merges).
-      if (isEdit && !body.imap_password) body.account_id = editId;
+      if (isEditar && !body.imap_password) body.account_id = editId;
       const msg = el('uf-email-msg');
       const btn = el('uf-email-test');
       const ico = btn.querySelector('.uf-email-test-ico');
@@ -4825,9 +4825,9 @@ async function initUnifiedIntegrations() {
 
     el('uf-email-save').addEventListener('click', async () => {
       const body = _collectBody();
-      // Name is optional — fall back to Email so the list still has a label.
+      // Name is optional — fall back to Correo so the list still has a label.
       if (!body.name) body.name = body.from_address;
-      if (!body.name) { el('uf-email-msg').textContent = 'Need at least a Name or Email'; el('uf-email-msg').style.color = 'var(--red)'; return; }
+      if (!body.name) { el('uf-email-msg').textContent = 'Need at least a Name or Correo'; el('uf-email-msg').style.color = 'var(--red)'; return; }
       const saveBtn = el('uf-email-save');
       saveBtn.disabled = true;
       const saveIcoEl = saveBtn.querySelector('.uf-email-save-ico');
@@ -4837,8 +4837,8 @@ async function initUnifiedIntegrations() {
       saveIcoEl.innerHTML = _spinner;
       saveLblEl.textContent = 'Saving…';
       try {
-        const url = isEdit ? `/api/email/accounts/${editId}` : '/api/email/accounts';
-        const method = isEdit ? 'PUT' : 'POST';
+        const url = isEditar ? `/api/email/accounts/${editId}` : '/api/email/accounts';
+        const method = isEditar ? 'PUT' : 'POST';
         const r = await fetch(url, {
           method, credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -4850,9 +4850,9 @@ async function initUnifiedIntegrations() {
           el('uf-email-msg').style.color = 'var(--red)';
           return;
         }
-        el('uf-email-msg').textContent = 'Saved';
+        el('uf-email-msg').textContent = 'Guardard';
         el('uf-email-msg').style.color = 'var(--green,#50fa7b)';
-        integrationNotice = 'Email account saved. For more settings, go to Settings > Email.';
+        integrationNotice = 'Correo account saved. For more settings, go to Configuración > Correo.';
         formEl.style.display = 'none';
         await renderList();
         notifyIntegrationsChanged();
@@ -4871,23 +4871,23 @@ async function initUnifiedIntegrations() {
   async function showVaultForm() {
     formEl.innerHTML = `
       <div class="admin-card" style="margin-top:8px">
-        <h2 style="font-size:13px">Vaultwarden (Password Vault)</h2>
-        <div id="uf-vault-status" style="font-size:11px;opacity:0.7;margin-bottom:8px">Loading...</div>
+        <h2 style="font-size:13px">Vaultwarden (Contraseña Vault)</h2>
+        <div id="uf-vault-status" style="font-size:11px;opacity:0.7;margin-bottom:8px">Cargando...</div>
         <div class="settings-col">
           <div class="settings-row"><label class="settings-label">Server URL</label><input id="uf-vault-url" class="settings-input" placeholder="https://vault.example.com"></div>
-          <div class="settings-row"><label class="settings-label">Email</label><input id="uf-vault-email" class="settings-input" placeholder="you@example.com"></div>
-          <div class="settings-row"><label class="settings-label">Master Password</label><input id="uf-vault-pass" class="settings-input" type="password" placeholder="Only required for Login / Unlock"></div>
+          <div class="settings-row"><label class="settings-label">Correo</label><input id="uf-vault-email" class="settings-input" placeholder="you@example.com"></div>
+          <div class="settings-row"><label class="settings-label">Master Contraseña</label><input id="uf-vault-pass" class="settings-input" type="password" placeholder="Only required for Entrar / Unlock"></div>
           <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;">
             <span id="uf-vault-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
-            <button class="admin-btn-add" id="uf-vault-save" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Save Config</button>
-            <button class="admin-btn-add" id="uf-vault-login" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Login</button>
+            <button class="admin-btn-add" id="uf-vault-save" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Guardar Config</button>
+            <button class="admin-btn-add" id="uf-vault-login" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Entrar</button>
             <button class="admin-btn-add" id="uf-vault-unlock" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Unlock</button>
             <button class="admin-btn-add" id="uf-vault-lock" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Lock</button>
-            <button class="admin-btn-add" id="uf-vault-logout" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Logout</button>
-            <button class="admin-btn-add" id="uf-vault-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancel</button>
+            <button class="admin-btn-add" id="uf-vault-logout" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Salir</button>
+            <button class="admin-btn-add" id="uf-vault-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancelar</button>
           </div>
           <div style="font-size:10px;opacity:0.5;margin-top:6px;line-height:1.4">
-            <strong>Login</strong> registers this device with your Vaultwarden account (once per account).<br>
+            <strong>Entrar</strong> registers this device with your Vaultwarden account (once per account).<br>
             <strong>Unlock</strong> decrypts the vault — required after restart or Lock. Session is saved so the assistant can read passwords.
           </div>
         </div>
@@ -4930,7 +4930,7 @@ async function initUnifiedIntegrations() {
           body: JSON.stringify({ server_url: el('uf-vault-url').value, email: el('uf-vault-email').value }),
         });
         const d = await r.json();
-        if (d.ok) { msg('Saved', 'var(--green,#50fa7b)'); await refreshStatus(); await renderList(); }
+        if (d.ok) { msg('Guardard', 'var(--green,#50fa7b)'); await refreshStatus(); await renderList(); }
         else msg(d.error || 'Failed', 'var(--red)');
       } catch (e) { msg('Error: ' + e.message, 'var(--red)'); }
     });
@@ -4938,7 +4938,7 @@ async function initUnifiedIntegrations() {
     el('uf-vault-login').addEventListener('click', async () => {
       const email = el('uf-vault-email').value.trim();
       const pass = el('uf-vault-pass').value;
-      if (!email || !pass) { msg('Email + master password required', 'var(--red)'); return; }
+      if (!email || !pass) { msg('Correo + master password required', 'var(--red)'); return; }
       msg('Logging in...');
       try {
         const r = await fetch('/api/vault/login', {
@@ -4951,7 +4951,7 @@ async function initUnifiedIntegrations() {
           msg(d.already ? 'Already logged in — use Unlock' : 'Logged in', 'var(--green,#50fa7b)');
           el('uf-vault-pass').value = '';
           await refreshStatus(); await renderList();
-        } else msg(d.error || 'Login failed', 'var(--red)');
+        } else msg(d.error || 'Entrar failed', 'var(--red)');
       } catch (e) { msg('Error: ' + e.message, 'var(--red)'); }
     });
 
@@ -4984,7 +4984,7 @@ async function initUnifiedIntegrations() {
     });
 
     el('uf-vault-logout').addEventListener('click', async () => {
-      if (!await window.styledConfirm('Log out of Bitwarden CLI? You\'ll need to re-enter your master password to log back in.', { confirmText: 'Log out' })) return;
+      if (!await window.styledConfirmar('Log out of Bitwarden CLI? You\'ll need to re-enter your master password to log back in.', { confirmText: 'Log out' })) return;
       msg('Logging out...');
       try {
         await fetch('/api/vault/logout', { method: 'POST', credentials: 'same-origin' });
@@ -5060,7 +5060,7 @@ async function initUnifiedIntegrations() {
     }
     if (editId && editId !== 'new') {
       // Show management view for existing server
-      formEl.innerHTML = '<div class="admin-card" style="margin-top:8px"><span style="opacity:0.5;font-size:11px">Loading...</span></div>';
+      formEl.innerHTML = '<div class="admin-card" style="margin-top:8px"><span style="opacity:0.5;font-size:11px">Cargando...</span></div>';
       try {
         const res = await fetch('/api/mcp/servers', { credentials: 'same-origin' });
         const servers = await res.json();
@@ -5082,7 +5082,7 @@ async function initUnifiedIntegrations() {
               ${srv.needs_oauth ? `<a href="/api/mcp/oauth/authorize/${srv.id}" target="_blank" class="admin-btn-add" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));text-decoration:none;font-weight:600;">Authorize</a>` : ''}
               <button class="admin-btn-add" id="uf-mcp-reconnect" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Reconnect</button>
               <button class="admin-btn-add" id="uf-mcp-toggle" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">${srv.is_enabled ? 'Disable' : 'Enable'}</button>
-              <button class="admin-btn-add" id="uf-mcp-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Close</button>
+              <button class="admin-btn-add" id="uf-mcp-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cerrar</button>
             </div>
             <div id="uf-mcp-tools-panel"></div>
           </div>`;
@@ -5129,10 +5129,10 @@ async function initUnifiedIntegrations() {
         }
       } catch (_) { formEl.innerHTML = '<div class="admin-card" style="margin-top:8px">Failed to load server</div>'; }
     } else {
-      // Add new MCP server form
+      // Agregar new MCP server form
       formEl.innerHTML = `
         <div class="admin-card" style="margin-top:8px">
-          <h2 style="font-size:13px">Add MCP Server</h2>
+          <h2 style="font-size:13px">Agregar MCP Server</h2>
           <div class="settings-col">
             <div class="settings-row"><label class="settings-label">Name</label><input id="uf-mcp-name" class="settings-input" placeholder="Server name"></div>
             <div class="settings-row"><label class="settings-label">Transport</label><select id="uf-mcp-transport" class="settings-input"><option value="stdio">stdio</option><option value="sse">SSE</option><option value="http">Streamable HTTP</option></select></div>
@@ -5146,8 +5146,8 @@ async function initUnifiedIntegrations() {
             </div>
             <div class="settings-row" style="margin-top:10px;align-items:center;justify-content:flex-end;gap:6px;">
               <span id="uf-mcp-msg" style="font-size:11px;flex:1;margin-right:8px"></span>
-              <button class="admin-btn-add" id="uf-mcp-save" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Save</button>
-              <button class="admin-btn-add" id="uf-mcp-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancel</button>
+              <button class="admin-btn-add" id="uf-mcp-save" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">Guardar</button>
+              <button class="admin-btn-add" id="uf-mcp-cancel" style="background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">Cancelar</button>
             </div>
           </div>
         </div>`;
@@ -5188,7 +5188,7 @@ async function initUnifiedIntegrations() {
             el('uf-mcp-msg').textContent = `Connected (${data.tool_count || 0} tools)`;
             formEl.style.display = 'none'; await renderList();
           } else if (r.ok) {
-            el('uf-mcp-msg').textContent = 'Saved'; formEl.style.display = 'none'; await renderList();
+            el('uf-mcp-msg').textContent = 'Guardard'; formEl.style.display = 'none'; await renderList();
           } else {
             el('uf-mcp-msg').textContent = `Failed (${r.status})`;
           }
@@ -5208,20 +5208,20 @@ async function initUnifiedIntegrations() {
 
     const toolScopes = [
       { key: 'todos:read', label: 'Todos', detail: 'Read notes and checklists' },
-      { key: 'todos:write', label: 'Todos write', detail: 'Create, update, delete, and toggle todo items' },
-      { key: 'documents:read', label: 'Documents', detail: 'Read documents when a document API is enabled' },
-      { key: 'documents:write', label: 'Documents write', detail: 'Create and update draft documents' },
-      { key: 'email:read', label: 'Email', detail: 'Read email when an email API is enabled' },
-      { key: 'email:draft', label: 'Email drafts', detail: 'Create email reply drafts without sending' },
-      { key: 'email:send', label: 'Email send', detail: 'Send email directly' },
-      { key: 'calendar:read', label: 'Calendar', detail: 'Read calendar events when enabled' },
-      { key: 'calendar:write', label: 'Calendar write', detail: 'Create and update calendar events' },
-      { key: 'memory:read', label: 'Memory', detail: 'Read memory when enabled' },
-      { key: 'memory:write', label: 'Memory write', detail: 'Write memory when enabled' },
-      { key: 'cookbook:read', label: 'Cookbook', detail: 'List cookbook tasks + tail their tmux output (debug a model serve from outside the UI)' },
-      { key: 'cookbook:launch', label: 'Cookbook launch', detail: 'Launch and stop cookbook serve tasks. Powerful: runs SSH commands on your configured servers, bounded by the same allowlist the UI uses (vllm/python3/sglang/llama-server/...)' },
+      { key: 'todos:write', label: 'Todos write', detail: 'Crear, update, delete, and toggle todo items' },
+      { key: 'documents:read', label: 'Documentos', detail: 'Read documents when a document API is enabled' },
+      { key: 'documents:write', label: 'Documentos write', detail: 'Crear and update draft documents' },
+      { key: 'email:read', label: 'Correo', detail: 'Read email when an email API is enabled' },
+      { key: 'email:draft', label: 'Correo drafts', detail: 'Crear email reply drafts without sending' },
+      { key: 'email:send', label: 'Correo send', detail: 'Send email directly' },
+      { key: 'calendar:read', label: 'Calendario', detail: 'Read calendar events when enabled' },
+      { key: 'calendar:write', label: 'Calendario write', detail: 'Crear and update calendar events' },
+      { key: 'memory:read', label: 'Memoria', detail: 'Read memory when enabled' },
+      { key: 'memory:write', label: 'Memoria write', detail: 'Write memory when enabled' },
+      { key: 'cookbook:read', label: 'Recetas', detail: 'List cookbook tasks + tail their tmux output (debug a model serve from outside the UI)' },
+      { key: 'cookbook:launch', label: 'Recetas launch', detail: 'Launch and stop cookbook serve tasks. Powerful: runs SSH commands on your configured servers, bounded by the same allowlist the UI uses (vllm/python3/sglang/llama-server/...)' },
     ];
-    // Strict name-prefix match keeps Codex and Claude tokens in their own forms.
+    // Strict name-prefix match keeps Códex and Claude tokens in their own forms.
     const agentTokens = (Array.isArray(tokens) ? tokens : []).filter(tok =>
       (tok.name || '').toLowerCase().startsWith(cfg.namePrefix)
     );
@@ -5287,10 +5287,10 @@ async function initUnifiedIntegrations() {
           <div id="uf-codex-reveal" style="display:none;width:100%;box-sizing:border-box;">
             <div style="font-weight:600;font-size:12px;margin-bottom:6px;">Token</div>
 
-            <div style="font-size:11px;opacity:0.62;margin-bottom:4px;">Copy this token, it won't be shown again.</div>
+            <div style="font-size:11px;opacity:0.62;margin-bottom:4px;">Copiar this token, it won't be shown again.</div>
             <div style="position:relative;">
               <code id="uf-codex-token" style="display:block;word-break:break-all;font-size:11px;padding:6px 30px 6px 8px;background:rgba(0,0,0,0.08);border-radius:4px;"></code>
-              <button type="button" class="admin-btn-sm" id="uf-codex-copy-token" title="Copy token" aria-label="Copy token" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:3px 5px;background:none;border:none;color:inherit;opacity:0.7;cursor:pointer;display:inline-flex;align-items:center;">
+              <button type="button" class="admin-btn-sm" id="uf-codex-copy-token" title="Copiar token" aria-label="Copiar token" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:3px 5px;background:none;border:none;color:inherit;opacity:0.7;cursor:pointer;display:inline-flex;align-items:center;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
             </div>
@@ -5302,9 +5302,9 @@ async function initUnifiedIntegrations() {
             <div style="margin-top:14px;display:flex;align-items:center;gap:8px;">
               <span style="font-weight:600;font-size:11px;">Configure access</span>
               <span style="flex:1"></span>
-              <button type="button" class="admin-btn-sm" id="uf-codex-copy-setup" title="Copy setup" aria-label="Copy setup" style="font-size:11px;font-weight:normal;display:inline-flex;align-items:center;gap:5px;opacity:0.85;">
+              <button type="button" class="admin-btn-sm" id="uf-codex-copy-setup" title="Copiar setup" aria-label="Copiar setup" style="font-size:11px;font-weight:normal;display:inline-flex;align-items:center;gap:5px;opacity:0.85;">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                <span>Copy</span>
+                <span>Copiar</span>
               </button>
               <button type="button" class="admin-btn-sm" id="uf-codex-toggle-config" aria-expanded="false" style="font-size:11px;font-weight:normal;display:inline-flex;align-items:center;gap:5px;opacity:0.85;">
                 <svg id="uf-codex-toggle-config-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.15s"><polyline points="6 9 12 15 18 9"/></svg>
@@ -5319,7 +5319,7 @@ async function initUnifiedIntegrations() {
           <div class="settings-row" style="margin-top:10px;align-items:center;gap:6px;">
             <button class="admin-btn-add" id="uf-codex-cancel" style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Cancel
+              Cancelar
             </button>
             <span id="uf-codex-msg" style="font-size:11px;flex:1;text-align:center;"></span>
             <button class="admin-btn-add" id="uf-codex-revoke" style="display:none;align-items:center;gap:5px;background:color-mix(in srgb, var(--color-error) 10%, transparent);color:var(--color-error);border:1px solid var(--color-error);font-weight:600;">
@@ -5328,17 +5328,17 @@ async function initUnifiedIntegrations() {
             </button>
             <button class="admin-btn-add" id="uf-codex-create-btn" style="display:${current ? 'none' : 'inline-flex'};align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/><path d="M15.5 7.5l3 3"/></svg>
-              Create token
+              Crear token
             </button>
             <button class="admin-btn-add" id="uf-codex-save" style="display:none;align-items:center;gap:5px;background:transparent;color:var(--accent, var(--red));border-color:color-mix(in srgb, var(--accent, var(--red)) 45%, var(--border));font-weight:600;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Save
+              Guardar
             </button>
           </div>
         </div>
       </div>`;
 
-    // Editing an existing token: surface Revoke alongside Cancel, and stash
+    // Editaring an existing token: surface Revoke alongside Cancelar, and stash
     // the id so the Revoke handler knows what to DELETE.
     if (current) {
       formEl.dataset.createdTokenId = String(current.id);
@@ -5357,7 +5357,7 @@ async function initUnifiedIntegrations() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name }),
             });
-            if (!r.ok) throw new Error('Save failed');
+            if (!r.ok) throw new Error('Guardar failed');
             notifyIntegrationsChanged();
           } catch (_) { renameInput.value = original; }
         };
@@ -5378,7 +5378,7 @@ async function initUnifiedIntegrations() {
             });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.detail || 'Failed');
-            if (msg) { msg.textContent = 'Saved'; msg.style.color = 'var(--green, #50fa7b)'; setTimeout(() => { msg.textContent = ''; }, 1200); }
+            if (msg) { msg.textContent = 'Guardard'; msg.style.color = 'var(--green, #50fa7b)'; setTimeout(() => { msg.textContent = ''; }, 1200); }
             notifyIntegrationsChanged();
           } catch (err) {
             cb.checked = !cb.checked;
@@ -5419,21 +5419,21 @@ async function initUnifiedIntegrations() {
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(d.detail || 'Failed');
-        if (msg) { msg.textContent = 'Saved'; msg.style.color = 'var(--green, #50fa7b)'; }
+        if (msg) { msg.textContent = 'Guardard'; msg.style.color = 'var(--green, #50fa7b)'; }
         await renderList();
         setTimeout(() => { formEl.style.display = 'none'; }, 350);
       } catch (err) {
-        if (msg) { msg.textContent = err?.message || 'Save failed'; msg.style.color = 'var(--red)'; }
+        if (msg) { msg.textContent = err?.message || 'Guardar failed'; msg.style.color = 'var(--red)'; }
       }
     });
 
-    // Revoke = delete this agent token entirely. Confirmation prompt keeps
-    // it from being a one-click footgun. Closes the form on success.
+    // Revoke = delete this agent token entirely. Confirmaration prompt keeps
+    // it from being a one-click footgun. Cerrars the form on success.
     el('uf-codex-revoke')?.addEventListener('click', async () => {
       const tokenId = formEl.dataset.createdTokenId;
       if (!tokenId) return;
-      const ok = window.styledConfirm
-        ? await window.styledConfirm(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`, { confirmText: 'Revoke', danger: true })
+      const ok = window.styledConfirmar
+        ? await window.styledConfirmar(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`, { confirmText: 'Revoke', danger: true })
         : confirm(`Revoke this ${cfg.word} agent token? Integrations using it will lose access.`);
       if (!ok) return;
       const msg = el('uf-codex-msg');
@@ -5448,7 +5448,7 @@ async function initUnifiedIntegrations() {
       }
     });
 
-    const _autoCreateCodex = async () => {
+    const _autoCrearCódex = async () => {
       const msg = el('uf-codex-msg');
       const prompt = el('uf-codex-prompt');
       const pending = el('uf-codex-pending');
@@ -5481,9 +5481,9 @@ async function initUnifiedIntegrations() {
         while (existingNames.has(name)) { name = `${base} ${n++}`; }
       }
       // Minimum scope on creation so the token isn't effectively saved
-      // with everything granted before the user has clicked Save. The
+      // with everything granted before the user has clicked Guardar. The
       // UI toggles below are pre-checked as a preview of what *will*
-      // be granted; nothing else is persisted server-side until Save.
+      // be granted; nothing else is persisted server-side until Guardar.
       const fd = new FormData();
       fd.append('name', name);
       fd.append('scopes', 'chat');
@@ -5501,7 +5501,7 @@ async function initUnifiedIntegrations() {
         if (setupCode) setupCode.textContent = setupForToken(d.token || '');
         // Populate inline scope toggles for the just-created token with
         // ALL scopes pre-checked as a UI preview — the underlying token
-        // still only has 'chat' until the user clicks Save below.
+        // still only has 'chat' until the user clicks Guardar below.
         const uiToken = { id: d.id, scopes: ['chat'].concat(toolScopes.map(s => s.key)) };
         const inlineEl = el('uf-codex-inline-scopes');
         if (inlineEl) {
@@ -5510,15 +5510,15 @@ async function initUnifiedIntegrations() {
               ${scopeToggles(uiToken)}
               <div class="uf-codex-scope-msg" data-token-id="${esc(uiToken.id)}" style="font-size:11px;min-height:14px;"></div>
             </div>`;
-          // No auto-PATCH: scope toggles only persist on Save click below.
+          // No auto-PATCH: scope toggles only persist on Guardar click below.
         }
-        // Now that the token exists, surface the Save button.
+        // Now that the token exists, surface the Guardar button.
         const saveBtn = el('uf-codex-save');
         if (saveBtn) saveBtn.style.display = 'inline-flex';
-        // Remember the created token id so Save can PATCH its scopes.
+        // Remember the created token id so Guardar can PATCH its scopes.
         formEl.dataset.createdTokenId = String(uiToken.id);
         if (msg) {
-          msg.textContent = `Created "${name}".`;
+          msg.textContent = `Creard "${name}".`;
           msg.style.color = 'var(--green, #50fa7b)';
         }
         await renderList();
@@ -5531,9 +5531,9 @@ async function initUnifiedIntegrations() {
         }
       }
     };
-    // Bind the explicit Create button; no auto-creation.
-    el('uf-codex-create-btn')?.addEventListener('click', () => { _autoCreateCodex(); });
-    const _copyCodexToken = async (text) => {
+    // Bind the explicit Crear button; no auto-creation.
+    el('uf-codex-create-btn')?.addEventListener('click', () => { _autoCrearCódex(); });
+    const _copyCódexToken = async (text) => {
       const value = String(text || '');
       if (!value) return false;
       if (navigator.clipboard && window.isSecureContext) {
@@ -5573,7 +5573,7 @@ async function initUnifiedIntegrations() {
       const btn = el('uf-codex-copy-setup');
       if (!token) return;
       const setup = setupForToken(token);
-      const ok = await _copyCodexToken(setup);
+      const ok = await _copyCódexToken(setup);
       if (!btn) return;
       if (ok) {
         btn.innerHTML = CHECK_ICON;
@@ -5589,7 +5589,7 @@ async function initUnifiedIntegrations() {
     });
     el('uf-codex-copy-token')?.addEventListener('click', async () => {
       const token = el('uf-codex-token')?.textContent || '';
-      const ok = await _copyCodexToken(token);
+      const ok = await _copyCódexToken(token);
       const btn = el('uf-codex-copy-token');
       if (!btn) return;
       if (ok) {
@@ -5622,7 +5622,7 @@ async function initUnifiedIntegrations() {
             });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.detail || 'Failed');
-            if (msg) { msg.textContent = 'Saved'; msg.style.color = 'var(--green, #50fa7b)'; }
+            if (msg) { msg.textContent = 'Guardard'; msg.style.color = 'var(--green, #50fa7b)'; }
             await renderList();
           } catch (err) {
             cb.checked = !cb.checked;
@@ -5634,19 +5634,19 @@ async function initUnifiedIntegrations() {
     // Note: don't call _wireScopeChange(formEl) here. The existing-token
     // editor (current) already wires its own change handler that PATCHes
     // immediately. The inline scopes for a *just-created* token should
-    // remain unwired so they only persist on Save click below.
+    // remain unwired so they only persist on Guardar click below.
   }
 
-  // ── Add button now drops a type-picker menu directly anchored to itself ──
+  // ── Agregar button now drops a type-picker menu directly anchored to itself ──
   if (addBtn) {
     const _typeOptions = [
       ['api', 'API Service'],
-      ['caldav', 'CalDAV Calendar'],
+      ['caldav', 'CalDAV Calendario'],
       ['claude', 'Claude Agent'],
-      ['codex', 'Codex Agent'],
+      ['codex', 'Códex Agent'],
       ['carddav', 'Contacts (CardDAV)'],
       ['contacts', 'Contacts Import'],
-      ['email', 'Email (IMAP/SMTP)'],
+      ['email', 'Correo (IMAP/SMTP)'],
       ['mcp', 'MCP Tool Server'],
     ];
     const _iconFor = (k) => (INTG_TYPES[k]?.icon || '').replace(/width="14"/, 'width="16"').replace(/height="14"/, 'height="16"');
@@ -5730,7 +5730,7 @@ export function open(tab) {
   const activeTab = tab || (modalEl.querySelector('[data-settings-tab].active') || {}).dataset?.settingsTab || 'services';
   document.body.classList.toggle('settings-appearance-open', activeTab === 'appearance');
   syncAppearanceOpacity(activeTab === 'appearance');
-  if (activeTab === 'ai') refreshAiModelEndpoints();
+  if (activeTab === 'ai') refreshAiModeloEndpoints();
   if (ADMIN_TABS.has(activeTab) && window.adminModule && !window.adminModule._initialized) {
     window.adminModule._initData();
   }
@@ -5757,7 +5757,7 @@ export function close() {
 
 // Handle redirect back from Google OAuth2 — open settings to integrations and show status.
 (function _handleOauthRedirect() {
-  const sp = new URLSearchParams(window.location.search);
+  const sp = new URLBuscarParams(window.location.search);
   if (!sp.has('email_oauth_success') && !sp.has('email_oauth_error')) return;
   // Strip params from URL without a page reload.
   const clean = window.location.pathname + window.location.hash;
@@ -5789,7 +5789,7 @@ export function close() {
   _tryOpen();
 })();
 
-const settingsModule = { open, close, initIntegrations, initUnifiedIntegrations, syncAdminVisibility, refreshAiModelEndpoints };
+const settingsModule = { open, close, initIntegrations, initUnifiedIntegrations, syncAdminVisibility, refreshAiModeloEndpoints };
 
 
 export default settingsModule;
